@@ -1,0 +1,48 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.env
+.env.*
+
+# FastAPI + Uvicorn log files
+*.log
+
+# macOS / Linux / Windows system files
+.DS_Store
+Thumbs.db
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+
+# Node modules (if you add npm later)
+node_modules/
+
+# Coverage and testing
+coverage/
+*.cover
+htmlcov/
+
+# Pytest
+.pytest_cache/
+.cache/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Frontend build files
+*.map
+
+# Local dev server settings
+*.sqlite3
