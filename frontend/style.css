@@ -110,13 +110,22 @@ body.space-bg::before {
     margin-left: 0;
 }
 
+/* Question and kid container */
+.question-kid-container {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    max-width: 700px;
+    margin: 0 auto 24px auto;
+    gap: 20px;
+    position: relative;
+    z-index: 1;
+}
+
 /* Question section */
 .question-section {
-    max-width: 600px;
-    margin: 0 auto 24px auto;
+    flex: 1 1 auto;
     background: none;
-    z-index: 1;
-    position: relative;
 }
 .question-title {
     font-size: 1.3em;
@@ -171,20 +180,17 @@ body.space-bg::before {
 
 /* Kid illustration */
 .kid-illustration {
+    flex: 0 0 auto;
     display: flex;
     justify-content: flex-end;
-    align-items: flex-end;
-    max-width: 700px;
-    margin: 0 auto 0 0;
-    height: 120px;
-    z-index: 1;
+    align-items: flex-start;
+    height: auto;
+    margin: 0;
     position: relative;
 }
 .kid-img {
     width: 90px;
     height: 90px;
-    margin-right: 40px;
-    margin-bottom: 10px;
     border-radius: 50%;
     background: #fff;
     border: 3px solid #2cb67d;
