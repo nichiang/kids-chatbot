@@ -1,27 +1,19 @@
-import random
 from pathlib import Path
+import csv
 
-general_vocab_pool = [
-    "observe", "protect", "enormous", "discover", "experiment",
-    "analyze", "predict", "structure", "benefit", "solution",
-    "visible", "require", "assist", "fortunate", "design",
-    "approach", "compare", "detail", "opinion", "evidence"
-]
+def load_file(file_path):
+    return Path(file_path).read_text().strip()
 
-# Topic-specific vocabulary
-topic_word_map = {
-    "animals": ["habitat", "creature", "adapt", "survive"],
-    "soccer": ["goalkeeper", "teamwork", "strategy", "defend", "attempt"],
-    "cooking": ["ingredients", "mixture", "measure", "combine", "recipe"],
-    "superheroes": ["rescue", "brave", "mission", "powerful", "secret"],
-    "space": ["planet", "explore", "astronaut", "gravity", "launch"],
-    "sea creatures": ["ocean", "deep", "marine", "waves", "current"],
-    "inventions": ["tool", "create", "machine", "invent", "improve"]
-}
+def load_vocabulary(csv_path):
+    with open(csv_path, newline='') as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader: #the file holds everything in a single row
+            return row
+            
 
-topics = list(topic_word_map.keys())
-
-def generate_prompt(topic=None, mode="fact", grade="4th"):
-    if topic is None:
-        topic = random.choice(topics)
-
+if __name__ == "__main__":
+    intro_system_role_text = load_file("intro_prompt.txt")
+    vocab_list = load_vocabulary("vocab.csv")
+    vocab_text=",".join(vocab_list)
+    story_steps_text = load_file("story_steps_prompt.txt")
+    print(story_steps_text)
