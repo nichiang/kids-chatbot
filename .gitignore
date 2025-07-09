@@ -46,3 +46,6 @@ build/
 
 # Local dev server settings
 *.sqlite3
+
+# Design files and mockups
+design/
