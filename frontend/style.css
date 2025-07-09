@@ -39,6 +39,43 @@ body.space-bg::before {
     transition: width 0.3s;
 }
 
+/* Mode selection buttons */
+.mode-selection {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin: 20px auto;
+    max-width: 600px;
+    position: relative;
+    z-index: 1;
+}
+
+.mode-button {
+    background: #22305a;
+    color: #fff;
+    border: 2px solid #2a7ae2;
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-size: 1.1em;
+    font-weight: bold;
+    font-family: 'Comic Sans MS', 'Comic Sans', cursive, sans-serif;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 140px;
+}
+
+.mode-button:hover {
+    background: #2a7ae2;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(42, 122, 226, 0.3);
+}
+
+.mode-button.active {
+    background: #2a7ae2;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(42, 122, 226, 0.4);
+}
+
 /* Chat container */
 .chat-container {
     max-width: 700px;
@@ -189,6 +226,40 @@ body.space-bg::before {
     color: #fff;
     cursor: default;
     box-shadow: 0 0 0 3px #ffe06655;
+}
+
+/* Vocabulary question container */
+.vocab-question-container {
+    margin-bottom: 16px;
+}
+
+.vocab-answers-wrapper {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-left: 60px; /* Align with chat messages */
+}
+
+.kid-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 3px solid #2cb67d;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    order: 2;
+}
+
+.answer-button.selected {
+    background: #7f5af0;
+    border: 2px solid #ffe066;
+    color: #fff;
+}
+
+.checkmark {
+    margin-left: 8px;
+    font-weight: bold;
+    color: #ffe066;
 }
 
 /* Responsive */

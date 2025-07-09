@@ -2,159 +2,186 @@ document.addEventListener("DOMContentLoaded", function () {
     const chatForm = document.getElementById("chat-form");
     const chatInput = document.getElementById("chat-input");
     const chatLog = document.getElementById("chat-log");
+    const storywritingBtn = document.getElementById("storywriting-btn");
+    const funFactsBtn = document.getElementById("fun-facts-btn");
 
-    // Conversation states
-    const storySegments = [
-        `Awesome choice! Space adventures are incredible! 🚀
-Here's how our story begins:
-Captain Zoe strapped herself into the gleaming spacecraft and checked all the controls. Her mission was to explore a mysterious new planet that scientists had discovered last week. As the rocket engines roared to life, she felt both nervous and excited about what extraordinary creatures she might encounter among the stars.
-Now it's your turn! What happens next in our space adventure? Tell me what Captain Zoe sees or does when she reaches the mysterious planet!`,
-
-        `That's a great idea! Let me help you make that sentence even better. Instead of "She finds an alien," you could write "She discovers an alien" or "She encounters a strange alien creature." The word "discovers" sounds more exciting for an adventure story!
-Here's what happens next:
-Captain Zoe's eyes widened as she spotted a peculiar creature with purple fur and three glowing eyes. The friendly alien was bouncing around some crystalline rocks, making musical sounds that echoed across the planet's surface. "Hello there!" Zoe called out through her helmet's speaker, wondering if this amazing being could communicate with humans.
-What do you think the alien does when it hears Captain Zoe? Does it respond, hide, or do something completely unexpected?`,
-
-        `Good addition to the story! You could make that sentence even more descriptive by saying "The alien quickly hides behind the rocks" or "It darts away and hides." Adding a little more detail makes the story come alive!
-Here's what happens next:
-The alien vanished behind a cluster of sparkling crystals, leaving only tiny purple footprints in the silver dust. Captain Zoe approached slowly, not wanting to frighten her new friend. She pulled out a small bag of Earth cookies from her backpack and placed one on a nearby rock, hoping the sweet treat might convince the shy creature to come out.
-What happens next? Does the alien come back for the cookie, or does Captain Zoe try a different way to make friends?`,
-
-        `Great continuation! To make your writing even stronger, you could say "The alien comes back for the cookie" or "The alien emerges to get the cookie." Adding "back" or "emerges" gives us more detail about the action!
-Here's what happens next:
-One purple paw slowly emerged from behind the crystal, followed by a curious glowing eye peeking out. The alien crept forward and sniffed the cookie with its tiny blue nose. After taking a small bite, it began to shimmer with joy and made happy chirping sounds! Captain Zoe smiled as the brave little creature stepped closer, no longer afraid.
-"We did it!" Captain Zoe thought. "We made first contact!" The alien offered her a beautiful glowing crystal as a gift of friendship, and together they explored the magnificent planet, discovering singing flowers and rainbow waterfalls.
-THE END`
-    ];
-
-    const vocabQuestion = {
-        question: 'What does the word emerged mean?\n"One purple paw slowly emerged from behind the crystal."',
-        options: [
-            'a) Ran quickly',
-            'b) Came out slowly',
-            'c) Jumped high',
-            'd) Fell down'
-        ],
-        correctIndex: 1
+    // App state
+    let currentMode = 'storywriting'; // 'storywriting' or 'funfacts'
+    let sessionData = {
+        storywriting: {
+            topic: null,
+            storyParts: [],
+            currentStep: 0,
+            isComplete: false
+        },
+        funfacts: {
+            topic: null,
+            factsShown: 0,
+            currentFact: null,
+            isComplete: false
+        }
     };
 
-    let storyStep = 0;
-    let storyDone = false;
-    let vocabShown = false;
-
-function appendMessage(sender, text) {
-    const msgWrapper = document.createElement("div");
-    msgWrapper.className = sender === "user" ? "chat-message user" : "chat-message bot";
-
-    const avatar = document.createElement("img");
-    avatar.className = "chat-avatar";
-    if (sender === "user") {
-        avatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f466.png"; // kid avatar
-        avatar.alt = "Kid";
-    } else {
-        avatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f99d.png"; // raccoon avatar
-        avatar.alt = "Raccoon Coach";
+    // Mode switching
+    function switchMode(mode) {
+        currentMode = mode;
+        
+        // Update button states
+        storywritingBtn.classList.toggle('active', mode === 'storywriting');
+        funFactsBtn.classList.toggle('active', mode === 'funfacts');
+        
+        // Clear chat log
+        chatLog.innerHTML = '';
+        
+        // Initialize the selected mode
+        if (mode === 'storywriting') {
+            initializeStorywriting();
+        } else {
+            initializeFunFacts();
+        }
     }
 
-    const bubble = document.createElement("div");
-    bubble.className = "chat-bubble";
-    bubble.textContent = text;
+    // Initialize Storywriting mode
+    function initializeStorywriting() {
+        if (!sessionData.storywriting.topic) {
+            appendMessage("bot", "Hi there! I'm excited to co-write a story with you! 📚✨\n\nWhat kind of story would you like to write today? Here are some fun options:\n\n🚀 Space adventures\n🏰 Fantasy quests\n⚽ Sports excitement\n🦄 Magical creatures\n🕵️ Mystery solving\n\nWhat sounds interesting to you?");
+        } else {
+            // Continue existing story
+            appendMessage("bot", "Let's continue our story! What happens next?");
+        }
+    }
 
-    msgWrapper.appendChild(avatar);
-    msgWrapper.appendChild(bubble);
+    // Initialize Fun Facts mode
+    function initializeFunFacts() {
+        if (!sessionData.funfacts.topic) {
+            appendMessage("bot", "Hey explorer! I have so many amazing facts to share! 🤓✨\n\nWhat topic would you like to learn about today?\n\n🐾 Animals\n🌌 Space\n🔬 Science inventions\n🏈 Sports\n🍕 Food\n🌊 Ocean creatures\n\nPick something that sounds cool to you!");
+        } else {
+            // Continue with more facts
+            appendMessage("bot", "Ready for another awesome fact? Let me know when you are!");
+        }
+    }
 
-    chatLog.appendChild(msgWrapper);
-    chatLog.scrollTop = chatLog.scrollHeight;
-}
+    // Message handling
+    function appendMessage(sender, text) {
+        const msgWrapper = document.createElement("div");
+        msgWrapper.className = sender === "user" ? "chat-message user" : "chat-message bot";
 
-function appendVocabQuestion() {
-    // Create container for vocab question UI
-    const vocabContainer = document.createElement("div");
-    vocabContainer.className = "vocab-question-container";
+        const avatar = document.createElement("img");
+        avatar.className = "chat-avatar";
+        if (sender === "user") {
+            avatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f466.png";
+            avatar.alt = "Kid";
+        } else {
+            avatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f99d.png";
+            avatar.alt = "Raccoon Coach";
+        }
 
-    // Create question bubble with raccoon avatar
-    const questionWrapper = document.createElement("div");
-    questionWrapper.className = "chat-message bot";
+        const bubble = document.createElement("div");
+        bubble.className = "chat-bubble";
+        bubble.textContent = text;
 
-    const avatar = document.createElement("img");
-    avatar.className = "chat-avatar";
-    avatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f99d.png"; // raccoon avatar
-    avatar.alt = "Raccoon Coach";
+        msgWrapper.appendChild(avatar);
+        msgWrapper.appendChild(bubble);
 
-    const bubble = document.createElement("div");
-    bubble.className = "chat-bubble";
-    bubble.textContent = vocabQuestion.question;
+        chatLog.appendChild(msgWrapper);
+        chatLog.scrollTop = chatLog.scrollHeight;
+    }
 
-    questionWrapper.appendChild(avatar);
-    questionWrapper.appendChild(bubble);
+    // Create vocabulary question UI
+    function appendVocabQuestion(question, options, correctIndex) {
+        const vocabContainer = document.createElement("div");
+        vocabContainer.className = "vocab-question-container";
 
-    // Create answers container with kid avatar
-    const answersWrapper = document.createElement("div");
-    answersWrapper.className = "vocab-answers-wrapper";
+        // Question bubble
+        const questionWrapper = document.createElement("div");
+        questionWrapper.className = "chat-message bot";
 
-    const kidAvatar = document.createElement("img");
-    kidAvatar.className = "kid-avatar";
-    kidAvatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f466.png"; // kid avatar
-    kidAvatar.alt = "Kid";
+        const avatar = document.createElement("img");
+        avatar.className = "chat-avatar";
+        avatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f99d.png";
+        avatar.alt = "Raccoon Coach";
 
-    const buttonsContainer = document.createElement("div");
-    buttonsContainer.className = "answer-buttons-container";
+        const bubble = document.createElement("div");
+        bubble.className = "chat-bubble";
+        bubble.textContent = question;
 
-    vocabQuestion.options.forEach((option, index) => {
-        const button = document.createElement("button");
-        button.className = "answer-button";
-        button.textContent = option;
-        button.addEventListener("click", () => {
-            // Disable all buttons after selection
-            Array.from(buttonsContainer.children).forEach(btn => btn.disabled = true);
+        questionWrapper.appendChild(avatar);
+        questionWrapper.appendChild(bubble);
 
-            // Highlight selected button
-            button.classList.add("selected");
-            // Add checkmark to selected button
+        // Answer buttons
+        const answersWrapper = document.createElement("div");
+        answersWrapper.className = "vocab-answers-wrapper";
+
+        const kidAvatar = document.createElement("img");
+        kidAvatar.className = "kid-avatar";
+        kidAvatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f466.png";
+        kidAvatar.alt = "Kid";
+
+        const buttonsContainer = document.createElement("div");
+        buttonsContainer.className = "answer-buttons-container";
+
+        options.forEach((option, index) => {
+            const button = document.createElement("button");
+            button.className = "answer-button";
+            button.textContent = option;
+            button.addEventListener("click", () => {
+                handleVocabAnswer(index, correctIndex, option, buttonsContainer, vocabContainer);
+            });
+            buttonsContainer.appendChild(button);
+        });
+
+        answersWrapper.appendChild(buttonsContainer);
+        answersWrapper.appendChild(kidAvatar);
+
+        vocabContainer.appendChild(questionWrapper);
+        vocabContainer.appendChild(answersWrapper);
+
+        chatLog.appendChild(vocabContainer);
+        chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    // Handle vocabulary answer
+    function handleVocabAnswer(selectedIndex, correctIndex, selectedOption, buttonsContainer, vocabContainer) {
+        // Disable all buttons
+        Array.from(buttonsContainer.children).forEach(btn => btn.disabled = true);
+
+        // Highlight selected button
+        const selectedButton = buttonsContainer.children[selectedIndex];
+        selectedButton.classList.add("selected");
+
+        // Add checkmark to correct answer
+        const correctButton = buttonsContainer.children[correctIndex];
+        if (selectedIndex === correctIndex) {
             const checkmark = document.createElement("span");
             checkmark.className = "checkmark";
             checkmark.textContent = "✔";
-            button.appendChild(checkmark);
+            selectedButton.appendChild(checkmark);
+        } else {
+            const checkmark = document.createElement("span");
+            checkmark.className = "checkmark";
+            checkmark.textContent = "✔";
+            correctButton.appendChild(checkmark);
+            correctButton.style.background = "#2cb67d";
+        }
 
-            // Append user's selected answer as chat bubble
-            appendMessage("user", option);
+        // Show user's selection
+        appendMessage("user", selectedOption);
 
-            // Append chatbot follow-up message
-            appendMessage("bot", getFollowUpMessage(index));
+        // Show feedback
+        const feedback = selectedIndex === correctIndex 
+            ? "Correct! Great job! 🎉" 
+            : `Nice try! The correct answer was ${buttonsContainer.children[correctIndex].textContent}. You'll get it next time! 💪`;
+        
+        appendMessage("bot", feedback);
 
-            // Remove vocab container after selection
+        // Remove vocab container
+        setTimeout(() => {
             vocabContainer.remove();
-        });
-        buttonsContainer.appendChild(button);
-    });
-
-    answersWrapper.appendChild(buttonsContainer);
-    answersWrapper.appendChild(kidAvatar);
-
-    vocabContainer.appendChild(questionWrapper);
-    vocabContainer.appendChild(answersWrapper);
-
-    chatLog.appendChild(vocabContainer);
-    chatLog.scrollTop = chatLog.scrollHeight;
-}
-
-// Sample follow-up messages for each answer option
-function getFollowUpMessage(selectedIndex) {
-    switch (selectedIndex) {
-        case 0:
-            return "Not quite. 'Ran quickly' is not the meaning of 'emerged'. Try again next time!";
-        case 1:
-            return "Correct! 'Came out slowly' is the right meaning of 'emerged'. Great job!";
-        case 2:
-            return "That's not right. 'Jumped high' is not the meaning of 'emerged'. Keep trying!";
-        case 3:
-            return "Nope. 'Fell down' is not the meaning of 'emerged'. You'll get it next time!";
-        default:
-            return "";
+        }, 1000);
     }
-}
 
-    chatForm.addEventListener("submit", function (e) {
+    // Handle form submission
+    chatForm.addEventListener("submit", async function (e) {
         e.preventDefault();
         const userMessage = chatInput.value.trim();
         if (!userMessage) return;
@@ -162,32 +189,55 @@ function getFollowUpMessage(selectedIndex) {
         appendMessage("user", userMessage);
         chatInput.value = "";
 
-        if (!storyDone) {
-            // Append chatbot story response for current step
-            appendMessage("bot", storySegments[storyStep]);
-            storyStep++;
-            if (storyStep >= storySegments.length) {
-                storyDone = true;
-                // Immediately show vocab question after story ends
-                appendVocabQuestion();
-                vocabShown = true;
+        // Show thinking message
+        appendMessage("bot", "Thinking...");
+
+        try {
+            // Send to backend
+            const response = await fetch("http://localhost:8000/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ 
+                    message: userMessage,
+                    mode: currentMode,
+                    sessionData: sessionData[currentMode]
+                })
+            });
+
+            const data = await response.json();
+            
+            // Remove thinking message
+            chatLog.removeChild(chatLog.lastChild);
+            
+            // Handle response based on mode
+            if (data.response) {
+                appendMessage("bot", data.response);
             }
-        } else if (!vocabShown) {
-            // Show vocab question after story (fallback)
-            appendVocabQuestion();
-            vocabShown = true;
-        } else {
-            // After vocab question, just echo user input for now
-            appendMessage("bot", "Thanks for your input!");
-            // Show Jupiter fact and vocabulary question again
-            appendVocabQuestion();
-            vocabShown = true;
+            
+            // Handle vocabulary questions
+            if (data.vocabQuestion) {
+                setTimeout(() => {
+                    appendVocabQuestion(
+                        data.vocabQuestion.question,
+                        data.vocabQuestion.options,
+                        data.vocabQuestion.correctIndex
+                    );
+                }, 1000);
+            }
+
+        } catch (err) {
+            // Remove thinking message
+            chatLog.removeChild(chatLog.lastChild);
+            appendMessage("bot", "Sorry, I'm having trouble connecting right now. Please try again!");
         }
     });
 
-// Start conversation with first story segment only if storyStep is 0
-if (storyStep === 0) {
-    appendMessage("bot", storySegments[storyStep]);
-    storyStep++;
-}
+    // Event listeners for mode buttons
+    storywritingBtn.addEventListener("click", () => switchMode('storywriting'));
+    funFactsBtn.addEventListener("click", () => switchMode('funfacts'));
+
+    // Initialize the app
+    switchMode('storywriting');
 });

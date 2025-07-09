@@ -4,15 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-### Backend
+### Backend Setup
 ```bash
 # Install dependencies
 cd backend
 pip install -r requirements.txt
 
+# Set up environment variables
+cp .env.example .env
+# Edit .env file and add your OpenAI API key
+
 # Start development server
 uvicorn app:app --reload
 ```
+
+### Environment Variables
+Required environment variables in `backend/.env`:
+- `OPENAI_API_KEY` - Your OpenAI API key (get from https://platform.openai.com/api-keys)
+- `OPENAI_MODEL` - OpenAI model to use (default: gpt-4o-mini)
+- `OPENAI_BASE_URL` - API base URL (default: https://api.openai.com/v1)
+
+**Security Note**: Never commit your `.env` file to git. The `.env.example` file shows required variables without exposing secrets.
 
 ### Frontend
 The frontend is static HTML/CSS/JS that runs directly in the browser. Open `frontend/index.html` in a web browser.
