@@ -69,11 +69,11 @@ document.addEventListener("DOMContentLoaded", function () {
         const avatar = document.createElement("img");
         avatar.className = "chat-avatar";
         if (sender === "user") {
-            avatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f466.png";
+            avatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9d2.png";
             avatar.alt = "Kid";
         } else {
-            avatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f99d.png";
-            avatar.alt = "Raccoon Coach";
+            avatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f43b.png";
+            avatar.alt = "Bear Tutor";
         }
 
         const bubble = document.createElement("div");
@@ -101,8 +101,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const avatar = document.createElement("img");
         avatar.className = "chat-avatar";
-        avatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f99d.png";
-        avatar.alt = "Raccoon Coach";
+        avatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f43b.png";
+        avatar.alt = "Bear Tutor";
 
         const bubble = document.createElement("div");
         bubble.className = "chat-bubble";
@@ -120,7 +120,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const kidAvatar = document.createElement("img");
         kidAvatar.className = "kid-avatar";
-        kidAvatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f466.png";
+        kidAvatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9d2.png";
         kidAvatar.alt = "Kid";
 
         const buttonsContainer = document.createElement("div");

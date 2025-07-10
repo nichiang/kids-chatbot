@@ -29,6 +29,7 @@ class SessionData(BaseModel):
     isComplete: bool = False
     factsShown: int = 0
     currentFact: Optional[str] = None
+    allFacts: List[str] = []
 
 class ChatRequest(BaseModel):
     message: str
@@ -152,6 +153,7 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
         fact_prompt = f"Generate a fun fact about: {topic}. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words using **word** format. End with relevant emojis that match the topic."
         fact_response = llm_provider.generate_response(fact_prompt)
         session_data.currentFact = fact_response
+        session_data.allFacts.append(fact_response)
         session_data.factsShown += 1
         
         # Generate vocabulary question
@@ -171,9 +173,11 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
     else:
         if session_data.factsShown < 3:  # Show 3 facts per topic
             # Generate another fact
-            fact_prompt = f"Generate a different fun fact about: {session_data.topic}. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words using **word** format. End with relevant emojis that match the topic."
+            previous_facts = " | ".join(session_data.allFacts) if session_data.allFacts else "None"
+            fact_prompt = f"Generate a completely different and NEW fun fact about: {session_data.topic}. This is fact #{session_data.factsShown + 1}. DO NOT repeat any of these previous facts: {previous_facts}. Make sure this is a totally different aspect or detail about {session_data.topic}. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words using **word** format. End with relevant emojis that match the topic."
             fact_response = llm_provider.generate_response(fact_prompt)
             session_data.currentFact = fact_response
+            session_data.allFacts.append(fact_response)
             session_data.factsShown += 1
             
             # Generate vocabulary question
