@@ -33,8 +33,8 @@ document.addEventListener("DOMContentLoaded", function () {
         // Clear chat log
         chatLog.innerHTML = '';
         
-        // Reset to default space theme when switching modes
-        switchTheme('space');
+        // No automatic theme switching when changing modes
+        // Theme is now manually controlled by user
         
         // Initialize the selected mode
         if (mode === 'storywriting') {
@@ -373,12 +373,6 @@ document.addEventListener("DOMContentLoaded", function () {
             // Update session data
             if (data.sessionData) {
                 sessionData[currentMode] = data.sessionData;
-                
-                // Check if topic was set and switch theme accordingly
-                if (data.sessionData.topic) {
-                    console.log(`Topic detected in continue: ${data.sessionData.topic}`);
-                    switchThemeForTopic(data.sessionData.topic);
-                }
             }
             
             // Handle vocabulary questions
@@ -454,12 +448,6 @@ document.addEventListener("DOMContentLoaded", function () {
             if (data.sessionData) {
                 sessionData[currentMode] = data.sessionData;
                 
-                // Check if topic was set and switch theme accordingly
-                if (data.sessionData.topic) {
-                    console.log(`Topic detected: ${data.sessionData.topic}`);
-                    switchThemeForTopic(data.sessionData.topic);
-                }
-                
                 // Auto-trigger vocabulary questions when story is complete
                 if (currentMode === 'storywriting' && data.sessionData.isComplete && !data.vocabQuestion) {
                     console.log("Story completed! Auto-triggering vocabulary questions...");
@@ -507,89 +495,44 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const body = document.body;
 
-    // Theme switching functionality (automatic only)
-    
-    // Current theme tracking
-    let currentTheme = 'space';
-    let currentUIStyle = 'ui-professional'; // Default UI style
+    // Unified Theme System
+    let currentTheme = 'theme-space'; // Default theme
 
     function switchTheme(themeName) {
         // Only switch if it's actually a different theme
         if (currentTheme === themeName) return;
         
-        // Create smooth crossfade effect
-        body.style.transition = 'all 2s ease-in-out';
-        
         // Remove all existing theme classes
-        body.classList.remove('space-theme', 'ocean-theme', 'fantasy-theme', 'adventure-theme', 'sports-theme', 'food-theme', 'space-bg');
+        body.classList.remove('theme-space', 'theme-fantasy', 'theme-sports', 'theme-ocean', 'theme-whimsical', 'theme-fun', 'theme-food', 'theme-animals', 'theme-elegant', 'theme-creative');
         
         // Add new theme class
-        body.classList.add(`${themeName}-theme`);
+        body.classList.add(themeName);
         
         currentTheme = themeName;
-        console.log(`Automatically switched to ${themeName} theme`);
-    }
-
-    // Map topics to themes
-    function getThemeForTopic(topic) {
-        const themeMap = {
-            'space': 'space',
-            'animals': 'ocean', // Default animals to ocean for now
-            'ocean': 'ocean',
-            'fantasy': 'fantasy',
-            'mystery': 'adventure',
-            'adventure': 'adventure',
-            'sports': 'sports', // Use dedicated sports theme
-            'food': 'food', // Use dedicated food theme
-            'inventions': 'space' // Use space theme for inventions
-        };
-        
-        return themeMap[topic] || 'space'; // Default to space
-    }
-
-    // Dynamic theme switching based on topic
-    function switchThemeForTopic(topic) {
-        const newTheme = getThemeForTopic(topic);
-        if (newTheme !== currentTheme) {
-            console.log(`Topic "${topic}" detected, switching to ${newTheme} theme`);
-            switchTheme(newTheme);
-        }
-    }
-
-    // UI Style switching functionality
-    function switchUIStyle(styleName) {
-        // Only switch if it's actually a different style
-        if (currentUIStyle === styleName) return;
-        
-        // Remove all existing UI style classes
-        body.classList.remove('ui-professional', 'ui-fun', 'ui-whimsical');
-        
-        // Add new UI style class
-        body.classList.add(styleName);
-        
-        currentUIStyle = styleName;
-        console.log(`Switched to ${styleName} UI style`);
+        console.log(`Switched to ${themeName} theme`);
         
         // Save preference to localStorage
-        localStorage.setItem('preferredUIStyle', styleName);
+        localStorage.setItem('preferredTheme', themeName);
     }
 
-    // Load saved UI style preference
-    function loadUIStylePreference() {
-        const savedStyle = localStorage.getItem('preferredUIStyle');
-        if (savedStyle && ['ui-professional', 'ui-fun', 'ui-whimsical'].includes(savedStyle)) {
-            switchUIStyle(savedStyle);
+    // Load saved theme preference
+    function loadThemePreference() {
+        const savedTheme = localStorage.getItem('preferredTheme');
+        const validThemes = ['theme-space', 'theme-fantasy', 'theme-sports', 'theme-ocean', 'theme-whimsical', 'theme-fun', 'theme-food', 'theme-animals', 'theme-elegant', 'theme-creative'];
+        
+        if (savedTheme && validThemes.includes(savedTheme)) {
+            switchTheme(savedTheme);
         } else {
-            // Set default style
-            switchUIStyle('ui-professional');
+            // Set default theme
+            switchTheme('theme-space');
         }
     }
 
-    // Make UI style switching available globally for testing
-    window.switchUIStyle = switchUIStyle;
+    // Make theme switching available globally
+    window.switchTheme = switchTheme;
 
 
     // Initialize the app
-    loadUIStylePreference(); // Load saved UI style
+    loadThemePreference(); // Load saved theme
     switchMode('storywriting');
 });
