@@ -33,6 +33,9 @@ document.addEventListener("DOMContentLoaded", function () {
         // Clear chat log
         chatLog.innerHTML = '';
         
+        // Reset to default space theme when switching modes
+        switchTheme('space');
+        
         // Initialize the selected mode
         if (mode === 'storywriting') {
             initializeStorywriting();
@@ -61,8 +64,85 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Message handling
+    // Smart auto-scroll function - only scrolls when content goes below viewport
+    function scrollToBottom() {
+        requestAnimationFrame(() => {
+            // Check if content actually extends beyond the viewport
+            const windowHeight = window.innerHeight;
+            const documentHeight = document.body.scrollHeight;
+            const currentScrollPosition = window.scrollY;
+            
+            // Only scroll if:
+            // 1. Document is taller than viewport AND
+            // 2. User is not already at the bottom (within 100px tolerance)
+            const isContentBelowFold = documentHeight > windowHeight;
+            const isNearBottom = (currentScrollPosition + windowHeight) >= (documentHeight - 100);
+            
+            if (isContentBelowFold && !isNearBottom) {
+                // Content extends beyond viewport and user is not at bottom - scroll smoothly
+                window.scrollTo({
+                    top: documentHeight,
+                    behavior: 'smooth'
+                });
+                
+                // Fallback for older browsers
+                setTimeout(() => {
+                    window.scrollTo(0, document.body.scrollHeight);
+                }, 150);
+            }
+            // If content fits in viewport or user is already at bottom, don't scroll
+        });
+    }
+
+    // Split long messages into multiple bubbles
+    function splitLongMessage(text) {
+        // Split at double line breaks first (natural paragraph breaks)
+        const paragraphs = text.split('\n\n');
+        const maxLength = 200; // Maximum characters per bubble
+        const result = [];
+        
+        paragraphs.forEach(paragraph => {
+            if (paragraph.length <= maxLength) {
+                result.push(paragraph);
+            } else {
+                // Split long paragraphs at sentence boundaries
+                const sentences = paragraph.split(/(?<=[.!?])\s+/);
+                let currentChunk = '';
+                
+                sentences.forEach(sentence => {
+                    if (currentChunk.length + sentence.length <= maxLength) {
+                        currentChunk += (currentChunk ? ' ' : '') + sentence;
+                    } else {
+                        if (currentChunk) result.push(currentChunk);
+                        currentChunk = sentence;
+                    }
+                });
+                
+                if (currentChunk) result.push(currentChunk);
+            }
+        });
+        
+        return result.filter(chunk => chunk.trim().length > 0);
+    }
+
+    // Message handling with smart splitting for long messages
     function appendMessage(sender, text) {
+        if (sender === "bot" && text.length > 200) {
+            // Split long bot messages into multiple bubbles
+            const messageParts = splitLongMessage(text);
+            messageParts.forEach((part, index) => {
+                setTimeout(() => {
+                    appendSingleMessage(sender, part);
+                }, index * 800); // 800ms delay between message parts
+            });
+        } else {
+            // Send short messages normally
+            appendSingleMessage(sender, text);
+        }
+    }
+
+    // Single message handling
+    function appendSingleMessage(sender, text) {
         const msgWrapper = document.createElement("div");
         msgWrapper.className = sender === "user" ? "chat-message user" : "chat-message bot";
 
@@ -87,7 +167,13 @@ document.addEventListener("DOMContentLoaded", function () {
         msgWrapper.appendChild(bubble);
 
         chatLog.appendChild(msgWrapper);
-        chatLog.scrollTop = chatLog.scrollHeight;
+        
+        // Wait for images to load before scrolling
+        avatar.onload = () => scrollToBottom();
+        avatar.onerror = () => scrollToBottom();
+        
+        // Also scroll immediately in case image is cached
+        scrollToBottom();
     }
 
     // Create vocabulary question UI
@@ -143,7 +229,24 @@ document.addEventListener("DOMContentLoaded", function () {
         vocabContainer.appendChild(answersWrapper);
 
         chatLog.appendChild(vocabContainer);
-        chatLog.scrollTop = chatLog.scrollHeight;
+        
+        // Wait for all avatars to load before scrolling
+        const avatars = [avatar, kidAvatar];
+        let loadedCount = 0;
+        const checkAllLoaded = () => {
+            loadedCount++;
+            if (loadedCount >= avatars.length) {
+                scrollToBottom();
+            }
+        };
+        
+        avatars.forEach(img => {
+            img.onload = checkAllLoaded;
+            img.onerror = checkAllLoaded;
+        });
+        
+        // Also scroll immediately in case images are cached
+        scrollToBottom();
     }
 
     // Handle vocabulary answer
@@ -225,6 +328,12 @@ document.addEventListener("DOMContentLoaded", function () {
             // Update session data
             if (data.sessionData) {
                 sessionData[currentMode] = data.sessionData;
+                
+                // Check if topic was set and switch theme accordingly
+                if (data.sessionData.topic) {
+                    console.log(`Topic detected in continue: ${data.sessionData.topic}`);
+                    switchThemeForTopic(data.sessionData.topic);
+                }
             }
             
             // Handle vocabulary questions
@@ -286,6 +395,12 @@ document.addEventListener("DOMContentLoaded", function () {
             // Update session data with backend response
             if (data.sessionData) {
                 sessionData[currentMode] = data.sessionData;
+                
+                // Check if topic was set and switch theme accordingly
+                if (data.sessionData.topic) {
+                    console.log(`Topic detected: ${data.sessionData.topic}`);
+                    switchThemeForTopic(data.sessionData.topic);
+                }
             }
             
             // Handle vocabulary questions
@@ -309,6 +424,64 @@ document.addEventListener("DOMContentLoaded", function () {
     // Event listeners for mode buttons
     storywritingBtn.addEventListener("click", () => switchMode('storywriting'));
     funFactsBtn.addEventListener("click", () => switchMode('funfacts'));
+
+    const body = document.body;
+
+    // Theme switching functionality (automatic only)
+    
+    // Current theme tracking
+    let currentTheme = 'space';
+
+    function switchTheme(themeName) {
+        // Only switch if it's actually a different theme
+        if (currentTheme === themeName) return;
+        
+        // Add fade effect during transition
+        body.style.opacity = '0.95';
+        
+        setTimeout(() => {
+            // Remove all existing theme classes
+            body.classList.remove('space-theme', 'ocean-theme', 'fantasy-theme', 'adventure-theme', 'sports-theme', 'food-theme', 'space-bg');
+            
+            // Add new theme class
+            body.classList.add(`${themeName}-theme`);
+            
+            currentTheme = themeName;
+            console.log(`Automatically switched to ${themeName} theme`);
+            
+            // Restore opacity
+            setTimeout(() => {
+                body.style.opacity = '1';
+            }, 100);
+        }, 200);
+    }
+
+    // Map topics to themes
+    function getThemeForTopic(topic) {
+        const themeMap = {
+            'space': 'space',
+            'animals': 'ocean', // Default animals to ocean for now
+            'ocean': 'ocean',
+            'fantasy': 'fantasy',
+            'mystery': 'adventure',
+            'adventure': 'adventure',
+            'sports': 'sports', // Use dedicated sports theme
+            'food': 'food', // Use dedicated food theme
+            'inventions': 'space' // Use space theme for inventions
+        };
+        
+        return themeMap[topic] || 'space'; // Default to space
+    }
+
+    // Dynamic theme switching based on topic
+    function switchThemeForTopic(topic) {
+        const newTheme = getThemeForTopic(topic);
+        if (newTheme !== currentTheme) {
+            console.log(`Topic "${topic}" detected, switching to ${newTheme} theme`);
+            switchTheme(newTheme);
+        }
+    }
+
 
     // Initialize the app
     switchMode('storywriting');
