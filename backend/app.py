@@ -66,17 +66,17 @@ async def chat_endpoint(chat_request: ChatRequest):
         return ChatResponse(response="Sorry, I'm having trouble right now. Please try again!")
 
 async def handle_storywriting(user_message: str, session_data: SessionData) -> ChatResponse:
-    """Handle storywriting mode interactions"""
+    """Handle storywriting mode interactions following the 10-step process"""
     
-    # If no topic is set, user is choosing a topic
+    # If no topic is set, user is choosing a topic (Step 1)
     if not session_data.topic:
         # Extract topic from user message
         topic = extract_topic_from_message(user_message)
         session_data.topic = topic
-        session_data.currentStep = 1
+        session_data.currentStep = 2  # Moving to Step 2 after topic selection
         
-        # Generate story beginning
-        story_prompt = f"Generate a story beginning for topic: {topic}"
+        # Generate story beginning following Steps 2-4
+        story_prompt = f"The child has chosen the topic: {topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. Then invite the child to continue the story without giving them any options."
         story_response = llm_provider.generate_response(story_prompt)
         session_data.storyParts.append(story_response)
         
@@ -85,41 +85,58 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
             sessionData=session_data
         )
     
-    # Story is in progress
+    # Story is in progress (Steps 5-6)
     else:
         # Add user's contribution to story
         session_data.storyParts.append(f"User: {user_message}")
         
-        # Provide grammar feedback if needed
+        # Provide grammar feedback if needed (Step 5)
         grammar_feedback = llm_provider.provide_grammar_feedback(user_message)
         
-        # Generate next part of story
+        # Generate next part of story (Steps 2-4 repeated)
         story_context = "\n".join(session_data.storyParts[-3:])  # Last 3 parts for context
-        story_prompt = f"Continue story about {session_data.topic}. Previous context: {story_context}"
-        story_response = llm_provider.generate_response(story_prompt)
         
-        # Add grammar feedback if available
-        if grammar_feedback:
-            story_response = grammar_feedback + "\n\n" + story_response
-        
-        session_data.storyParts.append(story_response)
-        session_data.currentStep += 1
-        
-        # Check if story should end and include vocab question
-        vocab_question = None
-        if session_data.currentStep >= 4:  # End after 4 exchanges
-            # Extract vocabulary words from the story
+        # Check if story should end (after 4 exchanges)
+        if session_data.currentStep >= 4:
+            # End the story (Step 7)
+            story_prompt = f"End the story about {session_data.topic}. Previous context: {story_context}. Write a final paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. End the story with a satisfying conclusion - do not ask the child to continue."
+            story_response = llm_provider.generate_response(story_prompt)
+            
+            # Add grammar feedback if available
+            if grammar_feedback:
+                story_response = grammar_feedback + "\n\n" + story_response
+            
+            session_data.storyParts.append(story_response)
+            session_data.isComplete = True
+            
+            # Start vocabulary questions (Step 8)
             vocab_words = llm_provider.extract_vocabulary_words(story_response)
+            vocab_question = None
             if vocab_words:
                 vocab_word = vocab_words[0]  # Use first vocabulary word
                 vocab_question = llm_provider.generate_vocabulary_question(vocab_word, story_response)
-                session_data.isComplete = True
-        
-        return ChatResponse(
-            response=story_response,
-            vocabQuestion=VocabQuestion(**vocab_question) if vocab_question else None,
-            sessionData=session_data
-        )
+            
+            return ChatResponse(
+                response=story_response,
+                vocabQuestion=VocabQuestion(**vocab_question) if vocab_question else None,
+                sessionData=session_data
+            )
+        else:
+            # Continue story (Steps 2-4 repeated)
+            story_prompt = f"Continue the story about {session_data.topic}. Previous context: {story_context}. Write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. Then invite the child to continue the story without giving them any options. Keep this a short story - try to end it before it goes over 300 words total."
+            story_response = llm_provider.generate_response(story_prompt)
+            
+            # Add grammar feedback if available
+            if grammar_feedback:
+                story_response = grammar_feedback + "\n\n" + story_response
+            
+            session_data.storyParts.append(story_response)
+            session_data.currentStep += 1
+            
+            return ChatResponse(
+                response=story_response,
+                sessionData=session_data
+            )
 
 async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatResponse:
     """Handle fun facts mode interactions"""
@@ -132,7 +149,7 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
         session_data.factsShown = 0
         
         # Generate first fact
-        fact_prompt = f"Generate a fun fact about: {topic}"
+        fact_prompt = f"Generate a fun fact about: {topic}. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words using **word** format. End with relevant emojis that match the topic."
         fact_response = llm_provider.generate_response(fact_prompt)
         session_data.currentFact = fact_response
         session_data.factsShown += 1
@@ -154,7 +171,7 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
     else:
         if session_data.factsShown < 3:  # Show 3 facts per topic
             # Generate another fact
-            fact_prompt = f"Generate a different fun fact about: {session_data.topic}"
+            fact_prompt = f"Generate a different fun fact about: {session_data.topic}. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words using **word** format. End with relevant emojis that match the topic."
             fact_response = llm_provider.generate_response(fact_prompt)
             session_data.currentFact = fact_response
             session_data.factsShown += 1
@@ -184,12 +201,15 @@ def extract_topic_from_message(message: str) -> str:
     
     # Topic mapping
     topic_keywords = {
-        "space": ["space", "planet", "star", "rocket", "astronaut", "jupiter", "mars"],
-        "animals": ["animal", "dog", "cat", "elephant", "lion", "whale", "bird"],
+        "space": ["space", "planet", "star", "rocket", "astronaut", "jupiter", "mars", "galaxy", "alien"],
+        "animals": ["animal", "dog", "cat", "elephant", "lion", "whale", "bird", "creature"],
         "inventions": ["invention", "science", "technology", "robot", "computer"],
         "sports": ["sport", "soccer", "football", "basketball", "tennis", "baseball"],
         "food": ["food", "cooking", "eat", "pizza", "ice cream", "fruit"],
-        "ocean": ["ocean", "sea", "fish", "shark", "whale", "coral", "water"]
+        "ocean": ["ocean", "sea", "fish", "shark", "whale", "coral", "water"],
+        "fantasy": ["fantasy", "magic", "magical", "dragon", "unicorn", "wizard", "fairy", "enchanted", "mystical"],
+        "mystery": ["mystery", "detective", "clue", "solve", "secret", "hidden"],
+        "adventure": ["adventure", "explore", "journey", "quest", "travel"]
     }
     
     for topic, keywords in topic_keywords.items():

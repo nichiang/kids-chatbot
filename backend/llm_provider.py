@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 from dotenv import load_dotenv
 import openai
+from generate_prompt import generate_prompt
 
 # Load environment variables from .env file
 load_dotenv()
@@ -18,6 +19,9 @@ class LLMProvider:
         self.api_key = os.getenv('OPENAI_API_KEY')
         self.model = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
         self.base_url = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
+        
+        # Generate the full prompt from spec files
+        self.system_prompt = generate_prompt()
         
         # Initialize OpenAI client
         if self.api_key:
@@ -39,7 +43,7 @@ class LLMProvider:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[
-                        {"role": "system", "content": "You are a friendly and playful English tutor for elementary school students (1st-3rd grade). Use simple language, be encouraging, and make learning fun. Bold important vocabulary words with **word** format."},
+                        {"role": "system", "content": self.system_prompt},
                         {"role": "user", "content": prompt}
                     ],
                     max_tokens=max_tokens,
@@ -85,41 +89,61 @@ What happens next in our story? Tell me how our hero begins their adventure!"""
         # Fact responses
         elif "fact" in prompt_lower:
             if "space" in prompt_lower:
-                return """🌌 Space — excellent choice, explorer! Here's an amazing space fact:
-
-Jupiter is so **enormous** that more than 1,300 Earths could fit inside it! Scientists still **investigate** Jupiter to learn about its powerful storms, like the Great Red Spot — a giant spinning storm that's been raging for hundreds of years. Space missions help us **discover** new facts about our solar system every day!"""
+                return """Jupiter is so **enormous** that more than 1,300 Earths could fit inside it! Scientists still **investigate** Jupiter to learn about its powerful storms, like the Great Red Spot — a giant spinning storm that's been raging for hundreds of years. Space missions help us **discover** new facts about our solar system every day! 🚀🪐✨"""
             
-            elif "animal" in prompt_lower:
-                return """🐾 Animals — great choice! Here's a fascinating animal fact:
-
-The blue whale is so **massive** that its heart alone weighs as much as a car! These **magnificent** creatures can **communicate** with each other across hundreds of miles using low-frequency sounds. Scientists still **study** these gentle giants to learn more about their amazing abilities!"""
+            elif "animal" in prompt_lower or "ocean" in prompt_lower:
+                return """The blue whale is so **massive** that its heart alone weighs as much as a car! These **magnificent** creatures can **communicate** with each other across hundreds of miles using low-frequency sounds. Scientists still **study** these gentle giants to learn more about their amazing abilities! 🐋🌊💙"""
                 
             else:
-                return """Awesome topic choice! Here's a cool fact:
-
-Did you know that honey never spoils? Archaeologists have found **ancient** honey in Egyptian tombs that's over 3,000 years old and still perfectly good to eat! The **unique** properties of honey help it **preserve** itself naturally forever!"""
+                return """Did you know that honey never spoils? Archaeologists have found **ancient** honey in Egyptian tombs that's over 3,000 years old and still perfectly good to eat! The **unique** properties of honey help it **preserve** itself naturally forever! 🍯✨🏺"""
         
         else:
             return "I'm here to help with stories and fun facts! What would you like to explore?"
 
     def generate_vocabulary_question(self, word: str, context: str) -> Dict:
-        """Generate vocabulary questions"""
+        """Generate vocabulary questions following Step 8 format"""
         if self.client and self.api_key:
             try:
-                prompt = f"""Create a multiple choice vocabulary question for the word "{word}" used in this context: "{context}"
+                # Extract just the sentence containing the word
+                import re
+                # Split on sentence-ending punctuation while preserving it
+                sentences = re.split(r'([.!?])', context)
+                sentence_with_word = None
+                
+                # Reconstruct sentences properly
+                for i in range(0, len(sentences) - 1, 2):
+                    if i + 1 < len(sentences):
+                        full_sentence = sentences[i] + sentences[i + 1]
+                        if f"**{word}**" in full_sentence:
+                            sentence_with_word = full_sentence.strip()
+                            break
+                
+                if not sentence_with_word:
+                    sentence_with_word = context  # Fallback to full context
+                
+                prompt = f"""Following Step 8 of the story process, create a vocabulary question for the word "{word}" from this sentence: "{sentence_with_word}"
 
-Generate a question in this exact format:
-- Question: What does the word **{word}** mean?
-- Show the sentence where it was used
-- 4 multiple choice answers (a, b, c, d) with one correct answer
-- Make it appropriate for 2nd-3rd grade students
+Create the question in this exact format:
+What does the word **{word}** mean?
 
-Return as JSON with: question, options (array of 4 strings), correctIndex (0-3)"""
+Show the sentence where it was used: "{sentence_with_word}"
+
+Then provide 4 multiple choice answers (a, b, c, d) with one correct answer and three distractors.
+Make it appropriate for 2nd-3rd grade students.
+
+Example format:
+{{
+  "question": "What does the word **courage** mean?\\n\\n\\"As Leo went forward, he felt a sense of **courage**.\\""
+  "options": ["a) being scared", "b) being brave", "c) being tired", "d) being hungry"],
+  "correctIndex": 1
+}}
+
+Return ONLY valid JSON with: question, options (array of 4 strings), correctIndex (0-3)"""
 
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[
-                        {"role": "system", "content": "You are creating vocabulary questions for elementary students. Always respond with valid JSON only."},
+                        {"role": "system", "content": self.system_prompt},
                         {"role": "user", "content": prompt}
                     ],
                     max_tokens=200,
@@ -136,70 +160,126 @@ Return as JSON with: question, options (array of 4 strings), correctIndex (0-3)"
             return self._get_fallback_vocab_question(word, context)
 
     def _get_fallback_vocab_question(self, word: str, context: str) -> Dict:
-        """Fallback vocabulary questions"""
+        """Fallback vocabulary questions with proper sentence extraction"""
+        # Extract just the sentence containing the word
+        import re
+        # Split on sentence-ending punctuation while preserving it
+        sentences = re.split(r'([.!?])', context)
+        sentence_with_word = None
+        
+        # Reconstruct sentences properly
+        for i in range(0, len(sentences) - 1, 2):
+            if i + 1 < len(sentences):
+                full_sentence = sentences[i] + sentences[i + 1]
+                if f"**{word}**" in full_sentence:
+                    sentence_with_word = full_sentence.strip()
+                    break
+        
+        if not sentence_with_word:
+            sentence_with_word = context  # Fallback to full context
+        
         vocab_questions = {
             "enormous": {
-                "question": f'What does the word **enormous** mean?\n"{context}"',
+                "question": f'What does the word **enormous** mean?\n\n"{sentence_with_word}"',
                 "options": ["a) very small", "b) very big", "c) very old", "d) very cold"],
                 "correctIndex": 1
             },
             "investigate": {
-                "question": f'What does the word **investigate** mean?\n"{context}"',
+                "question": f'What does the word **investigate** mean?\n\n"{sentence_with_word}"',
                 "options": ["a) to ignore", "b) to find out about", "c) to run away", "d) to eat"],
                 "correctIndex": 1
             },
             "discover": {
-                "question": f'What does the word **discover** mean?\n"{context}"',
+                "question": f'What does the word **discover** mean?\n\n"{sentence_with_word}"',
                 "options": ["a) to lose something", "b) to hide something", "c) to find something new", "d) to break something"],
                 "correctIndex": 2
             },
             "magnificent": {
-                "question": f'What does the word **magnificent** mean?\n"{context}"',
+                "question": f'What does the word **magnificent** mean?\n\n"{sentence_with_word}"',
                 "options": ["a) very small", "b) very boring", "c) very beautiful", "d) very scary"],
                 "correctIndex": 2
             },
             "ancient": {
-                "question": f'What does the word **ancient** mean?\n"{context}"',
+                "question": f'What does the word **ancient** mean?\n\n"{sentence_with_word}"',
                 "options": ["a) very new", "b) very old", "c) very fast", "d) very loud"],
                 "correctIndex": 1
             },
             "gleaming": {
-                "question": f'What does the word **gleaming** mean?\n"{context}"',
+                "question": f'What does the word **gleaming** mean?\n\n"{sentence_with_word}"',
                 "options": ["a) very dirty", "b) very shiny", "c) very broken", "d) very small"],
                 "correctIndex": 1
             },
             "extraordinary": {
-                "question": f'What does the word **extraordinary** mean?\n"{context}"',
+                "question": f'What does the word **extraordinary** mean?\n\n"{sentence_with_word}"',
                 "options": ["a) very ordinary", "b) very boring", "c) very amazing", "d) very sad"],
                 "correctIndex": 2
             },
             "enchanted": {
-                "question": f'What does the word **enchanted** mean?\n"{context}"',
+                "question": f'What does the word **enchanted** mean?\n\n"{sentence_with_word}"',
                 "options": ["a) very scary", "b) very magical", "c) very dark", "d) very small"],
                 "correctIndex": 1
             },
             "legendary": {
-                "question": f'What does the word **legendary** mean?\n"{context}"',
+                "question": f'What does the word **legendary** mean?\n\n"{sentence_with_word}"',
                 "options": ["a) very new", "b) very small", "c) very famous", "d) very quiet"],
                 "correctIndex": 2
             },
             "massive": {
-                "question": f'What does the word **massive** mean?\n"{context}"',
+                "question": f'What does the word **massive** mean?\n\n"{sentence_with_word}"',
                 "options": ["a) very tiny", "b) very huge", "c) very fast", "d) very quiet"],
                 "correctIndex": 1
             },
             "communicate": {
-                "question": f'What does the word **communicate** mean?\n"{context}"',
+                "question": f'What does the word **communicate** mean?\n\n"{sentence_with_word}"',
                 "options": ["a) to be silent", "b) to talk or share", "c) to run away", "d) to eat food"],
+                "correctIndex": 1
+            },
+            "courage": {
+                "question": f'What does the word **courage** mean?\n\n"{sentence_with_word}"',
+                "options": ["a) being scared", "b) being brave", "c) being tired", "d) being hungry"],
+                "correctIndex": 1
+            },
+            "curious": {
+                "question": f'What does the word **curious** mean?\n\n"{sentence_with_word}"',
+                "options": ["a) wanting to know more", "b) feeling sleepy", "c) being angry", "d) being quiet"],
+                "correctIndex": 0
+            },
+            "suspicious": {
+                "question": f'What does the word **suspicious** mean?\n\n"{sentence_with_word}"',
+                "options": ["a) very happy", "b) very loud", "c) seeming strange or wrong", "d) very bright"],
+                "correctIndex": 2
+            },
+            "unique": {
+                "question": f'What does the word **unique** mean?\n\n"{sentence_with_word}"',
+                "options": ["a) very common", "b) one of a kind", "c) very old", "d) very small"],
+                "correctIndex": 1
+            },
+            "preserve": {
+                "question": f'What does the word **preserve** mean?\n\n"{sentence_with_word}"',
+                "options": ["a) to throw away", "b) to keep safe", "c) to break", "d) to hide"],
+                "correctIndex": 1
+            },
+            "study": {
+                "question": f'What does the word **study** mean?\n\n"{sentence_with_word}"',
+                "options": ["a) to ignore", "b) to learn about", "c) to forget", "d) to destroy"],
                 "correctIndex": 1
             }
         }
         
-        return vocab_questions.get(word.lower(), {
-            "question": f'What does the word **{word}** mean?\n"{context}"',
-            "options": ["a) option 1", "b) option 2", "c) option 3", "d) option 4"],
-            "correctIndex": 0
-        })
+        # Generate reasonable definitions for unknown words
+        if word.lower() not in vocab_questions:
+            return {
+                "question": f'What does the word **{word}** mean?\n\n"{sentence_with_word}"',
+                "options": [
+                    f"a) something related to {word}",
+                    f"b) the opposite of {word}",
+                    f"c) a type of {word}",
+                    f"d) similar to {word}"
+                ],
+                "correctIndex": 0
+            }
+        
+        return vocab_questions.get(word.lower())
 
     def extract_vocabulary_words(self, text: str) -> List[str]:
         """Extract vocabulary words from text (words between ** markers)"""
@@ -208,20 +288,26 @@ Return as JSON with: question, options (array of 4 strings), correctIndex (0-3)"
         return words
 
     def provide_grammar_feedback(self, user_text: str) -> Optional[str]:
-        """Provide grammar feedback"""
+        """Provide grammar feedback following Step 5 of the story process"""
         if self.client and self.api_key:
             try:
-                prompt = f"""As a friendly English tutor for elementary students, provide ONE brief grammar suggestion for this sentence if needed: "{user_text}"
+                prompt = f"""As a friendly English tutor for elementary students, analyze this text: "{user_text}"
 
-If the grammar is correct, return "CORRECT".
+Following Step 5 of the story process, if there are any grammatical errors or if this is an incomplete sentence, explain what a better written sentence would be. If there is better vocabulary to use, suggest it. Be as brief as possible.
+
+If the grammar is correct and complete, return "CORRECT".
 If there's a suggestion, provide it in this format: "You could make that sentence even better by saying '[improved version]'. [Brief explanation]."
+
+Examples:
+- For "practiced." → "You could make that sentence even better by saying 'They practiced hard for the next game.' This gives us more detail about what happened!"
+- For "He go to the store." → "You could make that sentence even better by saying 'He went to the store.' We use 'went' for past actions!"
 
 Keep it encouraging and simple for 2nd-3rd graders."""
 
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[
-                        {"role": "system", "content": "You are a friendly English tutor. Be encouraging and keep suggestions brief."},
+                        {"role": "system", "content": self.system_prompt},
                         {"role": "user", "content": prompt}
                     ],
                     max_tokens=100,
@@ -239,8 +325,18 @@ Keep it encouraging and simple for 2nd-3rd graders."""
 
     def _get_fallback_grammar_feedback(self, user_text: str) -> Optional[str]:
         """Fallback grammar suggestions"""
-        user_lower = user_text.lower()
+        user_lower = user_text.lower().strip()
         
+        # Check for incomplete sentences (single words or very short fragments)
+        if len(user_text.split()) <= 2 and not user_text.endswith("!") and not user_text.endswith("?"):
+            if user_lower == "practiced." or user_lower == "practiced":
+                return "You could make that sentence even better by saying 'They practiced hard for the next game.' This gives us more detail about what happened!"
+            elif user_lower in ["ran.", "ran", "walked.", "walked", "played.", "played"]:
+                return f"You could make that sentence even better by saying 'They {user_lower.replace('.', '')} together.' This tells us more about what happened!"
+            elif len(user_text.split()) == 1:
+                return f"You could make that sentence even better by adding more details! Try something like 'They {user_text.replace('.', '')} hard to get better.'"
+        
+        # Check for common grammar errors
         if user_lower.startswith("she find"):
             return "You could make that sentence even better by saying 'She discovers' or 'She finds'. The word 'discovers' sounds more exciting for an adventure story!"
         
@@ -249,6 +345,9 @@ Keep it encouraging and simple for 2nd-3rd graders."""
         
         if user_lower.startswith("he go"):
             return "You could make that sentence even better by saying 'He goes' or 'He went'. This makes the sentence sound more complete!"
+        
+        if user_lower.startswith("they go"):
+            return "You could make that sentence even better by saying 'They go' or 'They went'. This makes the sentence sound more complete!"
         
         return None
 

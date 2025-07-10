@@ -78,7 +78,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const bubble = document.createElement("div");
         bubble.className = "chat-bubble";
-        bubble.textContent = text;
+        
+        // Replace **word** with colored spans for vocabulary highlighting
+        const processedText = text.replace(/\*\*(.*?)\*\*/g, '<span class="vocab-word">$1</span>');
+        bubble.innerHTML = processedText;
 
         msgWrapper.appendChild(avatar);
         msgWrapper.appendChild(bubble);
@@ -103,7 +106,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const bubble = document.createElement("div");
         bubble.className = "chat-bubble";
-        bubble.textContent = question;
+        
+        // Replace **word** with colored spans for vocabulary highlighting
+        const processedQuestion = question.replace(/\*\*(.*?)\*\*/g, '<span class="vocab-word">$1</span>');
+        bubble.innerHTML = processedQuestion;
 
         questionWrapper.appendChild(avatar);
         questionWrapper.appendChild(bubble);
@@ -178,6 +184,67 @@ document.addEventListener("DOMContentLoaded", function () {
         setTimeout(() => {
             vocabContainer.remove();
         }, 1000);
+
+        // Continue fun facts flow automatically
+        if (currentMode === 'funfacts') {
+            setTimeout(() => {
+                continueAfterVocab();
+            }, 2000);
+        }
+    }
+
+    // Continue fun facts flow after vocabulary question
+    async function continueAfterVocab() {
+        try {
+            // Show thinking message
+            appendMessage("bot", "Let me share another cool fact...");
+
+            // Send continue request to backend
+            const response = await fetch("http://localhost:8000/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ 
+                    message: "continue", // Signal to continue
+                    mode: currentMode,
+                    sessionData: sessionData[currentMode]
+                })
+            });
+
+            const data = await response.json();
+            
+            // Remove thinking message
+            chatLog.removeChild(chatLog.lastChild);
+            
+            // Handle response
+            if (data.response) {
+                appendMessage("bot", data.response);
+            }
+            
+            // Update session data
+            if (data.sessionData) {
+                sessionData[currentMode] = data.sessionData;
+            }
+            
+            // Handle vocabulary questions
+            if (data.vocabQuestion) {
+                setTimeout(() => {
+                    appendVocabQuestion(
+                        data.vocabQuestion.question,
+                        data.vocabQuestion.options,
+                        data.vocabQuestion.correctIndex
+                    );
+                }, 1000);
+            }
+
+        } catch (err) {
+            // Remove thinking message if it exists
+            if (chatLog.lastChild && chatLog.lastChild.textContent.includes("thinking")) {
+                chatLog.removeChild(chatLog.lastChild);
+            }
+            appendMessage("bot", "Sorry, I'm having trouble continuing right now. Please try again!");
+        }
     }
 
     // Handle form submission
@@ -214,6 +281,11 @@ document.addEventListener("DOMContentLoaded", function () {
             // Handle response based on mode
             if (data.response) {
                 appendMessage("bot", data.response);
+            }
+            
+            // Update session data with backend response
+            if (data.sessionData) {
+                sessionData[currentMode] = data.sessionData;
             }
             
             // Handle vocabulary questions
