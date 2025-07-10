@@ -87,6 +87,31 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
             sessionData=session_data
         )
     
+    # Check if story is already complete - show vocabulary questions
+    elif session_data.isComplete:
+        # Story is done, now show vocabulary questions
+        all_story_text = " ".join(session_data.storyParts)
+        vocab_words = llm_provider.extract_vocabulary_words(all_story_text)
+        vocab_question = None
+        if vocab_words:
+            vocab_word = select_new_vocab_word(vocab_words, session_data.askedVocabWords)
+            if vocab_word:
+                session_data.askedVocabWords.append(vocab_word)
+                vocab_question = llm_provider.generate_vocabulary_question(vocab_word, all_story_text)
+        
+        if vocab_question:
+            return ChatResponse(
+                response="Great story! Now let's test your vocabulary:",
+                vocabQuestion=VocabQuestion(**vocab_question),
+                sessionData=session_data
+            )
+        else:
+            # No more vocabulary words to ask about
+            return ChatResponse(
+                response="Wonderful story! You've mastered all the vocabulary words. Would you like to write another story?",
+                sessionData=session_data
+            )
+    
     # Story is in progress (Steps 5-6)
     else:
         # Add user's contribution to story
@@ -113,18 +138,12 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
             session_data.storyParts.append(story_response)
             session_data.isComplete = True
             
-            # Start vocabulary questions (Step 8)
-            vocab_words = llm_provider.extract_vocabulary_words(story_response)
-            vocab_question = None
-            if vocab_words:
-                vocab_word = select_new_vocab_word(vocab_words, session_data.askedVocabWords)
-                if vocab_word:
-                    session_data.askedVocabWords.append(vocab_word)
-                    vocab_question = llm_provider.generate_vocabulary_question(vocab_word, story_response)
+            # DO NOT send vocabulary questions immediately with story ending
+            # They will be sent in a follow-up interaction after user sees "The end!"
             
             return ChatResponse(
                 response=story_response,
-                vocabQuestion=VocabQuestion(**vocab_question) if vocab_question else None,
+                vocabQuestion=None,  # No vocab question with story ending
                 sessionData=session_data
             )
         else:

@@ -295,6 +295,52 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    // Trigger vocabulary questions after story completion
+    async function triggerVocabularyQuestions() {
+        try {
+            console.log("Sending vocab trigger request...");
+            
+            const response = await fetch("http://localhost:8000/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ 
+                    message: "start vocabulary", // Trigger vocabulary questions
+                    mode: currentMode,
+                    sessionData: sessionData[currentMode]
+                })
+            });
+
+            const data = await response.json();
+            
+            // Handle response
+            if (data.response) {
+                appendMessage("bot", data.response);
+            }
+            
+            // Update session data
+            if (data.sessionData) {
+                sessionData[currentMode] = data.sessionData;
+            }
+            
+            // Handle vocabulary questions
+            if (data.vocabQuestion) {
+                setTimeout(() => {
+                    appendVocabQuestion(
+                        data.vocabQuestion.question,
+                        data.vocabQuestion.options,
+                        data.vocabQuestion.correctIndex
+                    );
+                }, 1000);
+            }
+
+        } catch (err) {
+            console.error("Error triggering vocabulary questions:", err);
+            appendMessage("bot", "Let's move on to some vocabulary questions!");
+        }
+    }
+
     // Continue fun facts flow after vocabulary question
     async function continueAfterVocab() {
         try {
@@ -412,6 +458,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (data.sessionData.topic) {
                     console.log(`Topic detected: ${data.sessionData.topic}`);
                     switchThemeForTopic(data.sessionData.topic);
+                }
+                
+                // Auto-trigger vocabulary questions when story is complete
+                if (currentMode === 'storywriting' && data.sessionData.isComplete && !data.vocabQuestion) {
+                    console.log("Story completed! Auto-triggering vocabulary questions...");
+                    // Wait a bit for user to read "The end!" then trigger vocab
+                    setTimeout(() => {
+                        triggerVocabularyQuestions();
+                    }, 2000);
                 }
             }
             
