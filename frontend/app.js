@@ -254,23 +254,25 @@ document.addEventListener("DOMContentLoaded", function () {
         // Disable all buttons
         Array.from(buttonsContainer.children).forEach(btn => btn.disabled = true);
 
-        // Highlight selected button
+        // Highlight selected button and maintain its styling
         const selectedButton = buttonsContainer.children[selectedIndex];
         selectedButton.classList.add("selected");
 
         // Add checkmark to correct answer
         const correctButton = buttonsContainer.children[correctIndex];
         if (selectedIndex === correctIndex) {
+            // User selected correct answer - keep purple selected style
             const checkmark = document.createElement("span");
             checkmark.className = "checkmark";
             checkmark.textContent = "✔";
             selectedButton.appendChild(checkmark);
         } else {
+            // User selected wrong answer - show correct answer in green
             const checkmark = document.createElement("span");
             checkmark.className = "checkmark";
             checkmark.textContent = "✔";
             correctButton.appendChild(checkmark);
-            correctButton.style.background = "#2cb67d";
+            correctButton.classList.add("correct");
         }
 
         // Show user's selection
@@ -342,6 +344,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     currentMode === 'funfacts' || 
                     (currentMode === 'storywriting' && data.sessionData && data.sessionData.isComplete);
                 
+                console.log(`Vocab question received. Mode: ${currentMode}, Story complete: ${data.sessionData?.isComplete}, Should show: ${shouldShowVocabQuestion}`);
+                
                 if (shouldShowVocabQuestion) {
                     setTimeout(() => {
                         appendVocabQuestion(
@@ -350,6 +354,8 @@ document.addEventListener("DOMContentLoaded", function () {
                             data.vocabQuestion.correctIndex
                         );
                     }, 1000);
+                } else {
+                    console.log("Vocab question suppressed - story not complete yet");
                 }
             }
 
@@ -418,6 +424,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     currentMode === 'funfacts' || 
                     (currentMode === 'storywriting' && data.sessionData && data.sessionData.isComplete);
                 
+                console.log(`Vocab question received. Mode: ${currentMode}, Story complete: ${data.sessionData?.isComplete}, Should show: ${shouldShowVocabQuestion}`);
+                
                 if (shouldShowVocabQuestion) {
                     setTimeout(() => {
                         appendVocabQuestion(
@@ -426,6 +434,8 @@ document.addEventListener("DOMContentLoaded", function () {
                             data.vocabQuestion.correctIndex
                         );
                     }, 1000);
+                } else {
+                    console.log("Vocab question suppressed - story not complete yet");
                 }
             }
 

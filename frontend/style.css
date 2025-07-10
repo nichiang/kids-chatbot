@@ -311,6 +311,13 @@ body.space-bg {
     box-shadow: 0 0 0 3px #ffe06655;
 }
 
+/* Correct answer styling when not selected */
+.answer-button:disabled.correct {
+    background: #2cb67d !important;
+    border: 2px solid #ffe066 !important;
+    color: #fff !important;
+}
+
 /* Vocabulary question container */
 .vocab-question-container {
     margin-bottom: 16px;

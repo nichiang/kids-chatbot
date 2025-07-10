@@ -30,6 +30,7 @@ class SessionData(BaseModel):
     factsShown: int = 0
     currentFact: Optional[str] = None
     allFacts: List[str] = []
+    askedVocabWords: List[str] = []  # Track vocabulary words that have been asked
 
 class ChatRequest(BaseModel):
     message: str
@@ -77,7 +78,7 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
         session_data.currentStep = 2  # Moving to Step 2 after topic selection
         
         # Generate story beginning following Steps 2-4
-        story_prompt = f"The child has chosen the topic: {topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. Then invite the child to continue the story without giving them any options."
+        story_prompt = f"The child has chosen the topic: {topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."
         story_response = llm_provider.generate_response(story_prompt)
         session_data.storyParts.append(story_response)
         
@@ -97,10 +98,12 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
         # Generate next part of story (Steps 2-4 repeated)
         story_context = "\n".join(session_data.storyParts[-3:])  # Last 3 parts for context
         
-        # Check if story should end (after 4 exchanges)
-        if session_data.currentStep >= 4:
+        # Check if story should end (minimum 2 exchanges, maximum 5, or if story is getting long)
+        total_story_length = len(' '.join(session_data.storyParts))
+        should_end_story = (session_data.currentStep >= 3 and total_story_length > 400) or session_data.currentStep >= 6
+        if should_end_story:
             # End the story (Step 7)
-            story_prompt = f"End the story about {session_data.topic}. Previous context: {story_context}. Write a final paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. End the story with a satisfying conclusion - do not ask the child to continue."
+            story_prompt = f"End the story about {session_data.topic}. Previous context: {story_context}. Write a final paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. End the story with a satisfying conclusion and add 'The end!' at the very end. DO NOT ask the child to continue. DO NOT include vocabulary questions - those will be handled separately."
             story_response = llm_provider.generate_response(story_prompt)
             
             # Add grammar feedback if available
@@ -114,8 +117,10 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
             vocab_words = llm_provider.extract_vocabulary_words(story_response)
             vocab_question = None
             if vocab_words:
-                vocab_word = vocab_words[0]  # Use first vocabulary word
-                vocab_question = llm_provider.generate_vocabulary_question(vocab_word, story_response)
+                vocab_word = select_new_vocab_word(vocab_words, session_data.askedVocabWords)
+                if vocab_word:
+                    session_data.askedVocabWords.append(vocab_word)
+                    vocab_question = llm_provider.generate_vocabulary_question(vocab_word, story_response)
             
             return ChatResponse(
                 response=story_response,
@@ -124,7 +129,7 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
             )
         else:
             # Continue story (Steps 2-4 repeated)
-            story_prompt = f"Continue the story about {session_data.topic}. Previous context: {story_context}. Write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. Then invite the child to continue the story without giving them any options. Keep this a short story - try to end it before it goes over 300 words total."
+            story_prompt = f"Continue the story about {session_data.topic}. Previous context: {story_context}. Write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. Then invite the child to continue the story without giving them any options. Keep this a short story - try to end it before it goes over 300 words total. DO NOT include vocabulary questions - those will be handled separately."
             story_response = llm_provider.generate_response(story_prompt)
             
             # Add grammar feedback if available
@@ -160,8 +165,10 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
         vocab_words = llm_provider.extract_vocabulary_words(fact_response)
         vocab_question = None
         if vocab_words:
-            vocab_word = vocab_words[0]  # Use first vocabulary word
-            vocab_question = llm_provider.generate_vocabulary_question(vocab_word, fact_response)
+            vocab_word = select_new_vocab_word(vocab_words, session_data.askedVocabWords)
+            if vocab_word:
+                session_data.askedVocabWords.append(vocab_word)
+                vocab_question = llm_provider.generate_vocabulary_question(vocab_word, fact_response)
         
         return ChatResponse(
             response=fact_response,
@@ -184,8 +191,10 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
             vocab_words = llm_provider.extract_vocabulary_words(fact_response)
             vocab_question = None
             if vocab_words:
-                vocab_word = vocab_words[0]
-                vocab_question = llm_provider.generate_vocabulary_question(vocab_word, fact_response)
+                vocab_word = select_new_vocab_word(vocab_words, session_data.askedVocabWords)
+                if vocab_word:
+                    session_data.askedVocabWords.append(vocab_word)
+                    vocab_question = llm_provider.generate_vocabulary_question(vocab_word, fact_response)
             
             return ChatResponse(
                 response=fact_response,
@@ -193,11 +202,57 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 sessionData=session_data
             )
         else:
-            # Ask if they want to switch topics
-            return ChatResponse(
-                response=f"We've explored some great {session_data.topic} facts! Would you like to learn about a different topic? Try animals, space, inventions, or something else!",
-                sessionData=session_data
-            )
+            # Check if user wants to switch to a new topic
+            # Don't extract topic from "continue" messages - these are continuation signals, not topic changes
+            if user_message.lower().strip() == "continue":
+                new_topic = None  # Ignore topic extraction for continue signals
+            else:
+                new_topic = extract_topic_from_message(user_message)
+            
+            # If a new topic is detected and it's different from current topic, switch topics
+            if new_topic and new_topic != session_data.topic:
+                # Reset session state for new topic
+                session_data.topic = new_topic
+                session_data.factsShown = 0
+                session_data.allFacts = []
+                session_data.currentFact = None
+                session_data.askedVocabWords = []  # Reset vocabulary words for new topic
+                
+                # Generate first fact for new topic
+                fact_prompt = f"Generate a fun fact about: {new_topic}. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words using **word** format. End with relevant emojis that match the topic."
+                fact_response = llm_provider.generate_response(fact_prompt)
+                session_data.currentFact = fact_response
+                session_data.allFacts.append(fact_response)
+                session_data.factsShown += 1
+                
+                # Generate vocabulary question
+                vocab_words = llm_provider.extract_vocabulary_words(fact_response)
+                vocab_question = None
+                if vocab_words:
+                    vocab_word = select_new_vocab_word(vocab_words, session_data.askedVocabWords)
+                    if vocab_word:
+                        session_data.askedVocabWords.append(vocab_word)
+                        vocab_question = llm_provider.generate_vocabulary_question(vocab_word, fact_response)
+                
+                return ChatResponse(
+                    response=fact_response,
+                    vocabQuestion=VocabQuestion(**vocab_question) if vocab_question else None,
+                    sessionData=session_data
+                )
+            else:
+                # No new topic detected, ask if they want to switch topics
+                return ChatResponse(
+                    response=f"We've explored some great {session_data.topic} facts! Would you like to learn about a different topic? Try animals, space, inventions, or something else!",
+                    sessionData=session_data
+                )
+
+def select_new_vocab_word(vocab_words: List[str], asked_words: List[str]) -> Optional[str]:
+    """Select a vocabulary word that hasn't been asked yet"""
+    for word in vocab_words:
+        if word.lower() not in [asked.lower() for asked in asked_words]:
+            return word
+    # If all words have been asked, return the first one (shouldn't happen often)
+    return vocab_words[0] if vocab_words else None
 
 def extract_topic_from_message(message: str) -> str:
     """Extract topic from user message"""
