@@ -511,6 +511,7 @@ document.addEventListener("DOMContentLoaded", function () {
     
     // Current theme tracking
     let currentTheme = 'space';
+    let currentUIStyle = 'ui-professional'; // Default UI style
 
     function switchTheme(themeName) {
         // Only switch if it's actually a different theme
@@ -555,7 +556,40 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    // UI Style switching functionality
+    function switchUIStyle(styleName) {
+        // Only switch if it's actually a different style
+        if (currentUIStyle === styleName) return;
+        
+        // Remove all existing UI style classes
+        body.classList.remove('ui-professional', 'ui-fun', 'ui-whimsical');
+        
+        // Add new UI style class
+        body.classList.add(styleName);
+        
+        currentUIStyle = styleName;
+        console.log(`Switched to ${styleName} UI style`);
+        
+        // Save preference to localStorage
+        localStorage.setItem('preferredUIStyle', styleName);
+    }
+
+    // Load saved UI style preference
+    function loadUIStylePreference() {
+        const savedStyle = localStorage.getItem('preferredUIStyle');
+        if (savedStyle && ['ui-professional', 'ui-fun', 'ui-whimsical'].includes(savedStyle)) {
+            switchUIStyle(savedStyle);
+        } else {
+            // Set default style
+            switchUIStyle('ui-professional');
+        }
+    }
+
+    // Make UI style switching available globally for testing
+    window.switchUIStyle = switchUIStyle;
+
 
     // Initialize the app
+    loadUIStylePreference(); // Load saved UI style
     switchMode('storywriting');
 });

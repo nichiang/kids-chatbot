@@ -11,6 +11,13 @@
         <button id="fun-facts-btn" class="mode-button">Fun Facts</button>
     </div>
 
+    <!-- UI Style Toggle Buttons (for testing) -->
+    <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; display: flex; gap: 5px;">
+        <button onclick="switchUIStyle('ui-professional')" style="padding: 8px 12px; font-size: 0.8rem; border: 1px solid #ccc; background: rgba(255,255,255,0.9); color: #333; border-radius: 4px; cursor: pointer;">Professional</button>
+        <button onclick="switchUIStyle('ui-fun')" style="padding: 8px 12px; font-size: 0.8rem; border: 1px solid #ccc; background: rgba(255,255,255,0.9); color: #333; border-radius: 4px; cursor: pointer;">Fun</button>
+        <button onclick="switchUIStyle('ui-whimsical')" style="padding: 8px 12px; font-size: 0.8rem; border: 1px solid #ccc; background: rgba(255,255,255,0.9); color: #333; border-radius: 4px; cursor: pointer;">Whimsical</button>
+    </div>
+
 
     <div id="chat-container" class="chat-container">
         <div id="chat-log" class="chat-log"></div>
