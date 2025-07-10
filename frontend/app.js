@@ -283,10 +283,7 @@ document.addEventListener("DOMContentLoaded", function () {
         
         appendMessage("bot", feedback);
 
-        // Remove vocab container
-        setTimeout(() => {
-            vocabContainer.remove();
-        }, 1000);
+        // Keep vocab container visible (don't remove it)
 
         // Continue fun facts flow automatically
         if (currentMode === 'funfacts') {
@@ -338,13 +335,22 @@ document.addEventListener("DOMContentLoaded", function () {
             
             // Handle vocabulary questions
             if (data.vocabQuestion) {
-                setTimeout(() => {
-                    appendVocabQuestion(
-                        data.vocabQuestion.question,
-                        data.vocabQuestion.options,
-                        data.vocabQuestion.correctIndex
-                    );
-                }, 1000);
+                // Only show vocabulary questions when appropriate:
+                // - In fun facts mode: always show them
+                // - In storywriting mode: only show when story is complete
+                const shouldShowVocabQuestion = 
+                    currentMode === 'funfacts' || 
+                    (currentMode === 'storywriting' && data.sessionData && data.sessionData.isComplete);
+                
+                if (shouldShowVocabQuestion) {
+                    setTimeout(() => {
+                        appendVocabQuestion(
+                            data.vocabQuestion.question,
+                            data.vocabQuestion.options,
+                            data.vocabQuestion.correctIndex
+                        );
+                    }, 1000);
+                }
             }
 
         } catch (err) {
@@ -405,13 +411,22 @@ document.addEventListener("DOMContentLoaded", function () {
             
             // Handle vocabulary questions
             if (data.vocabQuestion) {
-                setTimeout(() => {
-                    appendVocabQuestion(
-                        data.vocabQuestion.question,
-                        data.vocabQuestion.options,
-                        data.vocabQuestion.correctIndex
-                    );
-                }, 1000);
+                // Only show vocabulary questions when appropriate:
+                // - In fun facts mode: always show them
+                // - In storywriting mode: only show when story is complete
+                const shouldShowVocabQuestion = 
+                    currentMode === 'funfacts' || 
+                    (currentMode === 'storywriting' && data.sessionData && data.sessionData.isComplete);
+                
+                if (shouldShowVocabQuestion) {
+                    setTimeout(() => {
+                        appendVocabQuestion(
+                            data.vocabQuestion.question,
+                            data.vocabQuestion.options,
+                            data.vocabQuestion.correctIndex
+                        );
+                    }, 1000);
+                }
             }
 
         } catch (err) {
@@ -436,24 +451,17 @@ document.addEventListener("DOMContentLoaded", function () {
         // Only switch if it's actually a different theme
         if (currentTheme === themeName) return;
         
-        // Add fade effect during transition
-        body.style.opacity = '0.95';
+        // Create smooth crossfade effect
+        body.style.transition = 'all 2s ease-in-out';
         
-        setTimeout(() => {
-            // Remove all existing theme classes
-            body.classList.remove('space-theme', 'ocean-theme', 'fantasy-theme', 'adventure-theme', 'sports-theme', 'food-theme', 'space-bg');
-            
-            // Add new theme class
-            body.classList.add(`${themeName}-theme`);
-            
-            currentTheme = themeName;
-            console.log(`Automatically switched to ${themeName} theme`);
-            
-            // Restore opacity
-            setTimeout(() => {
-                body.style.opacity = '1';
-            }, 100);
-        }, 200);
+        // Remove all existing theme classes
+        body.classList.remove('space-theme', 'ocean-theme', 'fantasy-theme', 'adventure-theme', 'sports-theme', 'food-theme', 'space-bg');
+        
+        // Add new theme class
+        body.classList.add(`${themeName}-theme`);
+        
+        currentTheme = themeName;
+        console.log(`Automatically switched to ${themeName} theme`);
     }
 
     // Map topics to themes

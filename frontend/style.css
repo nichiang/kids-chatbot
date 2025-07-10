@@ -6,7 +6,11 @@ body {
     color: #fff;
     position: relative;
     overflow-x: hidden;
-    transition: all 5s ease-in-out;
+    transition: background 3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body::before {
+    transition: all 3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Theme: Space (Default) */
@@ -115,30 +119,7 @@ body.food-theme {
     background: linear-gradient(135deg, #b8651a 0%, #d4751a 100%);
 }
 
-body.food-theme::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: 
-        /* Steam wisp 1 */
-        radial-gradient(ellipse 4px 15px at 20% 90%, rgba(255,255,255,0.3), rgba(255,255,255,0.1) 40%, transparent 60%),
-        radial-gradient(ellipse 3px 12px at 22% 80%, rgba(255,255,255,0.2), transparent 50%),
-        radial-gradient(ellipse 5px 18px at 18% 85%, rgba(255,255,255,0.25), rgba(255,255,255,0.05) 45%, transparent 65%),
-        
-        /* Steam wisp 2 */
-        radial-gradient(ellipse 4px 14px at 60% 95%, rgba(255,255,255,0.28), rgba(255,255,255,0.08) 45%, transparent 70%),
-        radial-gradient(ellipse 3px 11px at 58% 88%, rgba(255,255,255,0.22), transparent 55%),
-        radial-gradient(ellipse 6px 20px at 62% 92%, rgba(255,255,255,0.18), transparent 50%),
-        
-        /* Steam wisp 3 */
-        radial-gradient(ellipse 3px 13px at 80% 88%, rgba(255,255,255,0.25), rgba(255,255,255,0.1) 40%, transparent 60%),
-        radial-gradient(ellipse 5px 16px at 82% 93%, rgba(255,255,255,0.2), transparent 55%);
-    background-size: 300px 400px, 250px 350px, 350px 450px, 280px 380px, 240px 320px, 320px 420px, 260px 360px, 300px 400px;
-    opacity: 0.6;
-    z-index: 0;
-    pointer-events: none;
-    animation: steamRise 6s infinite ease-in-out;
-}
+/* No background effects for food theme - clean solid background only */
 
 /* Maintain compatibility with existing space-bg class */
 body.space-bg {
@@ -225,7 +206,6 @@ body.space-bg {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     margin: 0 12px;
 }
 
@@ -347,16 +327,22 @@ body.space-bg {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    border: 3px solid #2cb67d;
-    background: #fff;
     box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     order: 2;
 }
 
 .answer-button.selected {
-    background: #7f5af0;
-    border: 2px solid #ffe066;
-    color: #fff;
+    background: #7f5af0 !important;
+    border: 2px solid #ffe066 !important;
+    color: #fff !important;
+}
+
+/* Ensure selected state is maintained even when disabled */
+.answer-button.selected:disabled {
+    background: #7f5af0 !important;
+    border: 2px solid #ffe066 !important;
+    color: #fff !important;
+    box-shadow: 0 0 0 3px rgba(127, 90, 240, 0.3) !important;
 }
 
 .checkmark {
