@@ -303,8 +303,10 @@ document.addEventListener("DOMContentLoaded", function () {
             
             // Handle theme suggestions from backend
             if (data.suggestedTheme) {
-                console.log(`Backend suggested theme: ${data.suggestedTheme}`);
+                console.log(`Backend suggested theme: ${data.suggestedTheme}, current theme: ${currentTheme}, user manually selected: ${userManuallySelectedTheme}`);
                 handleTopicThemeSwitch(data.suggestedTheme);
+            } else {
+                console.log('No theme suggestion received from backend');
             }
             
             // Handle vocabulary questions
@@ -360,8 +362,10 @@ document.addEventListener("DOMContentLoaded", function () {
             
             // Handle theme suggestions from backend
             if (data.suggestedTheme) {
-                console.log(`Backend suggested theme: ${data.suggestedTheme}`);
+                console.log(`Backend suggested theme: ${data.suggestedTheme}, current theme: ${currentTheme}, user manually selected: ${userManuallySelectedTheme}`);
                 handleTopicThemeSwitch(data.suggestedTheme);
+            } else {
+                console.log('No theme suggestion received from backend');
             }
             
             // Handle vocabulary questions
@@ -449,8 +453,10 @@ document.addEventListener("DOMContentLoaded", function () {
             
             // Handle theme suggestions from backend
             if (data.suggestedTheme) {
-                console.log(`Backend suggested theme: ${data.suggestedTheme}`);
+                console.log(`Backend suggested theme: ${data.suggestedTheme}, current theme: ${currentTheme}, user manually selected: ${userManuallySelectedTheme}`);
                 handleTopicThemeSwitch(data.suggestedTheme);
+            } else {
+                console.log('No theme suggestion received from backend');
             }
             
             // Handle vocabulary questions
@@ -539,7 +545,7 @@ document.addEventListener("DOMContentLoaded", function () {
         
         // Don't auto-switch if user has manually selected a theme (unless it's initial load)
         if (isAutomatic && userManuallySelectedTheme && localStorage.getItem('userSelectedTheme')) {
-            console.log(`Auto-switch to ${themeName} skipped - user has manual preference`);
+            console.log(`Auto-switch to ${themeName} skipped - user has manual preference (userManuallySelectedTheme: ${userManuallySelectedTheme}, localStorage: ${localStorage.getItem('userSelectedTheme')})`);
             return;
         }
         
@@ -648,6 +654,8 @@ document.addEventListener("DOMContentLoaded", function () {
         if (suggestedTheme !== currentTheme) {
             console.log(`Topic/Theme "${topicOrTheme}" detected, switching to ${suggestedTheme} theme`);
             switchTheme(suggestedTheme, true); // Mark as automatic
+        } else {
+            console.log(`Topic/Theme "${topicOrTheme}" suggestion matches current theme ${currentTheme} - no switch needed`);
         }
     }
 
