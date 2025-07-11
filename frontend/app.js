@@ -539,14 +539,20 @@ document.addEventListener("DOMContentLoaded", function () {
     let currentTheme = 'theme-space'; // Default theme
     let userManuallySelectedTheme = false; // Track if user manually chose a theme
 
-    function switchTheme(themeName, isAutomatic = false) {
+    function switchTheme(themeName, isAutomatic = false, reason = 'manual') {
         // Only switch if it's actually a different theme
         if (currentTheme === themeName) return;
         
-        // Don't auto-switch if user has manually selected a theme (unless it's initial load)
-        if (isAutomatic && userManuallySelectedTheme && localStorage.getItem('userSelectedTheme')) {
-            console.log(`Auto-switch to ${themeName} skipped - user has manual preference (userManuallySelectedTheme: ${userManuallySelectedTheme}, localStorage: ${localStorage.getItem('userSelectedTheme')})`);
-            return;
+        // Smart auto-switching logic
+        if (isAutomatic) {
+            if (reason === 'topic') {
+                // Always allow topic-based theme switching (when user chooses story topics)
+                console.log(`Auto-switching to ${themeName} for topic selection - overriding manual preference`);
+            } else if (userManuallySelectedTheme && localStorage.getItem('userSelectedTheme')) {
+                // Block other automatic switching if user has manual preference
+                console.log(`Auto-switch to ${themeName} skipped - user has manual preference (userManuallySelectedTheme: ${userManuallySelectedTheme}, localStorage: ${localStorage.getItem('userSelectedTheme')})`);
+                return;
+            }
         }
         
         // Remove all existing theme classes
@@ -617,7 +623,7 @@ document.addEventListener("DOMContentLoaded", function () {
             // New user or no preference, randomly select Space or Ocean
             const initialThemes = ['theme-space', 'theme-ocean'];
             const randomTheme = initialThemes[Math.floor(Math.random() * initialThemes.length)];
-            switchTheme(randomTheme, true); // Mark as automatic
+            switchTheme(randomTheme, true, 'initial'); // Mark as automatic initial load
             console.log(`Welcome! Randomly selected ${randomTheme} as your starting theme`);
         }
     }
@@ -653,7 +659,7 @@ document.addEventListener("DOMContentLoaded", function () {
         
         if (suggestedTheme !== currentTheme) {
             console.log(`Topic/Theme "${topicOrTheme}" detected, switching to ${suggestedTheme} theme`);
-            switchTheme(suggestedTheme, true); // Mark as automatic
+            switchTheme(suggestedTheme, true, 'topic'); // Mark as automatic topic-based switch
         } else {
             console.log(`Topic/Theme "${topicOrTheme}" suggestion matches current theme ${currentTheme} - no switch needed`);
         }
