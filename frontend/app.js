@@ -495,19 +495,19 @@ document.addEventListener("DOMContentLoaded", function () {
         if (characterType === "bear") {
             // Map themes to individual bear character files
             const themeToCharacter = {
-                'theme-space': 'design/characterSheets/bearSpace.PNG',
-                'theme-fantasy': 'design/characterSheets/bearMagic.png',
-                'theme-sports': 'design/characterSheets/bearSports.png',
-                'theme-ocean': 'design/characterSheets/bearOcean.png',
-                'theme-food': 'design/characterSheets/bearCooking.png',
-                'theme-creative': 'design/characterSheets/bearArt.png',
-                'theme-elegant': 'design/characterSheets/bearMystery.png',
-                'theme-whimsical': 'design/characterSheets/bearMagic.png', // Use magic bear for whimsical
-                'theme-fun': 'design/characterSheets/bearSpace.PNG', // Default to space for now
-                'theme-animals': 'design/characterSheets/bearOcean.png' // Ocean bear for nature/animals
+                'theme-space': '../design/characterSheets/bearSpace.PNG',
+                'theme-fantasy': '../design/characterSheets/bearMagic.png',
+                'theme-sports': '../design/characterSheets/bearSports.png',
+                'theme-ocean': '../design/characterSheets/bearOcean.png',
+                'theme-food': '../design/characterSheets/bearCooking.png',
+                'theme-creative': '../design/characterSheets/bearArt.png',
+                'theme-elegant': '../design/characterSheets/bearMystery.png',
+                'theme-whimsical': '../design/characterSheets/bearMagic.png', // Use magic bear for whimsical
+                'theme-fun': '../design/characterSheets/bearSpace.PNG', // Default to space for now
+                'theme-animals': '../design/characterSheets/bearOcean.png' // Ocean bear for nature/animals
             };
 
-            const characterImage = themeToCharacter[theme] || 'design/characterSheets/bearSpace.PNG';
+            const characterImage = themeToCharacter[theme] || '../design/characterSheets/bearSpace.PNG';
             avatarElement.style.backgroundImage = `url('${characterImage}')`;
         } else {
             // For boy character, use a simple fallback for now
