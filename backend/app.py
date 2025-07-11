@@ -46,6 +46,7 @@ class ChatResponse(BaseModel):
     response: str
     vocabQuestion: Optional[VocabQuestion] = None
     sessionData: Optional[SessionData] = None
+    suggestedTheme: Optional[str] = None
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(chat_request: ChatRequest):
@@ -82,13 +83,41 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
         story_response = llm_provider.generate_response(story_prompt)
         session_data.storyParts.append(story_response)
         
+        # Get theme suggestion for this topic
+        suggested_theme = get_theme_suggestion(topic)
+        
         return ChatResponse(
             response=story_response,
-            sessionData=session_data
+            sessionData=session_data,
+            suggestedTheme=suggested_theme
         )
     
-    # Check if story is already complete - show vocabulary questions
+    # Check if story is already complete - handle vocabulary questions or new story
     elif session_data.isComplete:
+        # Check if user wants to start a new story
+        potential_new_topic = extract_topic_from_message(user_message)
+        if potential_new_topic and potential_new_topic != session_data.topic:
+            # User wants to start a new story - reset session data
+            session_data.topic = potential_new_topic
+            session_data.storyParts = []
+            session_data.currentStep = 2
+            session_data.isComplete = False
+            session_data.askedVocabWords = []
+            
+            # Generate story beginning for new topic
+            story_prompt = f"The child has chosen the topic: {potential_new_topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."
+            story_response = llm_provider.generate_response(story_prompt)
+            session_data.storyParts.append(story_response)
+            
+            # Get theme suggestion for new topic
+            suggested_theme = get_theme_suggestion(potential_new_topic)
+            
+            return ChatResponse(
+                response=story_response,
+                sessionData=session_data,
+                suggestedTheme=suggested_theme
+            )
+        
         # Story is done, now show vocabulary questions
         all_story_text = " ".join(session_data.storyParts)
         vocab_words = llm_provider.extract_vocabulary_words(all_story_text)
@@ -106,9 +135,10 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
                 sessionData=session_data
             )
         else:
-            # No more vocabulary words to ask about
+            # No more vocabulary words to ask about - offer to write another story
+            story_completion_prompt = f"Wonderful story! You've mastered all the vocabulary words. Would you like to write another story? Here are some fun ideas:\\n\\n🚀 Space adventures\\n🏰 Fantasy quests\\n⚽ Sports excitement\\n🦄 Magical creatures\\n🕵️ Mystery solving\\n🍕 Food adventures\\n🐾 Animal stories\\n🌊 Ocean explorations\\n\\nWhat sounds interesting to you?"
             return ChatResponse(
-                response="Wonderful story! You've mastered all the vocabulary words. Would you like to write another story?",
+                response=story_completion_prompt,
                 sessionData=session_data
             )
     
@@ -189,10 +219,14 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 session_data.askedVocabWords.append(vocab_word)
                 vocab_question = llm_provider.generate_vocabulary_question(vocab_word, fact_response)
         
+        # Get theme suggestion for this topic
+        suggested_theme = get_theme_suggestion(topic)
+        
         return ChatResponse(
             response=fact_response,
             vocabQuestion=VocabQuestion(**vocab_question) if vocab_question else None,
-            sessionData=session_data
+            sessionData=session_data,
+            suggestedTheme=suggested_theme
         )
     
     # Topic is set, continue with more facts
@@ -253,10 +287,14 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                         session_data.askedVocabWords.append(vocab_word)
                         vocab_question = llm_provider.generate_vocabulary_question(vocab_word, fact_response)
                 
+                # Get theme suggestion for new topic
+                suggested_theme = get_theme_suggestion(new_topic)
+                
                 return ChatResponse(
                     response=fact_response,
                     vocabQuestion=VocabQuestion(**vocab_question) if vocab_question else None,
-                    sessionData=session_data
+                    sessionData=session_data,
+                    suggestedTheme=suggested_theme
                 )
             else:
                 # No new topic detected, ask if they want to switch topics
@@ -297,6 +335,22 @@ def extract_topic_from_message(message: str) -> str:
     # Default topic extraction - use first word that looks like a topic
     words = message.split()
     return words[0] if words else "adventure"
+
+def get_theme_suggestion(topic: str) -> str:
+    """Map topic to theme suggestion for frontend"""
+    topic_to_theme = {
+        'fantasy': 'theme-fantasy',
+        'sports': 'theme-sports', 
+        'food': 'theme-food',
+        'animals': 'theme-animals',
+        'ocean': 'theme-ocean',
+        'space': 'theme-space',
+        'mystery': 'theme-elegant',
+        'adventure': 'theme-elegant',
+        'inventions': 'theme-space'  # Technical topics default to space
+    }
+    
+    return topic_to_theme.get(topic.lower(), 'theme-space')
 
 # Health check endpoint
 @app.get("/health")

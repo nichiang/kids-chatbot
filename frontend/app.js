@@ -324,6 +324,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 sessionData[currentMode] = data.sessionData;
             }
             
+            // Handle theme suggestions from backend
+            if (data.suggestedTheme) {
+                console.log(`Backend suggested theme: ${data.suggestedTheme}`);
+                handleTopicThemeSwitch(data.suggestedTheme);
+            }
+            
             // Handle vocabulary questions
             if (data.vocabQuestion) {
                 setTimeout(() => {
@@ -373,6 +379,12 @@ document.addEventListener("DOMContentLoaded", function () {
             // Update session data
             if (data.sessionData) {
                 sessionData[currentMode] = data.sessionData;
+            }
+            
+            // Handle theme suggestions from backend
+            if (data.suggestedTheme) {
+                console.log(`Backend suggested theme: ${data.suggestedTheme}`);
+                handleTopicThemeSwitch(data.suggestedTheme);
             }
             
             // Handle vocabulary questions
@@ -458,6 +470,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             }
             
+            // Handle theme suggestions from backend
+            if (data.suggestedTheme) {
+                console.log(`Backend suggested theme: ${data.suggestedTheme}`);
+                handleTopicThemeSwitch(data.suggestedTheme);
+            }
+            
             // Handle vocabulary questions
             if (data.vocabQuestion) {
                 // Only show vocabulary questions when appropriate:
@@ -497,10 +515,17 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Unified Theme System
     let currentTheme = 'theme-space'; // Default theme
+    let userManuallySelectedTheme = false; // Track if user manually chose a theme
 
-    function switchTheme(themeName) {
+    function switchTheme(themeName, isAutomatic = false) {
         // Only switch if it's actually a different theme
         if (currentTheme === themeName) return;
+        
+        // Don't auto-switch if user has manually selected a theme (unless it's initial load)
+        if (isAutomatic && userManuallySelectedTheme && localStorage.getItem('userSelectedTheme')) {
+            console.log(`Auto-switch to ${themeName} skipped - user has manual preference`);
+            return;
+        }
         
         // Remove all existing theme classes
         body.classList.remove('theme-space', 'theme-fantasy', 'theme-sports', 'theme-ocean', 'theme-whimsical', 'theme-fun', 'theme-food', 'theme-animals', 'theme-elegant', 'theme-creative');
@@ -509,22 +534,67 @@ document.addEventListener("DOMContentLoaded", function () {
         body.classList.add(themeName);
         
         currentTheme = themeName;
-        console.log(`Switched to ${themeName} theme`);
         
-        // Save preference to localStorage
-        localStorage.setItem('preferredTheme', themeName);
+        if (isAutomatic) {
+            console.log(`Auto-switched to ${themeName} theme`);
+        } else {
+            console.log(`Manually switched to ${themeName} theme`);
+            userManuallySelectedTheme = true;
+            localStorage.setItem('userSelectedTheme', 'true');
+            localStorage.setItem('preferredTheme', themeName);
+        }
     }
 
-    // Load saved theme preference
-    function loadThemePreference() {
+    // Random initial theme selection (Space or Ocean)
+    function loadInitialTheme() {
         const savedTheme = localStorage.getItem('preferredTheme');
-        const validThemes = ['theme-space', 'theme-fantasy', 'theme-sports', 'theme-ocean', 'theme-whimsical', 'theme-fun', 'theme-food', 'theme-animals', 'theme-elegant', 'theme-creative'];
+        const userHasPreference = localStorage.getItem('userSelectedTheme') === 'true';
         
-        if (savedTheme && validThemes.includes(savedTheme)) {
+        if (savedTheme && userHasPreference) {
+            // User has manually selected a theme before, use it
             switchTheme(savedTheme);
+            userManuallySelectedTheme = true;
         } else {
-            // Set default theme
-            switchTheme('theme-space');
+            // New user or no preference, randomly select Space or Ocean
+            const initialThemes = ['theme-space', 'theme-ocean'];
+            const randomTheme = initialThemes[Math.floor(Math.random() * initialThemes.length)];
+            switchTheme(randomTheme, true); // Mark as automatic
+            console.log(`Welcome! Randomly selected ${randomTheme} as your starting theme`);
+        }
+    }
+
+    // Handle automatic theme switching based on story topics (can accept topic or full theme name)
+    function handleTopicThemeSwitch(topicOrTheme) {
+        if (!topicOrTheme) return;
+        
+        // If it's already a full theme name (theme-*), use it directly
+        let suggestedTheme;
+        if (topicOrTheme.startsWith('theme-')) {
+            suggestedTheme = topicOrTheme;
+        } else {
+            // Map topic to theme
+            const topicThemeMap = {
+                'fantasy': 'theme-fantasy',
+                'sports': 'theme-sports', 
+                'food': 'theme-food',
+                'animals': 'theme-animals',
+                'ocean': 'theme-ocean',
+                'space': 'theme-space',
+                'creative': 'theme-creative',
+                'mystery': 'theme-elegant',
+                'adventure': 'theme-elegant',
+                'fun': 'theme-fun',
+                'whimsical': 'theme-whimsical',
+                'magical': 'theme-whimsical',
+                'inventions': 'theme-space' // Default technical topics to space
+            };
+            
+            suggestedTheme = topicThemeMap[topicOrTheme.toLowerCase()] || 'theme-space';
+        }
+        
+        if (suggestedTheme !== currentTheme) {
+            console.log(`Topic/Theme "${topicOrTheme}" detected, switching to ${suggestedTheme} theme`);
+            switchTheme(suggestedTheme, true); // Mark as automatic
         }
     }
 
@@ -533,6 +603,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // Initialize the app
-    loadThemePreference(); // Load saved theme
+    loadInitialTheme(); // Load initial theme (random Space/Ocean for new users)
     switchMode('storywriting');
 });
