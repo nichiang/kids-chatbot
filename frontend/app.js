@@ -490,38 +490,30 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const body = document.body;
 
-    // Character Avatar System
+    // Character Avatar System with Individual Images
     function setupCharacterAvatar(avatarElement, characterType, theme) {
-        // Map themes to character positions
-        const themeToPosition = {
-            'theme-space': { row: 0, col: 0 },      // Row 1, Col 1 (0-indexed)
-            'theme-fantasy': { row: 0, col: 1 },   // Row 1, Col 2
-            'theme-sports': { row: 0, col: 2 },    // Row 1, Col 3
-            'theme-ocean': { row: 1, col: 0 },     // Row 2, Col 1
-            'theme-food': { row: 1, col: 1 },      // Row 2, Col 2 (cooking)
-            'theme-creative': { row: 1, col: 2 },  // Row 2, Col 3 (art)
-            'theme-elegant': { row: 2, col: 0 },   // Row 3, Col 1 (mystery/professional)
-            'theme-fun': { row: 2, col: 1 },       // Row 3, Col 2
-            'theme-whimsical': { row: 0, col: 1 }, // Default to fantasy
-            'theme-animals': { row: 1, col: 0 }    // Default to ocean (nature)
-        };
+        if (characterType === "bear") {
+            // Map themes to individual bear character files
+            const themeToCharacter = {
+                'theme-space': 'design/characterSheets/bearSpace.PNG',
+                'theme-fantasy': 'design/characterSheets/bearMagic.png',
+                'theme-sports': 'design/characterSheets/bearSports.png',
+                'theme-ocean': 'design/characterSheets/bearOcean.png',
+                'theme-food': 'design/characterSheets/bearCooking.png',
+                'theme-creative': 'design/characterSheets/bearArt.png',
+                'theme-elegant': 'design/characterSheets/bearMystery.png',
+                'theme-whimsical': 'design/characterSheets/bearMagic.png', // Use magic bear for whimsical
+                'theme-fun': 'design/characterSheets/bearSpace.PNG', // Default to space for now
+                'theme-animals': 'design/characterSheets/bearOcean.png' // Ocean bear for nature/animals
+            };
 
-        const position = themeToPosition[theme] || { row: 0, col: 0 }; // Default to space
-        const characterPath = characterType === "bear" ? "design/characterSheets/bearCharacter.png" : "design/characterSheets/boy.png";
-        
-        // Each character is 380px wide x 530px tall
-        const characterWidth = 380;
-        const characterHeight = 530;
-        
-        // Calculate background position
-        const backgroundX = -(position.col * characterWidth);
-        const backgroundY = -(position.row * characterHeight);
-        
-        // Set up the avatar as a div with background image
-        avatarElement.style.backgroundImage = `url('${characterPath}')`;
-        avatarElement.style.backgroundPosition = `${backgroundX}px ${backgroundY}px`;
-        avatarElement.style.backgroundSize = `${characterWidth * 3}px ${characterHeight * 3}px`; // 3x3 grid
-        avatarElement.style.backgroundRepeat = 'no-repeat';
+            const characterImage = themeToCharacter[theme] || 'design/characterSheets/bearSpace.PNG';
+            avatarElement.style.backgroundImage = `url('${characterImage}')`;
+        } else {
+            // For boy character, use a simple fallback for now
+            // You can add individual boy character images later following the same pattern
+            avatarElement.style.backgroundImage = "url('https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9d2.png')";
+        }
         
         // Set alt text for accessibility
         avatarElement.setAttribute('role', 'img');

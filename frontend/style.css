@@ -1426,8 +1426,8 @@ body.theme-creative::before {
 
 /* Avatar */
 .chat-avatar {
-    width: 48px;
-    height: 48px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     margin: 0 12px;
     background-size: cover;
@@ -1485,12 +1485,12 @@ body.theme-creative::before {
     display: flex;
     align-items: flex-start;
     gap: 16px;
-    margin-left: 60px;
+    margin-left: 72px; /* Increased to match new 60px avatar + 12px margin */
 }
 
 .kid-avatar {
-    width: 48px;
-    height: 48px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     order: 2;
     background-size: cover;
