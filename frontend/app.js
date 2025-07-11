@@ -510,9 +510,18 @@ document.addEventListener("DOMContentLoaded", function () {
             const characterImage = themeToCharacter[theme] || '../design/characterSheets/bearSpace.PNG';
             avatarElement.style.backgroundImage = `url('${characterImage}')`;
         } else {
-            // For boy character, use a simple fallback for now
-            // You can add individual boy character images later following the same pattern
-            avatarElement.style.backgroundImage = "url('https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9d2.png')";
+            // Map themes to individual boy character files
+            const boyThemeToCharacter = {
+                'theme-space': '../design/characterSheets/boySpace2.PNG',
+                'theme-fantasy': '../design/characterSheets/boyMagic.PNG',
+                'theme-whimsical': '../design/characterSheets/boyMagic.PNG', // Use magic boy for whimsical
+                'theme-sports': '../design/characterSheets/boySports.PNG',
+                'theme-ocean': '../design/characterSheets/boyOcean.PNG',
+                'theme-animals': '../design/characterSheets/boyOcean.PNG' // Ocean boy for nature/animals
+            };
+
+            const boyCharacterImage = boyThemeToCharacter[theme] || '../design/characterSheets/boyDefault2.png';
+            avatarElement.style.backgroundImage = `url('${boyCharacterImage}')`;
         }
         
         // Set alt text for accessibility
