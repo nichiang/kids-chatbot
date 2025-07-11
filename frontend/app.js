@@ -146,14 +146,12 @@ document.addEventListener("DOMContentLoaded", function () {
         const msgWrapper = document.createElement("div");
         msgWrapper.className = sender === "user" ? "chat-message user" : "chat-message bot";
 
-        const avatar = document.createElement("img");
+        const avatar = document.createElement("div");
         avatar.className = "chat-avatar";
         if (sender === "user") {
-            avatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9d2.png";
-            avatar.alt = "Kid";
+            setupCharacterAvatar(avatar, "boy", currentTheme);
         } else {
-            avatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f43b.png";
-            avatar.alt = "Bear Tutor";
+            setupCharacterAvatar(avatar, "bear", currentTheme);
         }
 
         const bubble = document.createElement("div");
@@ -168,11 +166,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         chatLog.appendChild(msgWrapper);
         
-        // Wait for images to load before scrolling
-        avatar.onload = () => scrollToBottom();
-        avatar.onerror = () => scrollToBottom();
-        
-        // Also scroll immediately in case image is cached
+        // Scroll to bottom after avatar is set up
         scrollToBottom();
     }
 
@@ -185,10 +179,9 @@ document.addEventListener("DOMContentLoaded", function () {
         const questionWrapper = document.createElement("div");
         questionWrapper.className = "chat-message bot";
 
-        const avatar = document.createElement("img");
+        const avatar = document.createElement("div");
         avatar.className = "chat-avatar";
-        avatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f43b.png";
-        avatar.alt = "Bear Tutor";
+        setupCharacterAvatar(avatar, "bear", currentTheme);
 
         const bubble = document.createElement("div");
         bubble.className = "chat-bubble";
@@ -204,10 +197,9 @@ document.addEventListener("DOMContentLoaded", function () {
         const answersWrapper = document.createElement("div");
         answersWrapper.className = "vocab-answers-wrapper";
 
-        const kidAvatar = document.createElement("img");
+        const kidAvatar = document.createElement("div");
         kidAvatar.className = "kid-avatar";
-        kidAvatar.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f9d2.png";
-        kidAvatar.alt = "Kid";
+        setupCharacterAvatar(kidAvatar, "boy", currentTheme);
 
         const buttonsContainer = document.createElement("div");
         buttonsContainer.className = "answer-buttons-container";
@@ -230,22 +222,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         chatLog.appendChild(vocabContainer);
         
-        // Wait for all avatars to load before scrolling
-        const avatars = [avatar, kidAvatar];
-        let loadedCount = 0;
-        const checkAllLoaded = () => {
-            loadedCount++;
-            if (loadedCount >= avatars.length) {
-                scrollToBottom();
-            }
-        };
-        
-        avatars.forEach(img => {
-            img.onload = checkAllLoaded;
-            img.onerror = checkAllLoaded;
-        });
-        
-        // Also scroll immediately in case images are cached
+        // Scroll to bottom after avatars are set up
         scrollToBottom();
     }
 
@@ -513,6 +490,44 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const body = document.body;
 
+    // Character Avatar System
+    function setupCharacterAvatar(avatarElement, characterType, theme) {
+        // Map themes to character positions
+        const themeToPosition = {
+            'theme-space': { row: 0, col: 0 },      // Row 1, Col 1 (0-indexed)
+            'theme-fantasy': { row: 0, col: 1 },   // Row 1, Col 2
+            'theme-sports': { row: 0, col: 2 },    // Row 1, Col 3
+            'theme-ocean': { row: 1, col: 0 },     // Row 2, Col 1
+            'theme-food': { row: 1, col: 1 },      // Row 2, Col 2 (cooking)
+            'theme-creative': { row: 1, col: 2 },  // Row 2, Col 3 (art)
+            'theme-elegant': { row: 2, col: 0 },   // Row 3, Col 1 (mystery/professional)
+            'theme-fun': { row: 2, col: 1 },       // Row 3, Col 2
+            'theme-whimsical': { row: 0, col: 1 }, // Default to fantasy
+            'theme-animals': { row: 1, col: 0 }    // Default to ocean (nature)
+        };
+
+        const position = themeToPosition[theme] || { row: 0, col: 0 }; // Default to space
+        const characterPath = characterType === "bear" ? "design/characterSheets/bearCharacter.png" : "design/characterSheets/boy.png";
+        
+        // Each character is 380px wide x 530px tall
+        const characterWidth = 380;
+        const characterHeight = 530;
+        
+        // Calculate background position
+        const backgroundX = -(position.col * characterWidth);
+        const backgroundY = -(position.row * characterHeight);
+        
+        // Set up the avatar as a div with background image
+        avatarElement.style.backgroundImage = `url('${characterPath}')`;
+        avatarElement.style.backgroundPosition = `${backgroundX}px ${backgroundY}px`;
+        avatarElement.style.backgroundSize = `${characterWidth * 3}px ${characterHeight * 3}px`; // 3x3 grid
+        avatarElement.style.backgroundRepeat = 'no-repeat';
+        
+        // Set alt text for accessibility
+        avatarElement.setAttribute('role', 'img');
+        avatarElement.setAttribute('aria-label', characterType === "bear" ? "Bear Tutor" : "Kid");
+    }
+
     // Unified Theme System
     let currentTheme = 'theme-space'; // Default theme
     let userManuallySelectedTheme = false; // Track if user manually chose a theme
@@ -533,6 +548,12 @@ document.addEventListener("DOMContentLoaded", function () {
         // Add new theme class
         body.classList.add(themeName);
         
+        // Update theme button states
+        updateThemeButtonStates(themeName);
+        
+        // Update all existing avatars to match the new theme
+        updateAllAvatars(themeName);
+        
         currentTheme = themeName;
         
         if (isAutomatic) {
@@ -543,6 +564,37 @@ document.addEventListener("DOMContentLoaded", function () {
             localStorage.setItem('userSelectedTheme', 'true');
             localStorage.setItem('preferredTheme', themeName);
         }
+    }
+
+    function updateThemeButtonStates(activeTheme) {
+        // Remove active class from all theme buttons
+        const themeButtons = document.querySelectorAll('.theme-btn');
+        themeButtons.forEach(button => {
+            button.classList.remove('active');
+        });
+        
+        // Add active class to the current theme button
+        const activeButton = document.querySelector(`.theme-btn[data-theme="${activeTheme}"]`);
+        if (activeButton) {
+            activeButton.classList.add('active');
+        }
+    }
+
+    function updateAllAvatars(theme) {
+        // Update all chat avatars (bot avatars)
+        const chatAvatars = document.querySelectorAll('.chat-avatar');
+        chatAvatars.forEach(avatar => {
+            // Check if this is a bear avatar by looking at the aria-label or parent context
+            const isBearAvatar = avatar.getAttribute('aria-label') === 'Bear Tutor' || 
+                                avatar.closest('.chat-message.bot');
+            setupCharacterAvatar(avatar, isBearAvatar ? "bear" : "boy", theme);
+        });
+        
+        // Update all kid avatars (in vocab questions)
+        const kidAvatars = document.querySelectorAll('.kid-avatar');
+        kidAvatars.forEach(avatar => {
+            setupCharacterAvatar(avatar, "boy", theme);
+        });
     }
 
     // Random initial theme selection (Space or Ocean)

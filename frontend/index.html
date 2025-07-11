@@ -12,17 +12,17 @@
     </div>
 
     <!-- Theme Toggle Buttons -->
-    <div style="position: fixed; top: 10px; right: 10px; z-index: 1000; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; max-width: 200px;">
-        <button onclick="switchTheme('theme-space')" style="padding: 6px 10px; font-size: 0.7rem; border: 1px solid #ccc; background: rgba(255,255,255,0.9); color: #333; border-radius: 4px; cursor: pointer; font-weight: 500;">🚀 Space</button>
-        <button onclick="switchTheme('theme-fantasy')" style="padding: 6px 10px; font-size: 0.7rem; border: 1px solid #ccc; background: rgba(255,255,255,0.9); color: #333; border-radius: 4px; cursor: pointer; font-weight: 500;">🏰 Fantasy</button>
-        <button onclick="switchTheme('theme-sports')" style="padding: 6px 10px; font-size: 0.7rem; border: 1px solid #ccc; background: rgba(255,255,255,0.9); color: #333; border-radius: 4px; cursor: pointer; font-weight: 500;">⚽ Sports</button>
-        <button onclick="switchTheme('theme-ocean')" style="padding: 6px 10px; font-size: 0.7rem; border: 1px solid #ccc; background: rgba(255,255,255,0.9); color: #333; border-radius: 4px; cursor: pointer; font-weight: 500;">🌊 Ocean</button>
-        <button onclick="switchTheme('theme-whimsical')" style="padding: 6px 10px; font-size: 0.7rem; border: 1px solid #ccc; background: rgba(255,255,255,0.9); color: #333; border-radius: 4px; cursor: pointer; font-weight: 500;">✨ Whimsical</button>
-        <button onclick="switchTheme('theme-fun')" style="padding: 6px 10px; font-size: 0.7rem; border: 1px solid #ccc; background: rgba(255,255,255,0.9); color: #333; border-radius: 4px; cursor: pointer; font-weight: 500;">🌈 Fun</button>
-        <button onclick="switchTheme('theme-food')" style="padding: 6px 10px; font-size: 0.7rem; border: 1px solid #ccc; background: rgba(255,255,255,0.9); color: #333; border-radius: 4px; cursor: pointer; font-weight: 500;">🍕 Food</button>
-        <button onclick="switchTheme('theme-animals')" style="padding: 6px 10px; font-size: 0.7rem; border: 1px solid #ccc; background: rgba(255,255,255,0.9); color: #333; border-radius: 4px; cursor: pointer; font-weight: 500;">🐾 Animals</button>
-        <button onclick="switchTheme('theme-elegant')" style="padding: 6px 10px; font-size: 0.7rem; border: 1px solid #ccc; background: rgba(255,255,255,0.9); color: #333; border-radius: 4px; cursor: pointer; font-weight: 500;">💎 Elegant</button>
-        <button onclick="switchTheme('theme-creative')" style="padding: 6px 10px; font-size: 0.7rem; border: 1px solid #ccc; background: rgba(255,255,255,0.9); color: #333; border-radius: 4px; cursor: pointer; font-weight: 500;">🎨 Creative</button>
+    <div id="theme-buttons" class="theme-buttons">
+        <button class="theme-btn" data-theme="theme-space" onclick="switchTheme('theme-space')">🚀 Space</button>
+        <button class="theme-btn" data-theme="theme-fantasy" onclick="switchTheme('theme-fantasy')">🏰 Fantasy</button>
+        <button class="theme-btn" data-theme="theme-sports" onclick="switchTheme('theme-sports')">⚽ Sports</button>
+        <button class="theme-btn" data-theme="theme-ocean" onclick="switchTheme('theme-ocean')">🌊 Ocean</button>
+        <button class="theme-btn" data-theme="theme-whimsical" onclick="switchTheme('theme-whimsical')">✨ Whimsical</button>
+        <button class="theme-btn" data-theme="theme-fun" onclick="switchTheme('theme-fun')">🌈 Fun</button>
+        <button class="theme-btn" data-theme="theme-food" onclick="switchTheme('theme-food')">🍕 Food</button>
+        <button class="theme-btn" data-theme="theme-animals" onclick="switchTheme('theme-animals')">🐾 Animals</button>
+        <button class="theme-btn" data-theme="theme-elegant" onclick="switchTheme('theme-elegant')">💼 Professional</button>
+        <button class="theme-btn" data-theme="theme-creative" onclick="switchTheme('theme-creative')">🎨 Creative</button>
     </div>
 
 
