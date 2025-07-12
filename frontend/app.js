@@ -577,8 +577,11 @@ document.addEventListener("DOMContentLoaded", function () {
         // Add new theme class
         body.classList.add(themeName);
         
-        // Update theme button states
+        // Update theme button states (legacy - for any remaining theme buttons)
         updateThemeButtonStates(themeName);
+        
+        // Update dropdown active state
+        updateActiveThemeOption(themeName);
         
         // Update all existing avatars to match the new theme
         updateAllAvatars(themeName);
@@ -596,7 +599,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function updateThemeButtonStates(activeTheme) {
-        // Remove active class from all theme buttons
+        // Remove active class from all theme buttons (legacy support)
         const themeButtons = document.querySelectorAll('.theme-btn');
         themeButtons.forEach(button => {
             button.classList.remove('active');
@@ -608,6 +611,22 @@ document.addEventListener("DOMContentLoaded", function () {
             activeButton.classList.add('active');
         }
     }
+
+    // Update active theme option in dropdown
+    function updateActiveThemeOption(activeTheme) {
+        // Remove active class from all theme options
+        const themeOptions = document.querySelectorAll('.theme-option');
+        themeOptions.forEach(option => {
+            option.classList.remove('active');
+        });
+        
+        // Add active class to the current theme option
+        const activeOption = document.querySelector(`.theme-option[data-theme="${activeTheme}"]`);
+        if (activeOption) {
+            activeOption.classList.add('active');
+        }
+    }
+
 
     function updateAllAvatars(theme) {
         // Update all chat avatars (bot avatars)
@@ -761,7 +780,51 @@ document.addEventListener("DOMContentLoaded", function () {
     window.switchTheme = switchTheme;
 
 
+    // Settings dropdown functionality
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsDropdown = document.getElementById('settings-dropdown');
+    const themeOptions = document.querySelectorAll('.theme-option');
+
+    // Toggle dropdown
+    settingsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        settingsDropdown.classList.toggle('open');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!settingsDropdown.contains(e.target) && !settingsBtn.contains(e.target)) {
+            settingsDropdown.classList.remove('open');
+        }
+    });
+
+    // Close dropdown with ESC key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            settingsDropdown.classList.remove('open');
+        }
+    });
+
+    // Theme option selection
+    themeOptions.forEach(option => {
+        option.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const themeName = option.getAttribute('data-theme');
+            
+            // Switch theme
+            switchTheme(themeName);
+            
+            // Update active state
+            updateActiveThemeOption(themeName);
+            
+            // Close dropdown
+            settingsDropdown.classList.remove('open');
+        });
+    });
+
+
     // Initialize the app
     loadInitialTheme(); // Load initial theme (random Space/Ocean for new users)
+    updateActiveThemeOption(currentTheme); // Set initial active state in dropdown
     switchMode('funfacts');
 });

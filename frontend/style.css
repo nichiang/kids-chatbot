@@ -40,6 +40,139 @@ body::before {
 }
 
 /* ==============================================
+   SETTINGS DROPDOWN SYSTEM
+   ============================================== */
+
+/* Settings Container */
+.settings-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+/* Settings Button */
+.settings-btn {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.settings-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: scale(1.05);
+}
+
+.settings-icon {
+    width: 20px;
+    height: 20px;
+    filter: brightness(0) invert(1);
+}
+
+/* Settings Dropdown */
+.settings-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 8px;
+    min-width: 200px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 12px;
+    transform: translateY(-10px);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #333;
+}
+
+.settings-dropdown.open {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Dropdown Header */
+.dropdown-header {
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    margin-bottom: 8px;
+    color: #555;
+}
+
+/* Theme Options */
+.theme-options {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.theme-option {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    gap: 12px;
+    position: relative;
+}
+
+.theme-option:hover {
+    background: rgba(0, 0, 0, 0.05);
+    transform: translateX(2px);
+}
+
+.theme-option.active {
+    background: rgba(74, 144, 226, 0.15);
+    border: 1px solid rgba(74, 144, 226, 0.3);
+}
+
+.theme-emoji {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+.theme-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+.theme-check {
+    display: none;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .settings-container {
+        top: 15px;
+        right: 15px;
+    }
+    
+    .settings-dropdown {
+        right: -50px;
+        min-width: 180px;
+    }
+}
+
+/* ==============================================
    THEME 1: SPACE 🚀
    ============================================== */
 body.theme-space {

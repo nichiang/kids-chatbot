@@ -3,30 +3,30 @@
 
 const CHARACTER_CONFIG = {
     bear: {
-        'theme-space': '../design/characterSheets/bearSpaceHead.PNG',
-        'theme-fantasy': '../design/characterSheets/bearMagicHead.PNG',
-        'theme-sports': '../design/characterSheets/bearSportsHead.PNG',
-        'theme-food': '../design/characterSheets/bearCookingHead.PNG',
-        'theme-creative': '../design/characterSheets/bearArtHead.PNG',
-        'theme-whimsical': '../design/characterSheets/bearMagicHead.PNG', // Use magic for whimsical
-        'theme-ocean': '../design/characterSheets/bearOceanHead.PNG', // Now has specific ocean head
-        'theme-animals': '../design/characterSheets/bearOceanHead.PNG', // Use ocean for animals/nature
-        'theme-elegant': '../design/characterSheets/bearFallbackHead.png', // Use fallback for professional
-        'theme-fun': '../design/characterSheets/bearSpaceHead.PNG', // Use space for fun
-        'fallback': '../design/characterSheets/bearFallbackHead.png'
+        'theme-space': 'assets/characters/bearSpaceHead.PNG',
+        'theme-fantasy': 'assets/characters/bearMagicHead.PNG',
+        'theme-sports': 'assets/characters/bearSportsHead.PNG',
+        'theme-food': 'assets/characters/bearCookingHead.PNG',
+        'theme-creative': 'assets/characters/bearArtHead.PNG',
+        'theme-whimsical': 'assets/characters/bearMagicHead.PNG', // Use magic for whimsical
+        'theme-ocean': 'assets/characters/bearOceanHead.PNG', // Now has specific ocean head
+        'theme-animals': 'assets/characters/bearOceanHead.PNG', // Use ocean for animals/nature
+        'theme-elegant': 'assets/characters/bearFallbackHead.png', // Use fallback for professional
+        'theme-fun': 'assets/characters/bearSpaceHead.PNG', // Use space for fun
+        'fallback': 'assets/characters/bearFallbackHead.png'
     },
     boy: {
-        'theme-space': '../design/characterSheets/boySpaceHead.png',
-        'theme-sports': '../design/characterSheets/boySportsHead.png', 
-        'theme-ocean': '../design/characterSheets/boyOceanHead.png',
-        'theme-animals': '../design/characterSheets/boyOceanHead.png', // Use ocean for animals/nature
-        'theme-fantasy': '../design/characterSheets/boyDefault.png', // No specific fantasy head yet
-        'theme-whimsical': '../design/characterSheets/boyDefault.png', // No specific whimsical head yet
-        'theme-food': '../design/characterSheets/boyDefault.png', // No specific food head yet
-        'theme-creative': '../design/characterSheets/boyDefault.png', // No specific creative head yet
-        'theme-elegant': '../design/characterSheets/boyDefault.png', // No specific elegant head yet
-        'theme-fun': '../design/characterSheets/boySpaceHead.png', // Use space for fun
-        'fallback': '../design/characterSheets/boyDefault.png'
+        'theme-space': 'assets/characters/boySpaceHead.png',
+        'theme-sports': 'assets/characters/boySportsHead.png', 
+        'theme-ocean': 'assets/characters/boyOceanHead.png',
+        'theme-animals': 'assets/characters/boyOceanHead.png', // Use ocean for animals/nature
+        'theme-fantasy': 'assets/characters/boyDefault.png', // No specific fantasy head yet
+        'theme-whimsical': 'assets/characters/boyDefault.png', // No specific whimsical head yet
+        'theme-food': 'assets/characters/boyDefault.png', // No specific food head yet
+        'theme-creative': 'assets/characters/boyDefault.png', // No specific creative head yet
+        'theme-elegant': 'assets/characters/boyDefault.png', // No specific elegant head yet
+        'theme-fun': 'assets/characters/boySpaceHead.png', // Use space for fun
+        'fallback': 'assets/characters/boyDefault.png'
     }
 };
 

@@ -11,18 +11,66 @@
         <button id="storywriting-btn" class="mode-button">Storywriting</button>
     </div>
 
-    <!-- Theme Toggle Buttons -->
-    <div id="theme-buttons" class="theme-buttons">
-        <button class="theme-btn" data-theme="theme-space" onclick="switchTheme('theme-space')">🚀 Space</button>
-        <button class="theme-btn" data-theme="theme-fantasy" onclick="switchTheme('theme-fantasy')">🏰 Fantasy</button>
-        <button class="theme-btn" data-theme="theme-sports" onclick="switchTheme('theme-sports')">⚽ Sports</button>
-        <button class="theme-btn" data-theme="theme-ocean" onclick="switchTheme('theme-ocean')">🌊 Ocean</button>
-        <button class="theme-btn" data-theme="theme-whimsical" onclick="switchTheme('theme-whimsical')">✨ Whimsical</button>
-        <button class="theme-btn" data-theme="theme-fun" onclick="switchTheme('theme-fun')">🌈 Fun</button>
-        <button class="theme-btn" data-theme="theme-food" onclick="switchTheme('theme-food')">🍕 Food</button>
-        <button class="theme-btn" data-theme="theme-animals" onclick="switchTheme('theme-animals')">🐾 Animals</button>
-        <button class="theme-btn" data-theme="theme-elegant" onclick="switchTheme('theme-elegant')">💼 Professional</button>
-        <button class="theme-btn" data-theme="theme-creative" onclick="switchTheme('theme-creative')">🎨 Creative</button>
+    <!-- Settings Dropdown -->
+    <div class="settings-container">
+        <button class="settings-btn" id="settings-btn" aria-label="Theme Settings">
+            <img src="assets/icons/setting.svg" alt="Settings" class="settings-icon" />
+        </button>
+        <div class="settings-dropdown" id="settings-dropdown">
+            <div class="dropdown-header">Choose Theme</div>
+            <div class="theme-options">
+                <div class="theme-option" data-theme="theme-space">
+                    <span class="theme-emoji">🚀</span>
+                    <span class="theme-name">Space</span>
+                    <span class="theme-check">✓</span>
+                </div>
+                <div class="theme-option" data-theme="theme-fantasy">
+                    <span class="theme-emoji">🏰</span>
+                    <span class="theme-name">Fantasy</span>
+                    <span class="theme-check">✓</span>
+                </div>
+                <div class="theme-option" data-theme="theme-sports">
+                    <span class="theme-emoji">⚽</span>
+                    <span class="theme-name">Sports</span>
+                    <span class="theme-check">✓</span>
+                </div>
+                <div class="theme-option" data-theme="theme-ocean">
+                    <span class="theme-emoji">🌊</span>
+                    <span class="theme-name">Ocean</span>
+                    <span class="theme-check">✓</span>
+                </div>
+                <div class="theme-option" data-theme="theme-whimsical">
+                    <span class="theme-emoji">✨</span>
+                    <span class="theme-name">Whimsical</span>
+                    <span class="theme-check">✓</span>
+                </div>
+                <div class="theme-option" data-theme="theme-fun">
+                    <span class="theme-emoji">🌈</span>
+                    <span class="theme-name">Fun</span>
+                    <span class="theme-check">✓</span>
+                </div>
+                <div class="theme-option" data-theme="theme-food">
+                    <span class="theme-emoji">🍕</span>
+                    <span class="theme-name">Food</span>
+                    <span class="theme-check">✓</span>
+                </div>
+                <div class="theme-option" data-theme="theme-animals">
+                    <span class="theme-emoji">🐾</span>
+                    <span class="theme-name">Animals</span>
+                    <span class="theme-check">✓</span>
+                </div>
+                <div class="theme-option" data-theme="theme-elegant">
+                    <span class="theme-emoji">💼</span>
+                    <span class="theme-name">Professional</span>
+                    <span class="theme-check">✓</span>
+                </div>
+                <div class="theme-option" data-theme="theme-creative">
+                    <span class="theme-emoji">🎨</span>
+                    <span class="theme-name">Creative</span>
+                    <span class="theme-check">✓</span>
+                </div>
+            </div>
+        </div>
     </div>
 
 
