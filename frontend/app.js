@@ -451,14 +451,14 @@ document.addEventListener("DOMContentLoaded", function () {
         // Show thinking message
         appendMessage("bot", "Thinking...");
 
-        // Check for topic in user message and switch theme immediately (before backend response)
+        // Check for topic in user message and switch theme smoothly (before backend response)
         // This prevents jarring simultaneous theme change + content scroll
         const detectedTopic = extractTopicFromMessage(userMessage);
         if (detectedTopic) {
             const suggestedTheme = getThemeSuggestion(detectedTopic);
             if (suggestedTheme !== currentTheme) {
-                console.log(`Client-side topic "${detectedTopic}" detected, switching to ${suggestedTheme} theme during thinking phase`);
-                switchTheme(suggestedTheme, true, 'topic'); // Mark as automatic topic-based switch
+                console.log(`Client-side topic "${detectedTopic}" detected, smoothly switching to ${suggestedTheme} theme during thinking phase`);
+                smoothThemeTransition(suggestedTheme); // Use smooth transition instead of immediate switch
             }
         }
 
@@ -642,6 +642,37 @@ document.addEventListener("DOMContentLoaded", function () {
             switchTheme(randomTheme, true, 'initial'); // Mark as automatic initial load
             console.log(`Welcome! Randomly selected ${randomTheme} as your starting theme`);
         }
+    }
+
+    // Subtle opacity cross-fade theme transition function
+    function smoothThemeTransition(newTheme) {
+        if (newTheme === currentTheme) return;
+        
+        console.log(`Starting subtle cross-fade transition to ${newTheme}`);
+        
+        // Add transition class for smooth background changes
+        document.body.classList.add('theme-transitioning');
+        
+        // Add subtle opacity transition
+        document.body.style.transition = 'opacity 0.2s ease-out';
+        document.body.style.opacity = '0.95';
+        
+        // Switch theme during subtle fade (200ms delay)
+        setTimeout(() => {
+            // Switch theme using existing function
+            switchTheme(newTheme, true, 'topic');
+            
+            // Return to full opacity
+            document.body.style.opacity = '1';
+            
+            // Clean up after transition completes
+            setTimeout(() => {
+                document.body.classList.remove('theme-transitioning');
+                document.body.style.transition = '';
+                document.body.style.opacity = '';
+                console.log(`Subtle cross-fade transition to ${newTheme} completed`);
+            }, 200); // Match opacity transition duration
+        }, 200); // Wait for subtle fade to complete
     }
 
     // Handle automatic theme switching based on story topics (can accept topic or full theme name)
