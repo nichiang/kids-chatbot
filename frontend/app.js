@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const funFactsBtn = document.getElementById("fun-facts-btn");
 
     // App state
-    let currentMode = 'storywriting'; // 'storywriting' or 'funfacts'
+    let currentMode = 'funfacts'; // 'storywriting' or 'funfacts'
     let sessionData = {
         storywriting: {
             topic: null,
@@ -264,12 +264,15 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Keep vocab container visible (don't remove it)
 
-        // Continue fun facts flow automatically
-        if (currentMode === 'funfacts') {
-            setTimeout(() => {
+        // Continue flow automatically after vocabulary answer
+        setTimeout(() => {
+            if (currentMode === 'funfacts') {
                 continueAfterVocab();
-            }, 2000);
-        }
+            } else if (currentMode === 'storywriting') {
+                // Send continue signal to check for more vocab or story completion
+                sendContinueSignal();
+            }
+        }, 2000);
     }
 
     // Trigger vocabulary questions after story completion
@@ -301,13 +304,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 sessionData[currentMode] = data.sessionData;
             }
             
-            // Handle theme suggestions from backend
-            if (data.suggestedTheme) {
-                console.log(`Backend suggested theme: ${data.suggestedTheme}, current theme: ${currentTheme}, user manually selected: ${userManuallySelectedTheme}`);
-                handleTopicThemeSwitch(data.suggestedTheme);
-            } else {
-                console.log('No theme suggestion received from backend');
-            }
+            // Theme switching now happens during "Thinking..." phase to prevent jarring UX
+            // No longer handling backend theme suggestions here
             
             // Handle vocabulary questions
             if (data.vocabQuestion) {
@@ -323,6 +321,51 @@ document.addEventListener("DOMContentLoaded", function () {
         } catch (err) {
             console.error("Error triggering vocabulary questions:", err);
             appendMessage("bot", "Let's move on to some vocabulary questions!");
+        }
+    }
+
+    // Continue storywriting flow after vocabulary question
+    async function sendContinueSignal() {
+        try {
+            // Send continue request to backend to check for more vocab or completion
+            const response = await fetch("http://localhost:8000/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ 
+                    message: "continue", // Signal to continue
+                    mode: currentMode,
+                    sessionData: sessionData[currentMode]
+                })
+            });
+
+            const data = await response.json();
+            
+            // Handle response
+            if (data.response) {
+                appendMessage("bot", data.response);
+            }
+            
+            // Update session data
+            if (data.sessionData) {
+                sessionData[currentMode] = data.sessionData;
+            }
+            
+            // Handle vocabulary questions
+            if (data.vocabQuestion) {
+                setTimeout(() => {
+                    appendVocabQuestion(
+                        data.vocabQuestion.question,
+                        data.vocabQuestion.options,
+                        data.vocabQuestion.correctIndex
+                    );
+                }, 1000);
+            }
+
+        } catch (err) {
+            console.error("Error sending continue signal:", err);
+            appendMessage("bot", "Let me check what comes next...");
         }
     }
 
@@ -360,13 +403,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 sessionData[currentMode] = data.sessionData;
             }
             
-            // Handle theme suggestions from backend
-            if (data.suggestedTheme) {
-                console.log(`Backend suggested theme: ${data.suggestedTheme}, current theme: ${currentTheme}, user manually selected: ${userManuallySelectedTheme}`);
-                handleTopicThemeSwitch(data.suggestedTheme);
-            } else {
-                console.log('No theme suggestion received from backend');
-            }
+            // Theme switching now happens during "Thinking..." phase to prevent jarring UX
+            // No longer handling backend theme suggestions here
             
             // Handle vocabulary questions
             if (data.vocabQuestion) {
@@ -413,6 +451,17 @@ document.addEventListener("DOMContentLoaded", function () {
         // Show thinking message
         appendMessage("bot", "Thinking...");
 
+        // Check for topic in user message and switch theme immediately (before backend response)
+        // This prevents jarring simultaneous theme change + content scroll
+        const detectedTopic = extractTopicFromMessage(userMessage);
+        if (detectedTopic) {
+            const suggestedTheme = getThemeSuggestion(detectedTopic);
+            if (suggestedTheme !== currentTheme) {
+                console.log(`Client-side topic "${detectedTopic}" detected, switching to ${suggestedTheme} theme during thinking phase`);
+                switchTheme(suggestedTheme, true, 'topic'); // Mark as automatic topic-based switch
+            }
+        }
+
         try {
             // Send to backend
             const response = await fetch("http://localhost:8000/chat", {
@@ -451,13 +500,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             }
             
-            // Handle theme suggestions from backend
-            if (data.suggestedTheme) {
-                console.log(`Backend suggested theme: ${data.suggestedTheme}, current theme: ${currentTheme}, user manually selected: ${userManuallySelectedTheme}`);
-                handleTopicThemeSwitch(data.suggestedTheme);
-            } else {
-                console.log('No theme suggestion received from backend');
-            }
+            // Theme switching now happens during "Thinking..." phase to prevent jarring UX
+            // No longer handling backend theme suggestions here
             
             // Handle vocabulary questions
             if (data.vocabQuestion) {
@@ -498,37 +542,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Character Avatar System with Individual Images
     function setupCharacterAvatar(avatarElement, characterType, theme) {
-        if (characterType === "bear") {
-            // Map themes to individual bear character files
-            const themeToCharacter = {
-                'theme-space': '../design/characterSheets/bearSpace.PNG',
-                'theme-fantasy': '../design/characterSheets/bearMagic.png',
-                'theme-sports': '../design/characterSheets/bearSports.png',
-                'theme-ocean': '../design/characterSheets/bearOcean.png',
-                'theme-food': '../design/characterSheets/bearCooking.png',
-                'theme-creative': '../design/characterSheets/bearArt.png',
-                'theme-elegant': '../design/characterSheets/bearMystery.png',
-                'theme-whimsical': '../design/characterSheets/bearMagic.png', // Use magic bear for whimsical
-                'theme-fun': '../design/characterSheets/bearSpace.PNG', // Default to space for now
-                'theme-animals': '../design/characterSheets/bearOcean.png' // Ocean bear for nature/animals
-            };
-
-            const characterImage = themeToCharacter[theme] || '../design/characterSheets/bearSpace.PNG';
-            avatarElement.style.backgroundImage = `url('${characterImage}')`;
-        } else {
-            // Map themes to individual boy character files
-            const boyThemeToCharacter = {
-                'theme-space': '../design/characterSheets/boySpace2.PNG',
-                'theme-fantasy': '../design/characterSheets/boyMagic.PNG',
-                'theme-whimsical': '../design/characterSheets/boyMagic.PNG', // Use magic boy for whimsical
-                'theme-sports': '../design/characterSheets/boySports.PNG',
-                'theme-ocean': '../design/characterSheets/boyOcean.PNG',
-                'theme-animals': '../design/characterSheets/boyOcean.PNG' // Ocean boy for nature/animals
-            };
-
-            const boyCharacterImage = boyThemeToCharacter[theme] || '../design/characterSheets/boyDefault2.png';
-            avatarElement.style.backgroundImage = `url('${boyCharacterImage}')`;
-        }
+        // Use the character config system for easy image swapping
+        const characterImage = getCharacterImage(characterType, theme);
+        avatarElement.style.backgroundImage = `url('${characterImage}')`;
         
         // Set alt text for accessibility
         avatarElement.setAttribute('role', 'img');
@@ -665,11 +681,56 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    // Client-side topic extraction (mirrors backend logic)
+    function extractTopicFromMessage(message) {
+        const messageLower = message.toLowerCase();
+        
+        // Topic mapping (same as backend)
+        const topicKeywords = {
+            "space": ["space", "planet", "star", "rocket", "astronaut", "jupiter", "mars", "galaxy", "alien"],
+            "animals": ["animal", "dog", "cat", "elephant", "lion", "whale", "bird", "creature"],
+            "inventions": ["invention", "science", "technology", "robot", "computer"],
+            "sports": ["sport", "soccer", "football", "basketball", "tennis", "baseball"],
+            "food": ["food", "cooking", "eat", "pizza", "ice cream", "fruit"],
+            "ocean": ["ocean", "sea", "fish", "shark", "whale", "coral", "water"],
+            "fantasy": ["fantasy", "magic", "magical", "dragon", "unicorn", "wizard", "fairy", "enchanted", "mystical"],
+            "mystery": ["mystery", "detective", "clue", "solve", "secret", "hidden"],
+            "adventure": ["adventure", "explore", "journey", "quest", "travel"]
+        };
+        
+        for (const [topic, keywords] of Object.entries(topicKeywords)) {
+            if (keywords.some(keyword => messageLower.includes(keyword))) {
+                return topic;
+            }
+        }
+        
+        // Default topic extraction - use first word that looks like a topic
+        const words = message.split();
+        return words[0] || "adventure";
+    }
+
+    // Client-side theme suggestion (mirrors backend logic)
+    function getThemeSuggestion(topic) {
+        const topicToTheme = {
+            'fantasy': 'theme-fantasy',
+            'sports': 'theme-sports', 
+            'food': 'theme-food',
+            'animals': 'theme-animals',
+            'ocean': 'theme-ocean',
+            'space': 'theme-space',
+            'mystery': 'theme-elegant',
+            'adventure': 'theme-elegant',
+            'inventions': 'theme-space'  // Technical topics default to space
+        };
+        
+        return topicToTheme[topic.toLowerCase()] || 'theme-space';
+    }
+
     // Make theme switching available globally
     window.switchTheme = switchTheme;
 
 
     // Initialize the app
     loadInitialTheme(); // Load initial theme (random Space/Ocean for new users)
-    switchMode('storywriting');
+    switchMode('funfacts');
 });

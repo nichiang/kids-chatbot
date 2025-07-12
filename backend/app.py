@@ -31,6 +31,7 @@ class SessionData(BaseModel):
     currentFact: Optional[str] = None
     allFacts: List[str] = []
     askedVocabWords: List[str] = []  # Track vocabulary words that have been asked
+    awaiting_story_confirmation: bool = False  # Track if waiting for user to confirm new story
 
 class ChatRequest(BaseModel):
     message: str
@@ -94,30 +95,35 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
     
     # Check if story is already complete - handle vocabulary questions or new story
     elif session_data.isComplete:
-        # Check if user wants to start a new story - be more selective about topic detection
-        # Only start new story if user message clearly indicates wanting a new topic
         message_lower = user_message.lower().strip()
         
-        # Skip topic detection for generic responses or questions about vocabulary
-        generic_responses = ["yes", "no", "ok", "okay", "sure", "thanks", "thank you", "great", "cool", "awesome", "nice"]
-        vocab_related = ["what", "how", "why", "when", "where", "explain", "tell me", "show me"]
-        
-        should_check_for_new_topic = (
-            len(user_message.split()) >= 2 and  # Message has at least 2 words
-            not any(response in message_lower for response in generic_responses) and
-            not any(word in message_lower for word in vocab_related) and
-            not message_lower.startswith(("i ", "we ", "that ", "this ", "it "))  # Avoid pronouns that refer to current story
-        )
-        
-        if should_check_for_new_topic:
-            potential_new_topic = extract_topic_from_message(user_message)
-            if potential_new_topic and potential_new_topic != session_data.topic:
-                # User wants to start a new story - reset session data
+        # If we're awaiting confirmation for a new story
+        if session_data.awaiting_story_confirmation:
+            # Check for confirmation signals
+            positive_responses = ["yes", "yeah", "yep", "sure", "ok", "okay", "i want", "let's", "space", "fantasy", "sports", "ocean", "animals", "mystery", "adventure", "food", "creative", "magic"]
+            negative_responses = ["no", "nah", "not now", "maybe later", "i'm done", "that's it", "bye"]
+            
+            # Check if user is declining
+            if any(neg in message_lower for neg in negative_responses):
+                # User doesn't want another story
+                session_data.awaiting_story_confirmation = False
+                return ChatResponse(
+                    response="That's perfectly fine! Thanks for sharing this wonderful story adventure with me. You did such a great job! 🌟",
+                    sessionData=session_data
+                )
+            
+            # Check if user is confirming (either explicitly or by mentioning a topic)
+            elif any(pos in message_lower for pos in positive_responses) or len(user_message.split()) >= 1:
+                # User wants to write another story - extract topic
+                potential_new_topic = extract_topic_from_message(user_message)
+                
+                # Reset session data for new story
                 session_data.topic = potential_new_topic
                 session_data.storyParts = []
                 session_data.currentStep = 2
                 session_data.isComplete = False
                 session_data.askedVocabWords = []
+                session_data.awaiting_story_confirmation = False
                 
                 # Generate story beginning for new topic
                 story_prompt = f"The child has chosen the topic: {potential_new_topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."
@@ -128,10 +134,54 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
                 suggested_theme = get_theme_suggestion(potential_new_topic)
                 
                 return ChatResponse(
-                    response=story_response,
+                    response=f"Great choice! Let's write a {potential_new_topic} story! 🌟\\n\\n{story_response}",
                     sessionData=session_data,
                     suggestedTheme=suggested_theme
                 )
+            else:
+                # Unclear response - ask for clarification
+                return ChatResponse(
+                    response="I'm not sure if you want to write another story. Would you like to pick one of those story ideas, or are you done for now?",
+                    sessionData=session_data
+                )
+        
+        # If not awaiting confirmation, check for spontaneous new topic requests (old logic)
+        else:
+            # Skip topic detection for generic responses or questions about vocabulary
+            generic_responses = ["yes", "no", "ok", "okay", "sure", "thanks", "thank you", "great", "cool", "awesome", "nice"]
+            vocab_related = ["what", "how", "why", "when", "where", "explain", "tell me", "show me"]
+            
+            should_check_for_new_topic = (
+                len(user_message.split()) >= 2 and  # Message has at least 2 words
+                not any(response in message_lower for response in generic_responses) and
+                not any(word in message_lower for word in vocab_related) and
+                not message_lower.startswith(("i ", "we ", "that ", "this ", "it "))  # Avoid pronouns that refer to current story
+            )
+            
+            if should_check_for_new_topic:
+                potential_new_topic = extract_topic_from_message(user_message)
+                if potential_new_topic and potential_new_topic != session_data.topic:
+                    # User wants to start a new story - reset session data
+                    session_data.topic = potential_new_topic
+                    session_data.storyParts = []
+                    session_data.currentStep = 2
+                    session_data.isComplete = False
+                    session_data.askedVocabWords = []
+                    session_data.awaiting_story_confirmation = False
+                    
+                    # Generate story beginning for new topic
+                    story_prompt = f"The child has chosen the topic: {potential_new_topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."
+                    story_response = llm_provider.generate_response(story_prompt)
+                    session_data.storyParts.append(story_response)
+                    
+                    # Get theme suggestion for new topic
+                    suggested_theme = get_theme_suggestion(potential_new_topic)
+                    
+                    return ChatResponse(
+                        response=story_response,
+                        sessionData=session_data,
+                        suggestedTheme=suggested_theme
+                    )
         
         # Story is done, now show vocabulary questions
         all_story_text = " ".join(session_data.storyParts)
@@ -151,6 +201,7 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
             )
         else:
             # No more vocabulary words to ask about - offer to write another story
+            session_data.awaiting_story_confirmation = True
             story_completion_prompt = f"Wonderful story! You've mastered all the vocabulary words. Would you like to write another story? Here are some fun ideas:\\n\\n🚀 Space adventures\\n🏰 Fantasy quests\\n⚽ Sports excitement\\n🦄 Magical creatures\\n🕵️ Mystery solving\\n🍕 Food adventures\\n🐾 Animal stories\\n🌊 Ocean explorations\\n\\nWhat sounds interesting to you?"
             return ChatResponse(
                 response=story_completion_prompt,
