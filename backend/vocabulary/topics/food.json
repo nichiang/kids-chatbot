@@ -1,0 +1,165 @@
+{
+  "topic": "food",
+  "vocabulary": [
+    {
+      "word": "nutritious",
+      "definition": "healthy and good for your body",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "Vegetables are nutritious and help you grow strong",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "ingredients",
+      "definition": "the different foods you mix together to make something",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The cake recipe has five different ingredients",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "delicious",
+      "definition": "tasting very good",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "The homemade cookies were absolutely delicious",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "recipe",
+      "definition": "instructions for how to cook or make food",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "Grandma shared her secret recipe for apple pie",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "harvest",
+      "definition": "to gather crops when they are ready to eat",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "Farmers harvest corn in the fall",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "fresh",
+      "definition": "newly made or picked, not old",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "Fresh strawberries taste better than old ones",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "flavor",
+      "definition": "the taste of food",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The soup had a rich, savory flavor",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "spicy",
+      "definition": "having a hot, strong taste",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "The spicy chili made my mouth burn",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "cuisine",
+      "definition": "a style of cooking from a particular place",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Italian cuisine includes pasta and pizza",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "preparation",
+      "definition": "getting food ready to cook or eat",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The preparation for Thanksgiving dinner takes all day",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "protein",
+      "definition": "a nutrient in food that helps build strong muscles",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Fish and beans are good sources of protein",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "vitamins",
+      "definition": "healthy substances in food that your body needs",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Oranges have lots of vitamin C",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "balanced",
+      "definition": "having the right mix of different healthy foods",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "A balanced meal includes vegetables, protein, and grains",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "traditional",
+      "definition": "done the same way for a long time",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "We eat traditional turkey dinner on Thanksgiving",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "organic",
+      "definition": "grown without chemicals or artificial substances",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "Organic apples are grown without pesticides",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "cultivate",
+      "definition": "to grow plants for food",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "The farmer cultivates tomatoes in his greenhouse",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "preserve",
+      "definition": "to keep food fresh for a long time",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "We preserve fruit by making jam",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "appetite",
+      "definition": "the feeling of wanting to eat",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Running around outside gave me a big appetite",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "metabolism",
+      "definition": "how your body uses food for energy",
+      "difficulty": 4,
+      "type": "noun",
+      "example": "Exercise can help speed up your metabolism",
+      "grade_level": "4-5"
+    },
+    {
+      "word": "culinary",
+      "definition": "relating to cooking and preparing food",
+      "difficulty": 4,
+      "type": "adjective",
+      "example": "The chef studied culinary arts in cooking school",
+      "grade_level": "4-5"
+    }
+  ]
+}

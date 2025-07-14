@@ -1,0 +1,165 @@
+{
+  "topic": "animals",
+  "vocabulary": [
+    {
+      "word": "habitat",
+      "definition": "the natural home where an animal lives",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The forest is a perfect habitat for bears",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "species",
+      "definition": "a group of animals that are very similar",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "There are many species of butterflies in the garden",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "mammal",
+      "definition": "an animal that feeds milk to its babies",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "A whale is the largest mammal in the ocean",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "reptile",
+      "definition": "an animal with scales that lays eggs",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "A snake is a reptile that slides on its belly",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "nocturnal",
+      "definition": "active at night and sleeping during the day",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "Owls are nocturnal birds that hunt at night",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "herd",
+      "definition": "a group of animals that live and travel together",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The herd of elephants walked across the savanna",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "territory",
+      "definition": "an area that an animal claims as its own",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The lion marked its territory with scent",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "instinct",
+      "definition": "something animals know how to do without being taught",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "Birds build nests by instinct",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "predator",
+      "definition": "an animal that hunts other animals for food",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The eagle is a skilled predator with sharp talons",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "prey",
+      "definition": "an animal that is hunted by other animals",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The rabbit was quick enough to escape its prey",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "camouflage",
+      "definition": "colors or patterns that help animals hide",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The chameleon's camouflage made it invisible on the branch",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "migrate",
+      "definition": "to move from one place to another with the seasons",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "Monarch butterflies migrate thousands of miles south",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "hibernate",
+      "definition": "to sleep through the cold winter months",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "Bears hibernate in caves during the winter",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "carnivore",
+      "definition": "an animal that eats only meat",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "A tiger is a carnivore that hunts other animals",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "herbivore",
+      "definition": "an animal that eats only plants",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "A giraffe is a herbivore that eats leaves from tall trees",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "adaptation",
+      "definition": "a special feature that helps an animal survive",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "A polar bear's thick fur is an adaptation to cold weather",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "ecosystem",
+      "definition": "all the living things in an area and how they work together",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The rainforest ecosystem has many different animals",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "endangered",
+      "definition": "in danger of disappearing forever",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "We must protect endangered animals like pandas",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "biodiversity",
+      "definition": "the variety of different living things in one place",
+      "difficulty": 4,
+      "type": "noun",
+      "example": "The rainforest has incredible biodiversity",
+      "grade_level": "4-5"
+    },
+    {
+      "word": "conservation",
+      "definition": "protecting animals and nature from harm",
+      "difficulty": 4,
+      "type": "noun",
+      "example": "Conservation efforts help save endangered species",
+      "grade_level": "4-5"
+    }
+  ]
+}

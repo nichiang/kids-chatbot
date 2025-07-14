@@ -1,0 +1,165 @@
+{
+  "topic": "space",
+  "vocabulary": [
+    {
+      "word": "galaxy",
+      "definition": "a huge group of stars and planets in space",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "Our Earth is in the Milky Way galaxy",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "planet",
+      "definition": "a large round object that travels around a star",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "Mars is the red planet in our solar system",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "rocket",
+      "definition": "a powerful vehicle that can fly into space",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The rocket blasted off toward the moon",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "asteroid",
+      "definition": "a rocky object that floats in space",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The asteroid was as big as a mountain",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "orbit",
+      "definition": "the path a planet or moon takes around something bigger",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The moon's orbit around Earth takes about a month",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "comet",
+      "definition": "a space object made of ice and dust with a bright tail",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The comet's tail stretched across the night sky",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "astronaut",
+      "definition": "a person who travels into space",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The astronaut floated inside the space station",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "crater",
+      "definition": "a round hole made when something hits a planet or moon",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The moon has many craters from space rocks",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "gravity",
+      "definition": "the force that pulls things down toward a planet",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Gravity keeps us from floating away from Earth",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "universe",
+      "definition": "everything that exists in space, including all stars and planets",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The universe is bigger than we can imagine",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "telescope",
+      "definition": "a tool that makes faraway things look bigger and closer",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "We used a telescope to see the rings around Saturn",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "constellation",
+      "definition": "a group of stars that make a pattern in the sky",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The Big Dipper is a famous constellation",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "satellite",
+      "definition": "an object that goes around a planet in space",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The satellite helps us get TV signals from space",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "solar",
+      "definition": "having to do with the sun",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "All the planets in our solar system orbit the sun",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "atmosphere",
+      "definition": "the layer of air around a planet",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Earth's atmosphere protects us from space rocks",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "mission",
+      "definition": "an important job or trip with a special purpose",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The space mission lasted six months",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "explore",
+      "definition": "to travel to new places to learn about them",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "Astronauts explore space to make new discoveries",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "astronomical",
+      "definition": "having to do with space and stars, or extremely large",
+      "difficulty": 4,
+      "type": "adjective",
+      "example": "The distances in space are astronomical",
+      "grade_level": "4-5"
+    },
+    {
+      "word": "nebula",
+      "definition": "a colorful cloud of gas and dust in space where stars are born",
+      "difficulty": 4,
+      "type": "noun",
+      "example": "The Orion nebula glows with beautiful colors",
+      "grade_level": "4-5"
+    },
+    {
+      "word": "interstellar",
+      "definition": "between or among the stars",
+      "difficulty": 4,
+      "type": "adjective",
+      "example": "Interstellar travel would take many years",
+      "grade_level": "4-5"
+    }
+  ]
+}

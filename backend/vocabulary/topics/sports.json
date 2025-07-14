@@ -1,0 +1,165 @@
+{
+  "topic": "sports",
+  "vocabulary": [
+    {
+      "word": "athlete",
+      "definition": "a person who is skilled at sports",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The athlete trained every day to become stronger",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "compete",
+      "definition": "to try to win against other people",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "Many teams compete in the soccer tournament",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "victory",
+      "definition": "winning a game or contest",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The team celebrated their victory with cheers",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "coach",
+      "definition": "a person who teaches and trains athletes",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The coach helped the players improve their skills",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "stadium",
+      "definition": "a large building where sports are played",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "Thousands of fans filled the football stadium",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "equipment",
+      "definition": "the special tools and gear needed for a sport",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "Hockey players need protective equipment",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "practice",
+      "definition": "doing something over and over to get better",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "She practices piano for one hour every day",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "opponent",
+      "definition": "the person or team you compete against",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The tennis player shook hands with her opponent",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "tournament",
+      "definition": "a contest where many teams or players compete",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The basketball tournament lasted three days",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "championship",
+      "definition": "the most important contest to decide the best team",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "They won the championship after a tough game",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "teamwork",
+      "definition": "working together with others to reach a goal",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Good teamwork helped them win the relay race",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "strategy",
+      "definition": "a plan for how to win or succeed",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The coach shared a new strategy for the next game",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "endurance",
+      "definition": "the ability to keep going for a long time",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Marathon runners need great endurance",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "sportsmanship",
+      "definition": "being fair and respectful in sports",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Good sportsmanship means congratulating the other team",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "determination",
+      "definition": "refusing to give up even when things are hard",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Her determination helped her finish the difficult race",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "coordination",
+      "definition": "the ability to move your body parts together smoothly",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Gymnasts need excellent coordination for their routines",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "agility",
+      "definition": "being able to move quickly and easily",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The soccer player's agility helped him dodge defenders",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "professional",
+      "definition": "someone who gets paid to play sports as their job",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "She became a professional tennis player",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "perseverance",
+      "definition": "continuing to try even when facing difficulties",
+      "difficulty": 4,
+      "type": "noun",
+      "example": "His perseverance paid off when he made the team",
+      "grade_level": "4-5"
+    },
+    {
+      "word": "competitive",
+      "definition": "having a strong desire to win",
+      "difficulty": 4,
+      "type": "adjective",
+      "example": "The competitive swimmer trained twice a day",
+      "grade_level": "4-5"
+    }
+  ]
+}

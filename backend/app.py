@@ -5,6 +5,91 @@ from typing import Dict, List, Optional
 import logging
 from llm_provider import llm_provider
 from generate_prompt import generate_prompt, load_file
+from vocabulary_manager import vocabulary_manager
+
+def generate_vocabulary_enhanced_prompt(base_prompt: str, topic: str, used_words: List[str] = None, word_count: int = 3) -> tuple[str, List[str]]:
+    """
+    Generate a prompt enhanced with vocabulary integration and return selected vocabulary words
+    
+    Args:
+        base_prompt: The base prompt template
+        topic: Topic for vocabulary selection
+        used_words: Previously used words to avoid
+        word_count: Number of vocabulary words to include
+    
+    Returns:
+        Tuple of (enhanced_prompt, selected_vocabulary_words)
+    """
+    if used_words is None:
+        used_words = []
+    
+    # Pre-select vocabulary words from curated banks
+    selected_vocab_words = []
+    for _ in range(word_count):
+        vocab_word_data = vocabulary_manager.select_vocabulary_word(
+            topic=topic,
+            used_words=used_words + selected_vocab_words
+        )
+        if vocab_word_data:
+            selected_vocab_words.append(vocab_word_data['word'])
+    
+    if selected_vocab_words:
+        vocab_instruction = f" Naturally incorporate these educational vocabulary words into your response: {', '.join(selected_vocab_words)}. Bold these words using **word** format so children can learn them."
+        enhanced_prompt = base_prompt + vocab_instruction
+    else:
+        # Fallback if no vocabulary available
+        enhanced_prompt = base_prompt + " Bold 2-3 challenging or important words using **word** format."
+        selected_vocab_words = []
+    
+    return enhanced_prompt, selected_vocab_words
+
+def extract_vocabulary_from_content(content: str, content_vocabulary: List[str] = None) -> List[str]:
+    """
+    Extract vocabulary words from generated content, prioritizing bolded words
+    
+    Args:
+        content: The generated content text
+        content_vocabulary: List of vocabulary words that were intended to be used
+    
+    Returns:
+        List of vocabulary words found in the content
+    """
+    if content_vocabulary is None:
+        content_vocabulary = []
+    
+    # Extract words that are bolded with **word** format
+    import re
+    bolded_words = re.findall(r'\*\*(.*?)\*\*', content)
+    
+    # Clean up the bolded words (remove extra spaces, convert to lowercase for comparison)
+    extracted_words = []
+    for word in bolded_words:
+        clean_word = word.strip().lower()
+        if clean_word and len(clean_word) > 1:  # Avoid single characters or empty strings
+            extracted_words.append(clean_word)
+    
+    # Prioritize words that were in our intended vocabulary
+    context_words = []
+    for word in extracted_words:
+        # Check if this extracted word matches any of our intended vocabulary
+        for vocab_word in content_vocabulary:
+            if vocab_word.lower() == word or vocab_word.lower() in word:
+                context_words.append(vocab_word)
+                break
+        else:
+            # If no match found in intended vocabulary, add the extracted word directly
+            context_words.append(word)
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_words = []
+    for word in context_words:
+        if word.lower() not in seen:
+            seen.add(word.lower())
+            unique_words.append(word)
+    
+    logger.info(f"Extracted vocabulary from content: {unique_words}")
+    return unique_words
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -22,6 +107,12 @@ app.add_middleware(
 )
 
 # Request/Response models
+class VocabularyPhase(BaseModel):
+    isActive: bool = False
+    questionsAsked: int = 0
+    maxQuestions: int = 3
+    isComplete: bool = False
+
 class SessionData(BaseModel):
     topic: Optional[str] = None
     storyParts: List[str] = []
@@ -32,6 +123,8 @@ class SessionData(BaseModel):
     allFacts: List[str] = []
     askedVocabWords: List[str] = []  # Track vocabulary words that have been asked
     awaiting_story_confirmation: bool = False  # Track if waiting for user to confirm new story
+    vocabularyPhase: VocabularyPhase = VocabularyPhase()  # Track vocabulary phase state
+    contentVocabulary: List[str] = []  # Track vocabulary words used in generated content
 
 class ChatRequest(BaseModel):
     message: str
@@ -72,6 +165,14 @@ async def chat_endpoint(chat_request: ChatRequest):
 async def handle_storywriting(user_message: str, session_data: SessionData) -> ChatResponse:
     """Handle storywriting mode interactions following the 10-step process"""
     
+    # Handle distinct vocabulary phase messages
+    if user_message == "start_vocabulary":
+        return await handle_start_vocabulary(session_data)
+    elif user_message == "next_vocabulary":
+        return await handle_next_vocabulary(session_data)
+    elif user_message == "finish_vocabulary":
+        return await handle_finish_vocabulary(session_data)
+    
     # If no topic is set, user is choosing a topic (Step 1)
     if not session_data.topic:
         # Extract topic from user message
@@ -79,10 +180,19 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
         session_data.topic = topic
         session_data.currentStep = 2  # Moving to Step 2 after topic selection
         
-        # Generate story beginning following Steps 2-4
-        story_prompt = f"The child has chosen the topic: {topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."
-        story_response = llm_provider.generate_response(story_prompt)
+        # Generate story beginning with vocabulary integration
+        base_prompt = f"The child has chosen the topic: {topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."
+        enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+            base_prompt, topic, session_data.askedVocabWords
+        )
+        story_response = llm_provider.generate_response(enhanced_prompt)
         session_data.storyParts.append(story_response)
+        
+        # Track vocabulary words that were intended to be used
+        if selected_vocab:
+            logger.info(f"Story generation included vocabulary: {selected_vocab}")
+            # Store them for later vocabulary question generation
+            session_data.contentVocabulary.extend(selected_vocab)
         
         # Get theme suggestion for this topic
         suggested_theme = get_theme_suggestion(topic)
@@ -124,11 +234,21 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
                 session_data.isComplete = False
                 session_data.askedVocabWords = []
                 session_data.awaiting_story_confirmation = False
+                session_data.vocabularyPhase = VocabularyPhase()  # Reset vocabulary phase
+                session_data.contentVocabulary = []  # Reset content vocabulary for new story
                 
-                # Generate story beginning for new topic
-                story_prompt = f"The child has chosen the topic: {potential_new_topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."
-                story_response = llm_provider.generate_response(story_prompt)
+                # Generate story beginning with vocabulary integration
+                base_prompt = f"The child has chosen the topic: {potential_new_topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."
+                enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+                    base_prompt, potential_new_topic, session_data.askedVocabWords
+                )
+                story_response = llm_provider.generate_response(enhanced_prompt)
                 session_data.storyParts.append(story_response)
+                
+                # Track vocabulary words that were intended to be used
+                if selected_vocab:
+                    logger.info(f"New story generation included vocabulary: {selected_vocab}")
+                    session_data.contentVocabulary.extend(selected_vocab)
                 
                 # Get theme suggestion for new topic
                 suggested_theme = get_theme_suggestion(potential_new_topic)
@@ -168,11 +288,21 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
                     session_data.isComplete = False
                     session_data.askedVocabWords = []
                     session_data.awaiting_story_confirmation = False
+                    session_data.vocabularyPhase = VocabularyPhase()  # Reset vocabulary phase
+                    session_data.contentVocabulary = []  # Reset content vocabulary for new story
                     
-                    # Generate story beginning for new topic
-                    story_prompt = f"The child has chosen the topic: {potential_new_topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."
-                    story_response = llm_provider.generate_response(story_prompt)
+                    # Generate story beginning with vocabulary integration
+                    base_prompt = f"The child has chosen the topic: {potential_new_topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."
+                    enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+                        base_prompt, potential_new_topic, session_data.askedVocabWords
+                    )
+                    story_response = llm_provider.generate_response(enhanced_prompt)
                     session_data.storyParts.append(story_response)
+                    
+                    # Track vocabulary words that were intended to be used
+                    if selected_vocab:
+                        logger.info(f"Story topic switch included vocabulary: {selected_vocab}")
+                        session_data.contentVocabulary.extend(selected_vocab)
                     
                     # Get theme suggestion for new topic
                     suggested_theme = get_theme_suggestion(potential_new_topic)
@@ -183,30 +313,12 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
                         suggestedTheme=suggested_theme
                     )
         
-        # Story is done, now show vocabulary questions
-        all_story_text = " ".join(session_data.storyParts)
-        vocab_words = llm_provider.extract_vocabulary_words(all_story_text)
-        vocab_question = None
-        if vocab_words:
-            vocab_word = select_new_vocab_word(vocab_words, session_data.askedVocabWords)
-            if vocab_word:
-                session_data.askedVocabWords.append(vocab_word)
-                vocab_question = llm_provider.generate_vocabulary_question(vocab_word, all_story_text)
-        
-        if vocab_question:
-            return ChatResponse(
-                response="Great story! Now let's test your vocabulary:",
-                vocabQuestion=VocabQuestion(**vocab_question),
-                sessionData=session_data
-            )
-        else:
-            # No more vocabulary words to ask about - offer to write another story
-            session_data.awaiting_story_confirmation = True
-            story_completion_prompt = f"Wonderful story! You've mastered all the vocabulary words. Would you like to write another story? Here are some fun ideas:\\n\\n🚀 Space adventures\\n🏰 Fantasy quests\\n⚽ Sports excitement\\n🦄 Magical creatures\\n🕵️ Mystery solving\\n🍕 Food adventures\\n🐾 Animal stories\\n🌊 Ocean explorations\\n\\nWhat sounds interesting to you?"
-            return ChatResponse(
-                response=story_completion_prompt,
-                sessionData=session_data
-            )
+        # Story is done - vocabulary phase will be handled by new system
+        # Mark story as complete and let the frontend trigger vocabulary phase
+        return ChatResponse(
+            response="The end! 🌟",
+            sessionData=session_data
+        )
     
     # Story is in progress (Steps 5-6)
     else:
@@ -223,9 +335,17 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
         total_story_length = len(' '.join(session_data.storyParts))
         should_end_story = (session_data.currentStep >= 3 and total_story_length > 400) or session_data.currentStep >= 6
         if should_end_story:
-            # End the story (Step 7)
-            story_prompt = f"End the story about {session_data.topic}. Previous context: {story_context}. Write a final paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. End the story with a satisfying conclusion and add 'The end!' at the very end. DO NOT ask the child to continue. DO NOT include vocabulary questions - those will be handled separately."
-            story_response = llm_provider.generate_response(story_prompt)
+            # End the story with vocabulary integration
+            base_prompt = f"End the story about {session_data.topic}. Previous context: {story_context}. Write a final paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. End the story with a satisfying conclusion and add 'The end!' at the very end. DO NOT ask the child to continue. DO NOT include vocabulary questions - those will be handled separately."
+            enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+                base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
+            )
+            story_response = llm_provider.generate_response(enhanced_prompt)
+            
+            # Track vocabulary words that were intended to be used
+            if selected_vocab:
+                logger.info(f"Story ending included vocabulary: {selected_vocab}")
+                session_data.contentVocabulary.extend(selected_vocab)
             
             # Add grammar feedback if available
             if grammar_feedback:
@@ -243,9 +363,17 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
                 sessionData=session_data
             )
         else:
-            # Continue story (Steps 2-4 repeated)
-            story_prompt = f"Continue the story about {session_data.topic}. Previous context: {story_context}. Write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words. Then invite the child to continue the story without giving them any options. Keep this a short story - try to end it before it goes over 300 words total. DO NOT include vocabulary questions - those will be handled separately."
-            story_response = llm_provider.generate_response(story_prompt)
+            # Continue story with vocabulary integration
+            base_prompt = f"Continue the story about {session_data.topic}. Previous context: {story_context}. Write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. Keep this a short story - try to end it before it goes over 300 words total. DO NOT include vocabulary questions - those will be handled separately."
+            enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+                base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
+            )
+            story_response = llm_provider.generate_response(enhanced_prompt)
+            
+            # Track vocabulary words that were intended to be used
+            if selected_vocab:
+                logger.info(f"Story continuation included vocabulary: {selected_vocab}")
+                session_data.contentVocabulary.extend(selected_vocab)
             
             # Add grammar feedback if available
             if grammar_feedback:
@@ -259,6 +387,131 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
                 sessionData=session_data
             )
 
+async def handle_start_vocabulary(session_data: SessionData) -> ChatResponse:
+    """Start vocabulary phase after story completion"""
+    logger.info("Starting vocabulary phase")
+    
+    # Activate vocabulary phase
+    session_data.vocabularyPhase.isActive = True
+    session_data.vocabularyPhase.questionsAsked = 0
+    session_data.vocabularyPhase.isComplete = False
+    
+    # Extract vocabulary words from the generated story content
+    all_story_text = "\n".join(session_data.storyParts)
+    content_vocab_words = extract_vocabulary_from_content(all_story_text, session_data.contentVocabulary)
+    
+    # Find a vocabulary word that hasn't been asked yet
+    available_words = [word for word in content_vocab_words if word not in session_data.askedVocabWords]
+    
+    if available_words:
+        # Use a word from the story content
+        selected_word = available_words[0]
+        session_data.askedVocabWords.append(selected_word)
+        session_data.vocabularyPhase.questionsAsked = 1
+        
+        # Use the actual story content as context for the vocabulary question
+        vocab_question = llm_provider.generate_vocabulary_question(selected_word, context=all_story_text)
+        
+        return ChatResponse(
+            response="Great story! Now let's test your vocabulary:",
+            vocabQuestion=VocabQuestion(**vocab_question),
+            sessionData=session_data
+        )
+    else:
+        # Fallback to curated vocabulary if no words found in content
+        vocab_word_data = vocabulary_manager.select_vocabulary_word(
+            topic=session_data.topic or "general",
+            used_words=session_data.askedVocabWords
+        )
+        
+        if vocab_word_data:
+            session_data.askedVocabWords.append(vocab_word_data['word'])
+            session_data.vocabularyPhase.questionsAsked = 1
+            vocab_question = llm_provider.generate_vocabulary_question(
+                vocab_word_data['word'], 
+                context=vocab_word_data['definition']
+            )
+            
+            return ChatResponse(
+                response="Great story! Now let's test your vocabulary:",
+                vocabQuestion=VocabQuestion(**vocab_question),
+                sessionData=session_data
+            )
+    
+    # If no vocabulary words available, finish vocabulary phase
+    return await handle_finish_vocabulary(session_data)
+
+async def handle_next_vocabulary(session_data: SessionData) -> ChatResponse:
+    """Request next vocabulary question with count validation"""
+    logger.info(f"Requesting vocabulary question {session_data.vocabularyPhase.questionsAsked + 1} of {session_data.vocabularyPhase.maxQuestions}")
+    
+    # Check if we've reached the maximum
+    if session_data.vocabularyPhase.questionsAsked >= session_data.vocabularyPhase.maxQuestions:
+        logger.info("Max vocabulary questions reached, finishing vocabulary phase")
+        return await handle_finish_vocabulary(session_data)
+    
+    # Extract vocabulary words from the generated story content (same approach as handle_start_vocabulary)
+    all_story_text = "\n".join(session_data.storyParts)
+    content_vocab_words = extract_vocabulary_from_content(all_story_text, session_data.contentVocabulary)
+    
+    # Find a vocabulary word that hasn't been asked yet
+    available_words = [word for word in content_vocab_words if word not in session_data.askedVocabWords]
+    
+    if available_words:
+        # Use a word from the story content
+        selected_word = available_words[0]
+        session_data.askedVocabWords.append(selected_word)
+        session_data.vocabularyPhase.questionsAsked += 1
+        
+        # Use the actual story content as context for the vocabulary question
+        vocab_question = llm_provider.generate_vocabulary_question(selected_word, context=all_story_text)
+        
+        return ChatResponse(
+            response="Let's try another vocabulary question:",
+            vocabQuestion=VocabQuestion(**vocab_question),
+            sessionData=session_data
+        )
+    else:
+        # Fallback to curated vocabulary if no more words found in content
+        vocab_word_data = vocabulary_manager.select_vocabulary_word(
+            topic=session_data.topic or "general",
+            used_words=session_data.askedVocabWords
+        )
+        
+        if vocab_word_data:
+            session_data.askedVocabWords.append(vocab_word_data['word'])
+            session_data.vocabularyPhase.questionsAsked += 1
+            vocab_question = llm_provider.generate_vocabulary_question(
+                vocab_word_data['word'], 
+                context=vocab_word_data['definition']
+            )
+            
+            return ChatResponse(
+                response="Let's try another vocabulary question:",
+                vocabQuestion=VocabQuestion(**vocab_question),
+                sessionData=session_data
+            )
+    
+    # If no more vocabulary words available, finish vocabulary phase
+    logger.info("No more vocabulary words available, finishing vocabulary phase")
+    return await handle_finish_vocabulary(session_data)
+
+async def handle_finish_vocabulary(session_data: SessionData) -> ChatResponse:
+    """Finish vocabulary phase and ask for new story"""
+    logger.info("Finishing vocabulary phase, asking for new story")
+    
+    # Mark vocabulary phase as complete
+    session_data.vocabularyPhase.isComplete = True
+    session_data.vocabularyPhase.isActive = False
+    session_data.awaiting_story_confirmation = True
+    
+    story_completion_prompt = "Wonderful job with the vocabulary! You've done great! Would you like to write another story? Here are some fun ideas:\\n\\n🚀 Space adventures\\n🏰 Fantasy quests\\n⚽ Sports excitement\\n🦄 Magical creatures\\n🕵️ Mystery solving\\n🍕 Food adventures\\n🐾 Animal stories\\n🌊 Ocean explorations\\n\\nWhat sounds interesting to you?"
+    
+    return ChatResponse(
+        response=story_completion_prompt,
+        sessionData=session_data
+    )
+
 async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatResponse:
     """Handle fun facts mode interactions"""
     
@@ -268,22 +521,48 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
         topic = extract_topic_from_message(user_message)
         session_data.topic = topic
         session_data.factsShown = 0
+        session_data.contentVocabulary = []  # Reset content vocabulary for new topic
         
-        # Generate first fact
-        fact_prompt = f"Generate a fun fact about: {topic}. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words using **word** format. End with relevant emojis that match the topic."
-        fact_response = llm_provider.generate_response(fact_prompt)
+        # Generate first fact with vocabulary integration
+        base_prompt = f"Generate a fun fact about: {topic}. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. End with relevant emojis that match the topic."
+        enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+            base_prompt, topic, session_data.askedVocabWords
+        )
+        fact_response = llm_provider.generate_response(enhanced_prompt)
         session_data.currentFact = fact_response
         session_data.allFacts.append(fact_response)
         session_data.factsShown += 1
         
-        # Generate vocabulary question
-        vocab_words = llm_provider.extract_vocabulary_words(fact_response)
+        # Track vocabulary words that were intended to be used
+        if selected_vocab:
+            logger.info(f"Fun fact generation included vocabulary: {selected_vocab}")
+            session_data.contentVocabulary.extend(selected_vocab)
+        
+        # Generate vocabulary question using content-based extraction
+        fact_vocab_words = extract_vocabulary_from_content(fact_response, session_data.contentVocabulary)
         vocab_question = None
-        if vocab_words:
-            vocab_word = select_new_vocab_word(vocab_words, session_data.askedVocabWords)
-            if vocab_word:
-                session_data.askedVocabWords.append(vocab_word)
-                vocab_question = llm_provider.generate_vocabulary_question(vocab_word, fact_response)
+        
+        # Find a vocabulary word that hasn't been asked yet from the fact content
+        available_fact_words = [word for word in fact_vocab_words if word not in session_data.askedVocabWords]
+        
+        if available_fact_words:
+            selected_word = available_fact_words[0]
+            session_data.askedVocabWords.append(selected_word)
+            
+            # Use the actual fact content as context for the vocabulary question
+            vocab_question = llm_provider.generate_vocabulary_question(selected_word, context=fact_response)
+        else:
+            # Fallback to curated vocabulary if no words found in fact content
+            vocab_word_data = vocabulary_manager.select_vocabulary_word(
+                topic=topic,
+                used_words=session_data.askedVocabWords
+            )
+            if vocab_word_data:
+                session_data.askedVocabWords.append(vocab_word_data['word'])
+                vocab_question = llm_provider.generate_vocabulary_question(
+                    vocab_word_data['word'], 
+                    context=vocab_word_data['definition']
+                )
         
         # Get theme suggestion for this topic
         suggested_theme = get_theme_suggestion(topic)
@@ -298,22 +577,47 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
     # Topic is set, continue with more facts
     else:
         if session_data.factsShown < 3:  # Show 3 facts per topic
-            # Generate another fact
+            # Generate another fact with vocabulary integration
             previous_facts = " | ".join(session_data.allFacts) if session_data.allFacts else "None"
-            fact_prompt = f"Generate a completely different and NEW fun fact about: {session_data.topic}. This is fact #{session_data.factsShown + 1}. DO NOT repeat any of these previous facts: {previous_facts}. Make sure this is a totally different aspect or detail about {session_data.topic}. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words using **word** format. End with relevant emojis that match the topic."
-            fact_response = llm_provider.generate_response(fact_prompt)
+            base_prompt = f"Generate a completely different and NEW fun fact about: {session_data.topic}. This is fact #{session_data.factsShown + 1}. DO NOT repeat any of these previous facts: {previous_facts}. Make sure this is a totally different aspect or detail about {session_data.topic}. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. End with relevant emojis that match the topic."
+            enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+                base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
+            )
+            fact_response = llm_provider.generate_response(enhanced_prompt)
             session_data.currentFact = fact_response
             session_data.allFacts.append(fact_response)
             session_data.factsShown += 1
             
-            # Generate vocabulary question
-            vocab_words = llm_provider.extract_vocabulary_words(fact_response)
+            # Track vocabulary words that were intended to be used
+            if selected_vocab:
+                logger.info(f"Continuing fun fact included vocabulary: {selected_vocab}")
+                session_data.contentVocabulary.extend(selected_vocab)
+            
+            # Generate vocabulary question using content-based extraction
+            fact_vocab_words = extract_vocabulary_from_content(fact_response, session_data.contentVocabulary)
             vocab_question = None
-            if vocab_words:
-                vocab_word = select_new_vocab_word(vocab_words, session_data.askedVocabWords)
-                if vocab_word:
-                    session_data.askedVocabWords.append(vocab_word)
-                    vocab_question = llm_provider.generate_vocabulary_question(vocab_word, fact_response)
+            
+            # Find a vocabulary word that hasn't been asked yet from the fact content
+            available_fact_words = [word for word in fact_vocab_words if word not in session_data.askedVocabWords]
+            
+            if available_fact_words:
+                selected_word = available_fact_words[0]
+                session_data.askedVocabWords.append(selected_word)
+                
+                # Use the actual fact content as context for the vocabulary question
+                vocab_question = llm_provider.generate_vocabulary_question(selected_word, context=fact_response)
+            else:
+                # Fallback to curated vocabulary if no words found in fact content
+                vocab_word_data = vocabulary_manager.select_vocabulary_word(
+                    topic=session_data.topic,
+                    used_words=session_data.askedVocabWords
+                )
+                if vocab_word_data:
+                    session_data.askedVocabWords.append(vocab_word_data['word'])
+                    vocab_question = llm_provider.generate_vocabulary_question(
+                        vocab_word_data['word'], 
+                        context=vocab_word_data['definition']
+                    )
             
             return ChatResponse(
                 response=fact_response,
@@ -336,22 +640,48 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 session_data.allFacts = []
                 session_data.currentFact = None
                 session_data.askedVocabWords = []  # Reset vocabulary words for new topic
+                session_data.contentVocabulary = []  # Reset content vocabulary for new topic
                 
-                # Generate first fact for new topic
-                fact_prompt = f"Generate a fun fact about: {new_topic}. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. Bold 2-3 tricky or important words using **word** format. End with relevant emojis that match the topic."
-                fact_response = llm_provider.generate_response(fact_prompt)
+                # Generate first fact for new topic with vocabulary integration
+                base_prompt = f"Generate a fun fact about: {new_topic}. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. End with relevant emojis that match the topic."
+                enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+                    base_prompt, new_topic, session_data.askedVocabWords
+                )
+                fact_response = llm_provider.generate_response(enhanced_prompt)
                 session_data.currentFact = fact_response
                 session_data.allFacts.append(fact_response)
                 session_data.factsShown += 1
                 
-                # Generate vocabulary question
-                vocab_words = llm_provider.extract_vocabulary_words(fact_response)
+                # Track vocabulary words that were intended to be used
+                if selected_vocab:
+                    logger.info(f"New topic fun fact included vocabulary: {selected_vocab}")
+                    session_data.contentVocabulary.extend(selected_vocab)
+                
+                # Generate vocabulary question using content-based extraction
+                fact_vocab_words = extract_vocabulary_from_content(fact_response, session_data.contentVocabulary)
                 vocab_question = None
-                if vocab_words:
-                    vocab_word = select_new_vocab_word(vocab_words, session_data.askedVocabWords)
-                    if vocab_word:
-                        session_data.askedVocabWords.append(vocab_word)
-                        vocab_question = llm_provider.generate_vocabulary_question(vocab_word, fact_response)
+                
+                # Find a vocabulary word that hasn't been asked yet from the fact content
+                available_fact_words = [word for word in fact_vocab_words if word not in session_data.askedVocabWords]
+                
+                if available_fact_words:
+                    selected_word = available_fact_words[0]
+                    session_data.askedVocabWords.append(selected_word)
+                    
+                    # Use the actual fact content as context for the vocabulary question
+                    vocab_question = llm_provider.generate_vocabulary_question(selected_word, context=fact_response)
+                else:
+                    # Fallback to curated vocabulary if no words found in fact content
+                    vocab_word_data = vocabulary_manager.select_vocabulary_word(
+                        topic=new_topic,
+                        used_words=session_data.askedVocabWords
+                    )
+                    if vocab_word_data:
+                        session_data.askedVocabWords.append(vocab_word_data['word'])
+                        vocab_question = llm_provider.generate_vocabulary_question(
+                            vocab_word_data['word'], 
+                            context=vocab_word_data['definition']
+                        )
                 
                 # Get theme suggestion for new topic
                 suggested_theme = get_theme_suggestion(new_topic)
@@ -369,13 +699,7 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                     sessionData=session_data
                 )
 
-def select_new_vocab_word(vocab_words: List[str], asked_words: List[str]) -> Optional[str]:
-    """Select a vocabulary word that hasn't been asked yet"""
-    for word in vocab_words:
-        if word.lower() not in [asked.lower() for asked in asked_words]:
-            return word
-    # If all words have been asked, return the first one (shouldn't happen often)
-    return vocab_words[0] if vocab_words else None
+# Legacy function removed - now using vocabulary_manager.select_vocabulary_word()
 
 def extract_topic_from_message(message: str) -> str:
     """Extract topic from user message"""

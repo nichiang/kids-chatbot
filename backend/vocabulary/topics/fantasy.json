@@ -1,0 +1,165 @@
+{
+  "topic": "fantasy",
+  "vocabulary": [
+    {
+      "word": "enchanted",
+      "definition": "magical and wonderful",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "The enchanted forest sparkled with fairy dust",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "magical",
+      "definition": "having special powers that seem impossible",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "The wizard had a magical wand that could grant wishes",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "castle",
+      "definition": "a large stone building where kings and queens live",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The princess lived in a tall castle with many towers",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "dragon",
+      "definition": "a huge imaginary creature that can breathe fire",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The brave knight fought the fierce dragon",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "quest",
+      "definition": "a long journey to find something important",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The hero went on a quest to find the golden treasure",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "kingdom",
+      "definition": "a country ruled by a king or queen",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The peaceful kingdom was protected by brave knights",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "spell",
+      "definition": "magic words that make something happen",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The fairy cast a spell to help the lost children",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "unicorn",
+      "definition": "an imaginary horse with one horn on its head",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The beautiful unicorn had a silver horn and flowing mane",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "mystical",
+      "definition": "mysterious and full of magic",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The mystical crystal glowed with inner light",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "sorcerer",
+      "definition": "a person who uses magic and spells",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The wise sorcerer helped the village with his magic",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "prophecy",
+      "definition": "a prediction about what will happen in the future",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The ancient prophecy said a hero would save the land",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "legendary",
+      "definition": "famous in stories told for a very long time",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "King Arthur was a legendary ruler with a magical sword",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "potion",
+      "definition": "a magical drink that can change things",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The witch brewed a healing potion in her cauldron",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "realm",
+      "definition": "a magical kingdom or world",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The fairy realm was hidden behind a waterfall",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "transformation",
+      "definition": "changing from one thing into something completely different",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The prince's transformation back from a frog was magical",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "guardian",
+      "definition": "someone who protects and watches over others",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The dragon was the guardian of the ancient treasure",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "immortal",
+      "definition": "living forever and never dying",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The immortal wizard had lived for thousands of years",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "enchantment",
+      "definition": "a magical spell that changes things",
+      "difficulty": 4,
+      "type": "noun",
+      "example": "The enchantment made the whole forest come alive",
+      "grade_level": "4-5"
+    },
+    {
+      "word": "supernatural",
+      "definition": "beyond what is natural or normal",
+      "difficulty": 4,
+      "type": "adjective",
+      "example": "The ghost had supernatural powers to walk through walls",
+      "grade_level": "4-5"
+    },
+    {
+      "word": "incantation",
+      "definition": "special magic words spoken to cast a spell",
+      "difficulty": 4,
+      "type": "noun",
+      "example": "The wizard spoke an ancient incantation to open the door",
+      "grade_level": "4-5"
+    }
+  ]
+}

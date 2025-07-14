@@ -1,0 +1,284 @@
+{
+  "vocabulary": [
+    {
+      "word": "adventure",
+      "definition": "an exciting experience or journey",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "We went on an adventure to explore the forest",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "discover",
+      "definition": "to find something for the first time",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "Scientists discover new animals in the ocean",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "explore",
+      "definition": "to travel and learn about new places",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "Let's explore the mysterious cave",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "creative",
+      "definition": "able to make new and interesting things",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "She drew a creative picture with bright colors",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "unique",
+      "definition": "special and different from everything else",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "Every snowflake has a unique pattern",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "amazing",
+      "definition": "very surprising and wonderful",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "The fireworks made an amazing display in the sky",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "journey",
+      "definition": "a trip from one place to another",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The journey to grandma's house takes two hours",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "courage",
+      "definition": "being brave when something is scary",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "It takes courage to speak in front of many people",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "celebrate",
+      "definition": "to do something special for a happy event",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "We celebrate birthdays with cake and presents",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "friendship",
+      "definition": "a special relationship between people who care about each other",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "Their friendship lasted for many years",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "wonder",
+      "definition": "to think about something or feel amazed",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "I wonder what's inside that mysterious box",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "curious",
+      "definition": "wanting to learn or know about something",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "The curious cat investigated every corner of the room",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "treasure",
+      "definition": "something very valuable and special",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The pirates searched for buried treasure",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "ancient",
+      "definition": "very old, from long ago",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "The ancient castle was built hundreds of years ago",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "mystery",
+      "definition": "something that is hard to understand or explain",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The missing cookies were a mystery until we found crumbs",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "compassion",
+      "definition": "caring deeply about others and wanting to help them",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "She showed compassion by helping the injured bird",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "magnificent",
+      "definition": "extremely beautiful and impressive",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The magnificent waterfall took our breath away",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "fascinating",
+      "definition": "extremely interesting and captivating",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The documentary about wolves was fascinating",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "extraordinary",
+      "definition": "very unusual and remarkable",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "Her extraordinary talent amazed everyone",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "mysterious",
+      "definition": "difficult to understand or explain",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The mysterious footprints led into the dark forest",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "imagination",
+      "definition": "the ability to create pictures and ideas in your mind",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Her imagination helped her write wonderful stories",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "determined",
+      "definition": "decided to do something and not giving up",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The determined athlete practiced every day",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "appreciate",
+      "definition": "to understand the value of something good",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "We should appreciate the beautiful sunset",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "understand",
+      "definition": "to know what something means",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "I understand how to solve this math problem",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "incredible",
+      "definition": "amazing and hard to believe",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The acrobat did an incredible flip in the air",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "responsibility",
+      "definition": "having a job or duty to take care of something",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Taking care of a pet is a big responsibility",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "generous",
+      "definition": "willing to give and share with others",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The generous neighbor shared vegetables from her garden",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "accomplish",
+      "definition": "to complete or finish something successfully",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "She was proud to accomplish her goal of reading 50 books",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "environment",
+      "definition": "the natural world around us",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "We should protect our environment by recycling",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "contribute",
+      "definition": "to give or add something to help",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "Everyone can contribute to making the school better",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "permanent",
+      "definition": "lasting forever and not changing",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The permanent marker won't wash off easily",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "communicate",
+      "definition": "to share ideas and feelings with others",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "Animals communicate in many different ways",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "cooperation",
+      "definition": "working together to achieve something",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The project required cooperation from the whole team",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "opportunity",
+      "definition": "a chance to do something good",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Learning to play piano is a wonderful opportunity",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "independent",
+      "definition": "able to do things by yourself",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "She became more independent when she learned to ride a bike",
+      "grade_level": "3-4"
+    }
+  ]
+}

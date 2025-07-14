@@ -1,0 +1,165 @@
+{
+  "topic": "ocean",
+  "vocabulary": [
+    {
+      "word": "marine",
+      "definition": "relating to the ocean or sea",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "Marine animals live in the salty ocean water",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "current",
+      "definition": "moving water in the ocean that flows like a river",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The ocean current carried the fish to warmer waters",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "depths",
+      "definition": "the deepest parts of the ocean",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "Strange creatures live in the ocean depths",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "coral",
+      "definition": "colorful living structures that grow in warm ocean water",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The coral reef was home to many tropical fish",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "tide",
+      "definition": "the rising and falling of ocean water twice each day",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "At low tide, we could see shells on the beach",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "surface",
+      "definition": "the top layer of the ocean water",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "Dolphins jumped above the ocean surface",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "waves",
+      "definition": "moving bumps of water caused by wind",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The surfer rode the big waves to shore",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "kelp",
+      "definition": "tall seaweed that grows like underwater forests",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "Sea otters wrap themselves in kelp to stay in one place",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "ecosystem",
+      "definition": "all the living things in an area and how they work together",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The coral reef ecosystem has many colorful fish",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "navigate",
+      "definition": "to find your way from one place to another",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "Whales navigate across thousands of miles of ocean",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "submarine",
+      "definition": "a boat that can travel underwater",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The submarine explored the deep ocean floor",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "mysterious",
+      "definition": "strange and hard to understand",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The mysterious sounds came from deep in the ocean",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "habitat",
+      "definition": "the natural home where an animal lives",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The coral reef is a perfect habitat for tropical fish",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "migrate",
+      "definition": "to move from one place to another with the seasons",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "Gray whales migrate thousands of miles each year",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "camouflage",
+      "definition": "colors or patterns that help animals hide",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The octopus used camouflage to blend with the rocks",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "predator",
+      "definition": "an animal that hunts other animals for food",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The shark is a fierce predator in the ocean",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "plankton",
+      "definition": "tiny floating plants and animals in the ocean",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Many ocean animals eat plankton for food",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "bioluminescence",
+      "definition": "the ability of living things to make their own light",
+      "difficulty": 4,
+      "type": "noun",
+      "example": "Deep sea creatures use bioluminescence to communicate",
+      "grade_level": "4-5"
+    },
+    {
+      "word": "abyss",
+      "definition": "the deepest, darkest parts of the ocean",
+      "difficulty": 4,
+      "type": "noun",
+      "example": "Strange creatures live in the ocean abyss",
+      "grade_level": "4-5"
+    },
+    {
+      "word": "biodiversity",
+      "definition": "the variety of different living things in one place",
+      "difficulty": 4,
+      "type": "noun",
+      "example": "Coral reefs have amazing biodiversity",
+      "grade_level": "4-5"
+    }
+  ]
+}
