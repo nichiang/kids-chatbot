@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from typing import Dict, List, Optional
 import logging
 from llm_provider import llm_provider
-from generate_prompt import generate_prompt, load_file
+from generate_prompt import generate_prompt, load_file, generate_fun_facts_prompt
 from vocabulary_manager import vocabulary_manager
 
 def generate_vocabulary_enhanced_prompt(base_prompt: str, topic: str, used_words: List[str] = None, word_count: int = 3) -> tuple[str, List[str]]:
@@ -523,8 +523,8 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
         session_data.factsShown = 0
         session_data.contentVocabulary = []  # Reset content vocabulary for new topic
         
-        # Generate first fact with vocabulary integration
-        base_prompt = f"Generate a fun fact about: {topic}. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. End with relevant emojis that match the topic."
+        # Generate first fact with vocabulary integration using external prompt system
+        base_prompt = generate_fun_facts_prompt('first_fact', topic=topic)
         enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
             base_prompt, topic, session_data.askedVocabWords
         )
@@ -577,9 +577,14 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
     # Topic is set, continue with more facts
     else:
         if session_data.factsShown < 3:  # Show 3 facts per topic
-            # Generate another fact with vocabulary integration
+            # Generate another fact with vocabulary integration using external prompt system
             previous_facts = " | ".join(session_data.allFacts) if session_data.allFacts else "None"
-            base_prompt = f"Generate a completely different and NEW fun fact about: {session_data.topic}. This is fact #{session_data.factsShown + 1}. DO NOT repeat any of these previous facts: {previous_facts}. Make sure this is a totally different aspect or detail about {session_data.topic}. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. End with relevant emojis that match the topic."
+            base_prompt = generate_fun_facts_prompt(
+                'continuing_fact', 
+                topic=session_data.topic, 
+                fact_number=session_data.factsShown + 1,
+                previous_facts=previous_facts
+            )
             enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
                 base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
             )
@@ -642,8 +647,8 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 session_data.askedVocabWords = []  # Reset vocabulary words for new topic
                 session_data.contentVocabulary = []  # Reset content vocabulary for new topic
                 
-                # Generate first fact for new topic with vocabulary integration
-                base_prompt = f"Generate a fun fact about: {new_topic}. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. End with relevant emojis that match the topic."
+                # Generate first fact for new topic with vocabulary integration using external prompt system
+                base_prompt = generate_fun_facts_prompt('new_topic', topic=new_topic)
                 enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
                     base_prompt, new_topic, session_data.askedVocabWords
                 )
