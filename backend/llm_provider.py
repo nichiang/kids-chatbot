@@ -20,8 +20,11 @@ class LLMProvider:
         self.model = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
         self.base_url = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
         
-        # Generate the full prompt from spec files
+        # Generate the full prompt from spec files (default for story mode)
         self.system_prompt = generate_prompt()
+        
+        # Load fun facts system prompt
+        self.fun_facts_system_prompt = self._load_fun_facts_system_prompt()
         
         # Initialize OpenAI client
         if self.api_key:
@@ -34,16 +37,29 @@ class LLMProvider:
             logger.warning("OpenAI API key not found. Using fallback responses.")
             self.client = None
         
-    def generate_response(self, prompt: str, max_tokens: int = 300) -> str:
+    def _load_fun_facts_system_prompt(self) -> str:
+        """Load the fun facts system prompt from file"""
+        try:
+            from pathlib import Path
+            return Path("fun_facts_system_prompt.txt").read_text().strip()
+        except Exception as e:
+            logger.error(f"Error loading fun facts system prompt: {e}")
+            # Fallback to a basic fun facts system prompt
+            return "You are a friendly educational content creator for elementary school students. Generate engaging fun facts without including vocabulary questions in the content."
+    
+    def generate_response(self, prompt: str, max_tokens: int = 300, system_prompt: str = None) -> str:
         """
         Generate a response using OpenAI API or fallback to sample responses
         """
+        # Use provided system prompt or default to story system prompt
+        effective_system_prompt = system_prompt if system_prompt is not None else self.system_prompt
+        
         if self.client and self.api_key:
             try:
                 response = self.client.chat.completions.create(
                     model=self.model,
                     messages=[
-                        {"role": "system", "content": self.system_prompt},
+                        {"role": "system", "content": effective_system_prompt},
                         {"role": "user", "content": prompt}
                     ],
                     max_tokens=max_tokens,

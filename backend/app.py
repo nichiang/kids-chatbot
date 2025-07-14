@@ -34,11 +34,11 @@ def generate_vocabulary_enhanced_prompt(base_prompt: str, topic: str, used_words
             selected_vocab_words.append(vocab_word_data['word'])
     
     if selected_vocab_words:
-        vocab_instruction = f" Naturally incorporate these educational vocabulary words into your response: {', '.join(selected_vocab_words)}. Bold these words using **word** format so children can learn them."
+        vocab_instruction = f" Naturally incorporate these educational vocabulary words into your content: {', '.join(selected_vocab_words)}. Bold these words using **word** format. DO NOT include vocabulary questions, definitions, or explanations - just use the words naturally in the content."
         enhanced_prompt = base_prompt + vocab_instruction
     else:
         # Fallback if no vocabulary available
-        enhanced_prompt = base_prompt + " Bold 2-3 challenging or important words using **word** format."
+        enhanced_prompt = base_prompt + " Bold 2-3 challenging or important words using **word** format. DO NOT include vocabulary questions or definitions in the content."
         selected_vocab_words = []
     
     return enhanced_prompt, selected_vocab_words
@@ -528,7 +528,7 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
         enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
             base_prompt, topic, session_data.askedVocabWords
         )
-        fact_response = llm_provider.generate_response(enhanced_prompt)
+        fact_response = llm_provider.generate_response(enhanced_prompt, system_prompt=llm_provider.fun_facts_system_prompt)
         session_data.currentFact = fact_response
         session_data.allFacts.append(fact_response)
         session_data.factsShown += 1
@@ -588,7 +588,7 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
             enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
                 base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
             )
-            fact_response = llm_provider.generate_response(enhanced_prompt)
+            fact_response = llm_provider.generate_response(enhanced_prompt, system_prompt=llm_provider.fun_facts_system_prompt)
             session_data.currentFact = fact_response
             session_data.allFacts.append(fact_response)
             session_data.factsShown += 1
@@ -652,7 +652,7 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
                     base_prompt, new_topic, session_data.askedVocabWords
                 )
-                fact_response = llm_provider.generate_response(enhanced_prompt)
+                fact_response = llm_provider.generate_response(enhanced_prompt, system_prompt=llm_provider.fun_facts_system_prompt)
                 session_data.currentFact = fact_response
                 session_data.allFacts.append(fact_response)
                 session_data.factsShown += 1
