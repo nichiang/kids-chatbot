@@ -12,7 +12,13 @@ document.addEventListener("DOMContentLoaded", function () {
             topic: null,
             storyParts: [],
             currentStep: 0,
-            isComplete: false
+            isComplete: false,
+            vocabularyPhase: {
+                isActive: false,
+                questionsAsked: 0,
+                maxQuestions: 3,
+                isComplete: false
+            }
         },
         funfacts: {
             topic: null,
@@ -269,16 +275,34 @@ document.addEventListener("DOMContentLoaded", function () {
             if (currentMode === 'funfacts') {
                 continueAfterVocab();
             } else if (currentMode === 'storywriting') {
-                // Send continue signal to check for more vocab or story completion
-                sendContinueSignal();
+                // Update vocabulary phase tracking
+                sessionData.storywriting.vocabularyPhase.questionsAsked++;
+                
+                // Check if we've reached max vocabulary questions
+                if (sessionData.storywriting.vocabularyPhase.questionsAsked >= sessionData.storywriting.vocabularyPhase.maxQuestions) {
+                    // Finish vocabulary phase and ask for new story
+                    finishVocabularyPhase();
+                } else {
+                    // Request next vocabulary question
+                    requestNextVocabulary();
+                }
             }
         }, 2000);
     }
 
-    // Trigger vocabulary questions after story completion
-    async function triggerVocabularyQuestions() {
+
+    // Start vocabulary phase after story completion
+    async function startVocabularyPhase() {
         try {
-            console.log("Sending vocab trigger request...");
+            console.log("Starting vocabulary phase...");
+            
+            // Reset and activate vocabulary phase
+            sessionData.storywriting.vocabularyPhase = {
+                isActive: true,
+                questionsAsked: 0,
+                maxQuestions: 3,
+                isComplete: false
+            };
             
             const response = await fetch("http://localhost:8000/chat", {
                 method: "POST",
@@ -286,7 +310,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({ 
-                    message: "start vocabulary", // Trigger vocabulary questions
+                    message: "start_vocabulary", // Explicit vocabulary start signal
                     mode: currentMode,
                     sessionData: sessionData[currentMode]
                 })
@@ -304,9 +328,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 sessionData[currentMode] = data.sessionData;
             }
             
-            // Theme switching now happens during "Thinking..." phase to prevent jarring UX
-            // No longer handling backend theme suggestions here
-            
             // Handle vocabulary questions
             if (data.vocabQuestion) {
                 setTimeout(() => {
@@ -319,22 +340,23 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
         } catch (err) {
-            console.error("Error triggering vocabulary questions:", err);
+            console.error("Error starting vocabulary phase:", err);
             appendMessage("bot", "Let's move on to some vocabulary questions!");
         }
     }
 
-    // Continue storywriting flow after vocabulary question
-    async function sendContinueSignal() {
+    // Request next vocabulary question (with count validation)
+    async function requestNextVocabulary() {
         try {
-            // Send continue request to backend to check for more vocab or completion
+            console.log(`Requesting vocabulary question ${sessionData.storywriting.vocabularyPhase.questionsAsked + 1} of ${sessionData.storywriting.vocabularyPhase.maxQuestions}`);
+            
             const response = await fetch("http://localhost:8000/chat", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({ 
-                    message: "continue", // Signal to continue
+                    message: "next_vocabulary", // Explicit next vocabulary signal
                     mode: currentMode,
                     sessionData: sessionData[currentMode]
                 })
@@ -364,8 +386,47 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
         } catch (err) {
-            console.error("Error sending continue signal:", err);
-            appendMessage("bot", "Let me check what comes next...");
+            console.error("Error requesting next vocabulary:", err);
+            appendMessage("bot", "Let me ask another vocabulary question...");
+        }
+    }
+
+    // Finish vocabulary phase and ask for new story
+    async function finishVocabularyPhase() {
+        try {
+            console.log("Finishing vocabulary phase, asking for new story...");
+            
+            // Mark vocabulary phase as complete
+            sessionData.storywriting.vocabularyPhase.isComplete = true;
+            sessionData.storywriting.vocabularyPhase.isActive = false;
+            
+            const response = await fetch("http://localhost:8000/chat", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ 
+                    message: "finish_vocabulary", // Explicit vocabulary finish signal
+                    mode: currentMode,
+                    sessionData: sessionData[currentMode]
+                })
+            });
+
+            const data = await response.json();
+            
+            // Handle response (should ask if child wants to write another story)
+            if (data.response) {
+                appendMessage("bot", data.response);
+            }
+            
+            // Update session data
+            if (data.sessionData) {
+                sessionData[currentMode] = data.sessionData;
+            }
+
+        } catch (err) {
+            console.error("Error finishing vocabulary phase:", err);
+            appendMessage("bot", "That was great! Would you like to write another story?");
         }
     }
 
@@ -418,13 +479,21 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.log(`Vocab question received. Mode: ${currentMode}, Story complete: ${data.sessionData?.isComplete}, Should show: ${shouldShowVocabQuestion}`);
                 
                 if (shouldShowVocabQuestion) {
+                    // Calculate dynamic delay based on content length to ensure content finishes rendering
+                    const contentLength = data.response ? data.response.length : 0;
+                    const baseDelay = 1500; // Base delay in milliseconds
+                    const lengthMultiplier = 10; // Additional delay per character
+                    const dynamicDelay = Math.min(baseDelay + (contentLength * lengthMultiplier), 8000); // Cap at 8 seconds
+                    
+                    console.log(`Scheduling vocabulary question with dynamic delay: ${dynamicDelay}ms (content length: ${contentLength})`);
+                    
                     setTimeout(() => {
                         appendVocabQuestion(
                             data.vocabQuestion.question,
                             data.vocabQuestion.options,
                             data.vocabQuestion.correctIndex
                         );
-                    }, 1000);
+                    }, dynamicDelay);
                 } else {
                     console.log("Vocab question suppressed - story not complete yet");
                 }
@@ -453,13 +522,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Check for topic in user message and switch theme smoothly (before backend response)
         // This prevents jarring simultaneous theme change + content scroll
-        const detectedTopic = extractTopicFromMessage(userMessage);
-        if (detectedTopic) {
-            const suggestedTheme = getThemeSuggestion(detectedTopic);
-            if (suggestedTheme !== currentTheme) {
-                console.log(`Client-side topic "${detectedTopic}" detected, smoothly switching to ${suggestedTheme} theme during thinking phase`);
-                smoothThemeTransition(suggestedTheme); // Use smooth transition instead of immediate switch
+        // ONLY detect topics during initial topic selection, NOT during story contributions
+        const shouldDetectTopic = 
+            (currentMode === 'funfacts' && !sessionData.funfacts.topic) || // Fun facts mode without topic
+            (currentMode === 'storywriting' && !sessionData.storywriting.topic) || // Story mode without topic
+            userMessage.toLowerCase().includes('write about') || // Explicit topic change request
+            userMessage.toLowerCase().includes('story about'); // Explicit topic change request
+            
+        if (shouldDetectTopic) {
+            const detectedTopic = extractTopicFromMessage(userMessage);
+            if (detectedTopic) {
+                const suggestedTheme = getThemeSuggestion(detectedTopic);
+                if (suggestedTheme !== currentTheme) {
+                    console.log(`Client-side topic "${detectedTopic}" detected, smoothly switching to ${suggestedTheme} theme during thinking phase`);
+                    smoothThemeTransition(suggestedTheme); // Use smooth transition instead of immediate switch
+                }
             }
+        } else {
+            console.log(`Skipping topic detection - mode: ${currentMode}, has topic: ${currentMode === 'funfacts' ? !!sessionData.funfacts.topic : !!sessionData.storywriting.topic}`);
         }
 
         try {
@@ -490,12 +570,12 @@ document.addEventListener("DOMContentLoaded", function () {
             if (data.sessionData) {
                 sessionData[currentMode] = data.sessionData;
                 
-                // Auto-trigger vocabulary questions when story is complete
+                // Auto-trigger vocabulary phase when story is complete
                 if (currentMode === 'storywriting' && data.sessionData.isComplete && !data.vocabQuestion) {
-                    console.log("Story completed! Auto-triggering vocabulary questions...");
-                    // Wait a bit for user to read "The end!" then trigger vocab
+                    console.log("Story completed! Auto-starting vocabulary phase...");
+                    // Wait a bit for user to read "The end!" then start vocab phase
                     setTimeout(() => {
-                        triggerVocabularyQuestions();
+                        startVocabularyPhase();
                     }, 2000);
                 }
             }
@@ -515,13 +595,21 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.log(`Vocab question received. Mode: ${currentMode}, Story complete: ${data.sessionData?.isComplete}, Should show: ${shouldShowVocabQuestion}`);
                 
                 if (shouldShowVocabQuestion) {
+                    // Calculate dynamic delay based on content length to ensure content finishes rendering
+                    const contentLength = data.response ? data.response.length : 0;
+                    const baseDelay = 1500; // Base delay in milliseconds
+                    const lengthMultiplier = 15; // Additional delay per character
+                    const dynamicDelay = Math.min(baseDelay + (contentLength * lengthMultiplier), 8000); // Cap at 8 seconds
+                    
+                    console.log(`Scheduling vocabulary question with dynamic delay: ${dynamicDelay}ms (content length: ${contentLength})`);
+                    
                     setTimeout(() => {
                         appendVocabQuestion(
                             data.vocabQuestion.question,
                             data.vocabQuestion.options,
                             data.vocabQuestion.correctIndex
                         );
-                    }, 1000);
+                    }, dynamicDelay);
                 } else {
                     console.log("Vocab question suppressed - story not complete yet");
                 }
