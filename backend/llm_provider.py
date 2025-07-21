@@ -120,19 +120,8 @@ What happens next in our story? Tell me how our hero begins their adventure!"""
         """Generate vocabulary questions following Step 8 format"""
         if self.client and self.api_key:
             try:
-                # Extract just the sentence containing the word
-                import re
-                # Split on sentence-ending punctuation while preserving it
-                sentences = re.split(r'([.!?])', context)
-                sentence_with_word = None
-                
-                # Reconstruct sentences properly
-                for i in range(0, len(sentences) - 1, 2):
-                    if i + 1 < len(sentences):
-                        full_sentence = sentences[i] + sentences[i + 1]
-                        if f"**{word}**" in full_sentence:
-                            sentence_with_word = full_sentence.strip()
-                            break
+                # Extract just the sentence containing the word using improved matching
+                sentence_with_word = self._extract_sentence_with_word(word, context)
                 
                 if not sentence_with_word:
                     sentence_with_word = context  # Fallback to full context
@@ -177,19 +166,8 @@ Return ONLY valid JSON with: question, options (array of 4 strings), correctInde
 
     def _get_fallback_vocab_question(self, word: str, context: str) -> Dict:
         """Fallback vocabulary questions with proper sentence extraction"""
-        # Extract just the sentence containing the word
-        import re
-        # Split on sentence-ending punctuation while preserving it
-        sentences = re.split(r'([.!?])', context)
-        sentence_with_word = None
-        
-        # Reconstruct sentences properly
-        for i in range(0, len(sentences) - 1, 2):
-            if i + 1 < len(sentences):
-                full_sentence = sentences[i] + sentences[i + 1]
-                if f"**{word}**" in full_sentence:
-                    sentence_with_word = full_sentence.strip()
-                    break
+        # Extract just the sentence containing the word using improved matching
+        sentence_with_word = self._extract_sentence_with_word(word, context)
         
         if not sentence_with_word:
             sentence_with_word = context  # Fallback to full context
@@ -296,6 +274,33 @@ Return ONLY valid JSON with: question, options (array of 4 strings), correctInde
             }
         
         return vocab_questions.get(word.lower())
+
+    def _extract_sentence_with_word(self, word: str, context: str) -> Optional[str]:
+        """
+        Extract sentence containing the vocabulary word with improved matching
+        Handles case-insensitive matching and punctuation variations
+        """
+        import re
+        
+        # Split on sentence-ending punctuation while preserving it
+        sentences = re.split(r'([.!?])', context)
+        
+        # Reconstruct sentences properly
+        for i in range(0, len(sentences) - 1, 2):
+            if i + 1 < len(sentences):
+                full_sentence = sentences[i] + sentences[i + 1]
+                
+                # Create a regex pattern that matches the word with case insensitivity and punctuation
+                # This looks for **word** or **word,** or **word!** etc and handles case differences
+                word_pattern = re.compile(
+                    r'\*\*' + re.escape(word) + r'([,;:.!?]*)\*\*',
+                    re.IGNORECASE
+                )
+                
+                if word_pattern.search(full_sentence):
+                    return full_sentence.strip()
+        
+        return None
 
     def extract_vocabulary_words(self, text: str) -> List[str]:
         """Extract vocabulary words from text (words between ** markers)"""
