@@ -77,8 +77,15 @@
     <div id="chat-container" class="chat-container">
         <div id="chat-log" class="chat-log"></div>
         <form id="chat-form" class="chat-form">
-            <input type="text" id="chat-input" placeholder="Type your message..." autocomplete="off" required />
-            <button type="submit">Send</button>
+            <div class="input-container">
+                <input type="text" id="chat-input" placeholder="Type your message..." autocomplete="off" required />
+                <button type="button" id="mic-button" class="mic-button" aria-label="Speak your message" title="Click to speak">
+                    <svg class="mic-icon" xmlns="http://www.w3.org/2000/svg" viewBox="-5.0 -10.0 110.0 110.0">
+                        <path d="m19.121 51.66h2.6602c2.4102 4.1719 6.9219 6.9883 12.07 6.9883 0.33984 0 0.69141 0.011718 1.0312 0.011718l5.1797 24.73 14.262-2.9883-1.0117-20.648c6.2305 0.69922 12.422 1.75 18.52 3.1211 1.3516 3.4414 4.6914 5.8789 8.5898 5.8789 5.0898 0 9.2383-4.1406 9.2383-9.2305v-33.312c0-5.0898-4.1406-9.2383-9.2383-9.2383-3.9102 0-7.25 2.4414-8.5898 5.8789-12.441 2.7891-25.211 4.2188-38 4.2188-5.1602 0-9.6602 2.8203-12.07 6.9883h-2.6602c-4.8516 0-8.8008 3.9492-8.8008 8.8008s3.9492 8.8008 8.8008 8.8008zm56.09-25.449c0-2.8906 2.3516-5.2383 5.2305-5.2383s5.2383 2.3516 5.2383 5.2383v33.309c0 2.8906-2.3516 5.2305-5.2383 5.2305-2.8906 0-5.2305-2.3516-5.2305-5.2305zm-25.039 50.98-7.0117 1.4688-4.1797-19.93c3.4492 0.10156 6.8906 0.30859 10.32 0.62109zm-16.32-46.121c12.559 0 25.109-1.3516 37.359-3.9883v31.559c-12.25-2.6406-24.801-3.9883-37.359-3.9883-5.4883 0-9.9492-4.4609-9.9492-9.9492v-3.6719c0-5.4883 4.4609-9.9492 9.9492-9.9492zm-14.73 7h0.78125v9.6016h-0.78125c-2.6484 0-4.8008-2.1484-4.8008-4.8008 0-2.6484 2.1484-4.8008 4.8008-4.8008z"/>
+                    </svg>
+                </button>
+            </div>
+            <button class="submit-button" type="submit">Send</button>
         </form>
     </div>
 

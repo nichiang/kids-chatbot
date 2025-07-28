@@ -4,6 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const chatLog = document.getElementById("chat-log");
     const storywritingBtn = document.getElementById("storywriting-btn");
     const funFactsBtn = document.getElementById("fun-facts-btn");
+    const micButton = document.getElementById("mic-button");
 
     // App state
     let currentMode = 'funfacts'; // 'storywriting' or 'funfacts'
@@ -27,6 +28,118 @@ document.addEventListener("DOMContentLoaded", function () {
             isComplete: false
         }
     };
+
+    // Speech Recognition Setup
+    let speechRecognition = null;
+    let isRecording = false;
+
+    // Initialize speech recognition
+    function initializeSpeechRecognition() {
+        // Check for speech recognition API support
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            console.error("Speech recognition not supported in this browser. Please use Chrome, Edge, Safari, or Firefox with HTTPS.");
+            micButton.style.display = 'none';
+            return false;
+        }
+
+        // Check if we're on HTTPS (required for microphone access)
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+            console.error("Speech recognition requires HTTPS or localhost. Current protocol:", location.protocol);
+            micButton.style.display = 'none';
+            return false;
+        }
+
+        try {
+            speechRecognition = new SpeechRecognition();
+            speechRecognition.continuous = false;
+            speechRecognition.interimResults = true;
+            speechRecognition.lang = 'en-US';
+
+            speechRecognition.onstart = function() {
+                console.log("Speech recognition started");
+                isRecording = true;
+                micButton.classList.add('recording');
+                micButton.title = 'Recording... Click to stop';
+            };
+
+            speechRecognition.onresult = function(event) {
+                let transcript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    transcript += event.results[i][0].transcript;
+                }
+                chatInput.value = transcript;
+            };
+
+            speechRecognition.onend = function() {
+                console.log("Speech recognition ended");
+                isRecording = false;
+                micButton.classList.remove('recording');
+                micButton.title = 'Click to speak';
+            };
+
+            speechRecognition.onerror = function(event) {
+                console.error("Speech recognition error:", event.error);
+                isRecording = false;
+                micButton.classList.remove('recording');
+                micButton.title = 'Click to speak';
+                
+                // User-friendly error messages
+                let errorMessage = "Speech recognition error: ";
+                switch(event.error) {
+                    case 'not-allowed':
+                        errorMessage += "Microphone permission denied. Please allow microphone access and try again.";
+                        break;
+                    case 'no-speech':
+                        errorMessage += "No speech detected. Please try speaking closer to your microphone.";
+                        break;
+                    case 'audio-capture':
+                        errorMessage += "No microphone found. Please check your microphone connection.";
+                        break;
+                    case 'network':
+                        errorMessage += "Network error. Please check your internet connection.";
+                        break;
+                    default:
+                        errorMessage += event.error;
+                }
+                console.error(errorMessage);
+            };
+
+            // Show microphone button since speech recognition is supported
+            micButton.style.display = 'block';
+            console.log("Speech recognition initialized successfully");
+            return true;
+
+        } catch (error) {
+            console.error("Failed to initialize speech recognition:", error);
+            micButton.style.display = 'none';
+            return false;
+        }
+    }
+
+    // Microphone button click handler
+    micButton.addEventListener('click', function() {
+        if (!speechRecognition) {
+            console.error("Speech recognition not available");
+            return;
+        }
+
+        if (isRecording) {
+            // Stop recording
+            speechRecognition.stop();
+        } else {
+            // Start recording
+            try {
+                speechRecognition.start();
+            } catch (error) {
+                console.error("Failed to start speech recognition:", error);
+            }
+        }
+    });
+
+    // Initialize speech recognition on page load
+    initializeSpeechRecognition();
 
     // Mode switching
     function switchMode(mode) {
@@ -481,8 +594,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (shouldShowVocabQuestion) {
                     // Calculate dynamic delay based on content length to ensure content finishes rendering
                     const contentLength = data.response ? data.response.length : 0;
-                    const baseDelay = 1500; // Base delay in milliseconds
-                    const lengthMultiplier = 10; // Additional delay per character
+                    const baseDelay = 1000; // Base delay in milliseconds
+                    const lengthMultiplier = 5; // Additional delay per character
                     const dynamicDelay = Math.min(baseDelay + (contentLength * lengthMultiplier), 8000); // Cap at 8 seconds
                     
                     console.log(`Scheduling vocabulary question with dynamic delay: ${dynamicDelay}ms (content length: ${contentLength})`);
@@ -598,7 +711,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     // Calculate dynamic delay based on content length to ensure content finishes rendering
                     const contentLength = data.response ? data.response.length : 0;
                     const baseDelay = 1500; // Base delay in milliseconds
-                    const lengthMultiplier = 15; // Additional delay per character
+                    const lengthMultiplier = 1; // Additional delay per character
                     const dynamicDelay = Math.min(baseDelay + (contentLength * lengthMultiplier), 8000); // Cap at 8 seconds
                     
                     console.log(`Scheduling vocabulary question with dynamic delay: ${dynamicDelay}ms (content length: ${contentLength})`);

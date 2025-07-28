@@ -274,7 +274,7 @@ body.theme-space::before {
     color: #001122 !important;
 }
 
-.theme-space .chat-form button {
+.theme-space .chat-form .submit-button {
     background: rgba(138, 43, 226, 0.8);
     border: 2px solid rgba(255, 165, 0, 0.6);
     color: #ffffff;
@@ -283,7 +283,7 @@ body.theme-space::before {
     transition: all 0.3s ease;
 }
 
-.theme-space .chat-form button:hover {
+.theme-space .chat-form .submit-button:hover {
     background: rgba(255, 165, 0, 0.8);
     border-color: rgba(138, 43, 226, 0.8);
     color: #001122;
@@ -398,7 +398,7 @@ body.theme-fantasy::before {
     color: #4a0e4e !important;
 }
 
-.theme-fantasy .chat-form button {
+.theme-fantasy .chat-form .submit-button {
     background: rgba(147, 51, 234, 0.8);
     border: 2px solid rgba(255, 215, 0, 0.6);
     color: #ffffff;
@@ -407,7 +407,7 @@ body.theme-fantasy::before {
     transition: all 0.4s ease;
 }
 
-.theme-fantasy .chat-form button:hover {
+.theme-fantasy .chat-form .submit-button:hover {
     background: rgba(255, 215, 0, 0.9);
     border-color: rgba(147, 51, 234, 0.8);
     color: #4a0e4e;
@@ -533,7 +533,7 @@ body.theme-sports::before {
     font-weight: 700;
 }
 
-.theme-sports .chat-form button {
+.theme-sports .chat-form .submit-button {
     background: rgba(76, 175, 80, 0.8);
     border: 2px solid rgba(255, 193, 7, 0.6);
     color: #ffffff;
@@ -542,7 +542,7 @@ body.theme-sports::before {
     transition: all 0.3s ease;
 }
 
-.theme-sports .chat-form button:hover {
+.theme-sports .chat-form .submit-button:hover {
     background: rgba(255, 193, 7, 0.9);
     border-color: rgba(255, 87, 34, 0.8);
     color: #2d5016;
@@ -661,7 +661,7 @@ body.theme-ocean::before {
     color: #ffffff !important;
 }
 
-.theme-ocean .chat-form button {
+.theme-ocean .chat-form .submit-button {
     background: rgba(0, 188, 212, 0.8);
     border: 2px solid rgba(0, 150, 136, 0.6);
     color: #ffffff;
@@ -670,7 +670,7 @@ body.theme-ocean::before {
     transition: all 0.3s ease;
 }
 
-.theme-ocean .chat-form button:hover {
+.theme-ocean .chat-form .submit-button:hover {
     background: rgba(0, 150, 136, 0.9);
     border-color: rgba(0, 188, 212, 0.8);
     color: #ffffff;
@@ -787,7 +787,7 @@ body.theme-whimsical::before {
     color: #5a2463 !important;
 }
 
-.theme-whimsical .chat-form button {
+.theme-whimsical .chat-form .submit-button {
     background: rgba(240, 98, 146, 0.8);
     border: 2px solid rgba(251, 113, 133, 0.6);
     color: #ffffff;
@@ -796,7 +796,7 @@ body.theme-whimsical::before {
     transition: all 0.4s ease;
 }
 
-.theme-whimsical .chat-form button:hover {
+.theme-whimsical .chat-form .submit-button:hover {
     background: rgba(251, 113, 133, 0.9);
     border-color: rgba(240, 98, 146, 0.8);
     color: #ffffff;
@@ -926,7 +926,7 @@ body.theme-fun::before {
     animation: funSelected 0.6s ease;
 }
 
-.theme-fun .chat-form button {
+.theme-fun .chat-form .submit-button {
     background: rgba(255, 107, 107, 0.8);
     border: 3px solid rgba(255, 217, 61, 0.6);
     color: #ffffff;
@@ -935,7 +935,7 @@ body.theme-fun::before {
     transition: all 0.3s ease;
 }
 
-.theme-fun .chat-form button:hover {
+.theme-fun .chat-form .submit-button:hover {
     background: rgba(255, 217, 61, 0.9);
     border-color: rgba(78, 205, 196, 0.8);
     color: #2d3748;
@@ -1056,7 +1056,7 @@ body.theme-food::before {
     font-weight: 700;
 }
 
-.theme-food .chat-form button {
+.theme-food .chat-form .submit-button {
     background: rgba(255, 140, 0, 0.8);
     border: 2px solid rgba(255, 215, 0, 0.6);
     color: #ffffff;
@@ -1065,7 +1065,7 @@ body.theme-food::before {
     transition: all 0.3s ease;
 }
 
-.theme-food .chat-form button:hover {
+.theme-food .chat-form .submit-button:hover {
     background: rgba(255, 215, 0, 0.9);
     border-color: rgba(255, 99, 71, 0.8);
     color: #8b4513;
@@ -1183,7 +1183,7 @@ body.theme-animals::before {
     font-weight: 700;
 }
 
-.theme-animals .chat-form button {
+.theme-animals .chat-form .submit-button {
     background: rgba(76, 175, 80, 0.8);
     border: 2px solid rgba(139, 69, 19, 0.6);
     color: #ffffff;
@@ -1192,7 +1192,7 @@ body.theme-animals::before {
     transition: all 0.3s ease;
 }
 
-.theme-animals .chat-form button:hover {
+.theme-animals .chat-form .submit-button:hover {
     background: rgba(139, 69, 19, 0.9);
     border-color: rgba(255, 193, 7, 0.8);
     color: #ffffff;
@@ -1309,7 +1309,7 @@ body.theme-elegant::before {
     font-weight: 600;
 }
 
-.theme-elegant .chat-form button {
+.theme-elegant .chat-form .submit-button {
     background: rgba(255, 215, 0, 0.2);
     border: 1px solid rgba(255, 215, 0, 0.4);
     color: #ffffff;
@@ -1318,7 +1318,7 @@ body.theme-elegant::before {
     transition: all 0.3s ease;
 }
 
-.theme-elegant .chat-form button:hover {
+.theme-elegant .chat-form .submit-button:hover {
     background: rgba(255, 215, 0, 0.4);
     border-color: rgba(255, 215, 0, 0.8);
     color: #263238;
@@ -1438,7 +1438,7 @@ body.theme-creative::before {
     font-weight: 600;
 }
 
-.theme-creative .chat-form button {
+.theme-creative .chat-form .submit-button {
     background: rgba(171, 71, 188, 0.8);
     border: 2px solid rgba(255, 193, 7, 0.6);
     color: #ffffff;
@@ -1447,7 +1447,7 @@ body.theme-creative::before {
     transition: all 0.4s ease;
 }
 
-.theme-creative .chat-form button:hover {
+.theme-creative .chat-form .submit-button:hover {
     background: rgba(255, 193, 7, 0.9);
     border-color: rgba(76, 175, 80, 0.8);
     color: #6a1b9a;
@@ -1599,14 +1599,181 @@ body.theme-creative::before {
     width: 100%;
 }
 
+/* Input container for positioning microphone icon */
+.input-container {
+    position: relative;
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+}
+
 #chat-input {
     flex: 1 1 auto;
-    padding: 12px 16px;
+    padding: 12px 42px 12px 16px; /* Optimized padding for closer mic position */
     font-size: 1.1em;
     border-radius: 12px;
     border: none;
     outline: none;
     font-family: inherit;
+    width: 100%;
+}
+
+/* Microphone button styling */
+.mic-button {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    transition: all 0.3s ease;
+    opacity: 0.7;
+    display: none; /* Hidden by default, shown via JavaScript if supported */
+}
+
+.mic-button:hover {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* Theme-specific hover effects defined below */
+
+/* Microphone SVG icon styling */
+.mic-icon {
+    width: 30px;
+    height: 30px;
+    transition: all 0.3s ease;
+    /* Default color will be set by theme-specific styles */
+}
+
+/* Recording state */
+.mic-button.recording {
+    opacity: 1;
+    animation: pulse-recording 1s infinite;
+}
+
+/* Theme-specific recording effects defined below */
+
+@keyframes pulse-recording {
+    0%, 100% { transform: translateY(-50%) scale(1); }
+    50% { transform: translateY(-50%) scale(1.15); }
+}
+
+/* ==============================================
+   THEME-SPECIFIC MICROPHONE ICON STYLING
+   Simple color system matching mode-button styling
+   ============================================== */
+
+/* Theme Space */
+.theme-space .mic-icon {
+    fill: rgba(100, 200, 255, 0.4);
+}
+.theme-space .mic-button:hover .mic-icon {
+    fill: rgba(100, 200, 255, 0.7);
+}
+.theme-space .mic-button.recording .mic-icon {
+    fill: rgba(100, 200, 255, 1.0);
+}
+
+/* Theme Fantasy */
+.theme-fantasy .mic-icon {
+    fill: rgba(255, 215, 0, 0.4);
+}
+.theme-fantasy .mic-button:hover .mic-icon {
+    fill: rgba(255, 215, 0, 0.7);
+}
+.theme-fantasy .mic-button.recording .mic-icon {
+    fill: rgba(255, 215, 0, 1.0);
+}
+
+/* Theme Sports */
+.theme-sports .mic-icon {
+    fill: rgba(76, 175, 80, 0.4);
+}
+.theme-sports .mic-button:hover .mic-icon {
+    fill: rgba(76, 175, 80, 0.7);
+}
+.theme-sports .mic-button.recording .mic-icon {
+    fill: rgba(76, 175, 80, 1.0);
+}
+
+/* Theme Ocean */
+.theme-ocean .mic-icon {
+    fill: rgba(0, 188, 212, 0.4);
+}
+.theme-ocean .mic-button:hover .mic-icon {
+    fill: rgba(0, 188, 212, 0.7);
+}
+.theme-ocean .mic-button.recording .mic-icon {
+    fill: rgba(0, 188, 212, 1.0);
+}
+
+/* Theme Whimsical */
+.theme-whimsical .mic-icon {
+    fill: rgba(240, 98, 146, 0.4);
+}
+.theme-whimsical .mic-button:hover .mic-icon {
+    fill: rgba(240, 98, 146, 0.7);
+}
+.theme-whimsical .mic-button.recording .mic-icon {
+    fill: rgba(240, 98, 146, 1.0);
+}
+
+/* Theme Fun */
+.theme-fun .mic-icon {
+    fill: rgba(255, 107, 107, 0.4);
+}
+.theme-fun .mic-button:hover .mic-icon {
+    fill: rgba(255, 107, 107, 0.7);
+}
+.theme-fun .mic-button.recording .mic-icon {
+    fill: rgba(255, 107, 107, 1.0);
+}
+
+/* Theme Food */
+.theme-food .mic-icon {
+    fill: rgba(255, 140, 0, 0.4);
+}
+.theme-food .mic-button:hover .mic-icon {
+    fill: rgba(255, 140, 0, 0.7);
+}
+.theme-food .mic-button.recording .mic-icon {
+    fill: rgba(255, 140, 0, 1.0);
+}
+
+/* Theme Animals */
+.theme-animals .mic-icon {
+    fill: rgba(76, 175, 80, 0.4);
+}
+.theme-animals .mic-button:hover .mic-icon {
+    fill: rgba(76, 175, 80, 0.7);
+}
+.theme-animals .mic-button.recording .mic-icon {
+    fill: rgba(76, 175, 80, 1.0);
+}
+
+/* Theme Elegant */
+.theme-elegant .mic-icon {
+    fill: rgba(255, 215, 0, 0.3);
+}
+.theme-elegant .mic-button:hover .mic-icon {
+    fill: rgba(255, 215, 0, 0.5);
+}
+.theme-elegant .mic-button.recording .mic-icon {
+    fill: rgba(255, 215, 0, 0.8);
+}
+
+/* Theme Creative */
+.theme-creative .mic-icon {
+    fill: rgba(171, 71, 188, 0.4);
+}
+.theme-creative .mic-button:hover .mic-icon {
+    fill: rgba(171, 71, 188, 0.7);
+}
+.theme-creative .mic-button.recording .mic-icon {
+    fill: rgba(171, 71, 188, 1.0);
 }
 
 .chat-form button {
@@ -1619,6 +1786,10 @@ body.theme-creative::before {
     border: none;
     outline: none;
     font-family: inherit;
+}
+
+.chat-form .mic-button {
+    padding: 0 5px;
 }
 
 /* Vocabulary question container */

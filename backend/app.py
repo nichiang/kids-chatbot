@@ -505,7 +505,7 @@ async def handle_finish_vocabulary(session_data: SessionData) -> ChatResponse:
     session_data.vocabularyPhase.isActive = False
     session_data.awaiting_story_confirmation = True
     
-    story_completion_prompt = "Wonderful job with the vocabulary! You've done great! Would you like to write another story? Here are some fun ideas:\\n\\n🚀 Space adventures\\n🏰 Fantasy quests\\n⚽ Sports excitement\\n🦄 Magical creatures\\n🕵️ Mystery solving\\n🍕 Food adventures\\n🐾 Animal stories\\n🌊 Ocean explorations\\n\\nWhat sounds interesting to you?"
+    story_completion_prompt = "Wonderful job with the vocabulary! You've done great! Would you like to write another story? Here are some fun ideas:\n\n🚀 Space adventures\n🏰 Fantasy quests\n⚽ Sports excitement\n🦄 Magical creatures\n🕵️ Mystery solving\n🍕 Food adventures\n🐾 Animal stories\n🌊 Ocean explorations\n\nWhat sounds interesting to you?"
     
     return ChatResponse(
         response=story_completion_prompt,
