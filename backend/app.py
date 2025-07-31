@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 import logging
@@ -61,10 +62,10 @@ def extract_vocabulary_from_content(content: str, content_vocabulary: List[str] 
     import re
     bolded_words = re.findall(r'\*\*(.*?)\*\*', content)
     
-    # Clean up the bolded words (remove extra spaces, convert to lowercase for comparison)
+    # Clean up the bolded words (remove extra spaces, preserve original casing)
     extracted_words = []
     for word in bolded_words:
-        clean_word = word.strip().lower()
+        clean_word = word.strip()  # Keep original casing for proper noun detection
         if clean_word and len(clean_word) > 1:  # Avoid single characters or empty strings
             extracted_words.append(clean_word)
     
@@ -91,6 +92,28 @@ def extract_vocabulary_from_content(content: str, content_vocabulary: List[str] 
     logger.info(f"Extracted vocabulary from content: {unique_words}")
     return unique_words
 
+def select_best_vocabulary_word(available_words: List[str]) -> str:
+    """
+    Select the best vocabulary word, prioritizing lowercase words over capitalized words
+    to avoid proper nouns like names and places.
+    
+    Args:
+        available_words: List of available vocabulary words to choose from
+    
+    Returns:
+        The best vocabulary word (lowercase prioritized over uppercase)
+    """
+    if not available_words:
+        return None
+    
+    # Prioritize words that start with lowercase letters (likely common vocabulary)
+    lowercase_words = [word for word in available_words if word and word[0].islower()]
+    
+    if lowercase_words:
+        return lowercase_words[0]  # Return first lowercase word
+    else:
+        return available_words[0]  # Fallback to first available word (even if capitalized)
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -105,6 +128,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Request/Response models
 class VocabularyPhase(BaseModel):
@@ -404,8 +428,8 @@ async def handle_start_vocabulary(session_data: SessionData) -> ChatResponse:
     available_words = [word for word in content_vocab_words if word not in session_data.askedVocabWords]
     
     if available_words:
-        # Use a word from the story content
-        selected_word = available_words[0]
+        # Use a word from the story content, prioritizing lowercase words over proper nouns
+        selected_word = select_best_vocabulary_word(available_words)
         session_data.askedVocabWords.append(selected_word)
         session_data.vocabularyPhase.questionsAsked = 1
         
@@ -458,8 +482,8 @@ async def handle_next_vocabulary(session_data: SessionData) -> ChatResponse:
     available_words = [word for word in content_vocab_words if word not in session_data.askedVocabWords]
     
     if available_words:
-        # Use a word from the story content
-        selected_word = available_words[0]
+        # Use a word from the story content, prioritizing lowercase words over proper nouns
+        selected_word = select_best_vocabulary_word(available_words)
         session_data.askedVocabWords.append(selected_word)
         session_data.vocabularyPhase.questionsAsked += 1
         
@@ -546,7 +570,7 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
         available_fact_words = [word for word in fact_vocab_words if word not in session_data.askedVocabWords]
         
         if available_fact_words:
-            selected_word = available_fact_words[0]
+            selected_word = select_best_vocabulary_word(available_fact_words)
             session_data.askedVocabWords.append(selected_word)
             
             # Use the actual fact content as context for the vocabulary question
@@ -606,7 +630,7 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
             available_fact_words = [word for word in fact_vocab_words if word not in session_data.askedVocabWords]
             
             if available_fact_words:
-                selected_word = available_fact_words[0]
+                selected_word = select_best_vocabulary_word(available_fact_words)
                 session_data.askedVocabWords.append(selected_word)
                 
                 # Use the actual fact content as context for the vocabulary question
@@ -632,13 +656,70 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
         else:
             # Check if user wants to switch to a new topic
             # Don't extract topic from "continue" messages - these are continuation signals, not topic changes
-            if user_message.lower().strip() == "continue":
+            message_lower = user_message.lower().strip()
+            if message_lower == "continue":
                 new_topic = None  # Ignore topic extraction for continue signals
+            elif message_lower in ["same topic", "same", "more", "keep going", "this topic"]:
+                new_topic = session_data.topic  # Explicitly set to current topic for same-topic continuation
             else:
                 new_topic = extract_topic_from_message(user_message)
             
-            # If a new topic is detected and it's different from current topic, switch topics
-            if new_topic and new_topic != session_data.topic:
+            # Check if user wants to continue with same topic or switch to new topic
+            if new_topic and new_topic == session_data.topic:
+                # User wants to continue with same topic - reset for more facts
+                session_data.factsShown = 0
+                session_data.allFacts = []
+                session_data.currentFact = None
+                session_data.askedVocabWords = []  # Reset vocabulary words for fresh start
+                session_data.contentVocabulary = []  # Reset content vocabulary for fresh start
+                
+                # Generate first fact for continuing topic using external prompt system
+                base_prompt = generate_fun_facts_prompt('new_topic', topic=session_data.topic)
+                enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+                    base_prompt, session_data.topic, session_data.askedVocabWords
+                )
+                fact_response = llm_provider.generate_response(enhanced_prompt, system_prompt=llm_provider.fun_facts_system_prompt)
+                session_data.currentFact = fact_response
+                session_data.allFacts.append(fact_response)
+                session_data.factsShown += 1
+                
+                # Track vocabulary words that were intended to be used
+                if selected_vocab:
+                    logger.info(f"Same topic continuation included vocabulary: {selected_vocab}")
+                    session_data.contentVocabulary.extend(selected_vocab)
+                
+                # Generate vocabulary question using content-based extraction
+                fact_vocab_words = extract_vocabulary_from_content(fact_response, session_data.contentVocabulary)
+                vocab_question = None
+                
+                # Find a vocabulary word that hasn't been asked yet from the fact content
+                available_fact_words = [word for word in fact_vocab_words if word not in session_data.askedVocabWords]
+                
+                if available_fact_words:
+                    selected_word = select_best_vocabulary_word(available_fact_words)
+                    session_data.askedVocabWords.append(selected_word)
+                    
+                    # Use the actual fact content as context for the vocabulary question
+                    vocab_question = llm_provider.generate_vocabulary_question(selected_word, context=fact_response)
+                else:
+                    # Fallback to curated vocabulary if no words found in fact content
+                    vocab_word_data = vocabulary_manager.select_vocabulary_word(
+                        topic=session_data.topic,
+                        used_words=session_data.askedVocabWords
+                    )
+                    if vocab_word_data:
+                        session_data.askedVocabWords.append(vocab_word_data['word'])
+                        vocab_question = llm_provider.generate_vocabulary_question(
+                            vocab_word_data['word'], 
+                            context=vocab_word_data['definition']
+                        )
+                
+                return ChatResponse(
+                    response=f"Great! Let's continue with more {session_data.topic} facts!\n\n{fact_response}",
+                    vocabQuestion=VocabQuestion(**vocab_question) if vocab_question else None,
+                    sessionData=session_data
+                )
+            elif new_topic and new_topic != session_data.topic:
                 # Reset session state for new topic
                 session_data.topic = new_topic
                 session_data.factsShown = 0
@@ -670,7 +751,7 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 available_fact_words = [word for word in fact_vocab_words if word not in session_data.askedVocabWords]
                 
                 if available_fact_words:
-                    selected_word = available_fact_words[0]
+                    selected_word = select_best_vocabulary_word(available_fact_words)
                     session_data.askedVocabWords.append(selected_word)
                     
                     # Use the actual fact content as context for the vocabulary question
@@ -751,6 +832,11 @@ def get_theme_suggestion(topic: str) -> str:
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "message": "English Learning Chatbot API is running!"}
+
+# Mount static files from frontend directory AFTER all API routes
+import os
+frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
+app.mount("/", StaticFiles(directory=frontend_path, html=True), name="static")
 
 if __name__ == "__main__":
     import uvicorn

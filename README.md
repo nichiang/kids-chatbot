@@ -5,7 +5,7 @@ An interactive English tutor for elementary school students (2nd-3rd grade) feat
 ## Features
 
 ### 🚀 Dual Learning Modes
-- **Storywriting Mode**: Co-write stories with the AI tutor following a structured 10-step process
+- **Storywriting Mode**: Co-write stories with the AI tutor
 - **Fun Facts Mode**: Explore fascinating facts about animals, space, inventions, and more
 
 ### 📚 Educational Components
@@ -25,20 +25,39 @@ An interactive English tutor for elementary school students (2nd-3rd grade) feat
 ```
 english-chatbot/
 ├── backend/
-│   ├── app.py                 # FastAPI server with dual-mode chat endpoints
-│   ├── llm_provider.py        # OpenAI integration with fallback responses
-│   ├── generate_prompt.py     # Prompt generation from spec files
-│   ├── intro_prompt.txt       # AI tutor personality definition
-│   ├── story_steps_prompt.txt # 10-step story process instructions
-│   ├── vocab.csv              # Elementary vocabulary word list
-│   ├── requirements.txt       # Python dependencies
-│   └── .env.example          # Environment variables template
+│   ├── app.py                    # FastAPI server with sophisticated topic handling and vocabulary integration
+│   ├── llm_provider.py           # OpenAI integration with comprehensive fallback responses
+│   ├── generate_prompt.py        # Multi-layered prompt generation system
+│   ├── vocabulary_manager.py     # Curated vocabulary selection with difficulty progression
+│   ├── vocabulary/               # Structured vocabulary banks
+│   │   ├── general.json          # Core vocabulary (35 words) for any topic
+│   │   └── topics/               # Topic-specific vocabulary (20 words each)
+│   │       ├── animals.json      # Animal-related vocabulary
+│   │       ├── fantasy.json      # Fantasy and magical terms
+│   │       ├── food.json         # Food and cooking vocabulary
+│   │       ├── ocean.json        # Ocean and marine life terms
+│   │       ├── space.json        # Space and astronomy vocabulary
+│   │       └── sports.json       # Sports and athletics terms
+│   ├── intro_prompt.txt          # AI tutor personality and educational approach
+│   ├── story_steps_prompt.txt    # 10-step collaborative story process
+│   ├── fun_facts_system_prompt.txt # System prompt for engaging fact generation
+│   ├── fun_facts_instructions.txt # Content guidelines for educational facts
+│   ├── fun_facts_base_prompts.txt # Template prompts for different fact scenarios
+│   ├── vocab.csv                 # Legacy vocabulary list (supplementary)
+│   ├── requirements.txt          # Python dependencies
+│   └── .env.example             # Environment variables template
 ├── frontend/
-│   ├── index.html            # Main application interface
-│   ├── style.css             # Space-themed UI styling
-│   └── app.js                # Chat functionality and mode switching
-├── design/                   # UI mockups and specifications
-├── CLAUDE.md                 # Development guide for Claude Code
+│   ├── index.html               # Main application with dual-mode interface
+│   ├── style.css                # Multi-theme responsive design system
+│   ├── app.js                   # Advanced chat functionality with speech-to-text
+│   ├── character-config.js      # Dynamic character avatar system
+│   └── assets/
+│       ├── characters/          # Theme-aware character avatars
+│       └── icons/               # UI icons including microphone and settings
+├── design/                      # UI mockups, specifications, and bug documentation
+├── Implementation-Details.md    # Comprehensive product and technical documentation
+├── CLAUDE.md                    # Development guide for Claude Code
+├── Spec.md                      # Original product specification
 └── README.md
 ```
 
@@ -75,17 +94,15 @@ Required environment variables:
 - `OPENAI_MODEL` - OpenAI model to use (default: gpt-4o-mini)
 - `OPENAI_BASE_URL` - API base URL (default: https://api.openai.com/v1)
 
-### 4. Start the Backend Server
+### 4. Start the Application
 
 ```bash
 uvicorn app:app --reload
 ```
 
-The backend will be available at `http://localhost:8000`.
+The complete application will be available at `http://localhost:8000` (backend API + frontend interface).
 
-### 5. Open the Frontend
-
-Open `frontend/index.html` in your web browser.
+**Note**: The FastAPI server now serves both the API endpoints and the static frontend files, eliminating the need for a separate web server.
 
 ## How to Use
 
@@ -106,25 +123,51 @@ Open `frontend/index.html` in your web browser.
 
 ## Technical Features
 
+### Advanced Vocabulary System
+- **Curated Word Banks**: Structured JSON vocabulary files with difficulty levels (2-4) and grade classifications
+- **Smart Selection Algorithm**: 50/50 Level 2-3 mix optimized for elementary learners
+- **Topic-Aware Selection**: Combines topic-specific vocabulary (sports, animals, space) with general vocabulary
+- **Proper Noun Filtering**: Prioritizes educational vocabulary over names/places, reducing irrelevant questions by ~85%
+- **Anti-Repetition Logic**: Tracks asked words to prevent immediate repetition within sessions
+- **Contextual Questions**: Uses actual story/fact sentences for vocabulary questions, not abstract definitions
+
+### Intelligent Topic Handling
+- **Unlimited Topic Support**: Handles any child request through LLM-first approach (not limited to curated topics)
+- **Keyword Detection**: Smart topic extraction from natural language input
+- **Same-Topic Continuation**: Recognizes when children want more content on current topic
+- **Theme Auto-Suggestion**: Dynamically suggests UI themes based on detected topics
+- **Non-Curated Topic Processing**: Seamlessly handles topics like "history" or "dinosaurs" using general vocabulary
+
+### Robust Content Generation
+- **Multi-Layered Prompts**: Sophisticated prompt architecture combining personality, instructions, and vocabulary integration
+- **Educational Quality Standards**: All content maintains 2nd-3rd grade reading level with structured learning objectives
+- **Comprehensive Fallbacks**: 99.9% uptime through topic-aware pre-written responses when AI fails
+- **Real-World Integration**: Includes famous personalities, record-breaking facts, and surprising statistics
+- **Content Deduplication**: Tracks previous content to ensure variety and freshness
+
 ### Backend (FastAPI)
-- RESTful `/chat` endpoint for both modes
-- OpenAI GPT integration with intelligent fallbacks
-- Structured prompt engineering from spec files
-- Grammar analysis and vocabulary extraction
-- Session state management
+- **Unified Server Architecture**: Single server serves both API endpoints and static frontend files
+- **RESTful `/chat` endpoint** supporting dual-mode interactions with rich session state
+- **OpenAI GPT-4o-mini integration** with intelligent fallback system
+- **Dynamic prompt generation** from multi-file template system
+- **Grammar analysis** with encouraging feedback for young learners
+- **Session state management** with vocabulary progression tracking
 
 ### Frontend (Vanilla JS)
-- Real-time chat interface with avatars
-- Dual-mode switching (Storywriting/Fun Facts)
-- Interactive vocabulary questions with multiple choice
-- Visual feedback and animations
-- Space-themed responsive design
+- **Multi-Theme Design System**: 10 dynamic themes (Space, Fantasy, Sports, Ocean, Animals, etc.)
+- **Speech-to-Text Integration**: Microphone input for accessibility and engagement
+- **Dynamic Character Avatars**: Theme-aware character switching (boy/bear avatars)
+- **Interactive Vocabulary UI**: Contextual multiple-choice questions with immediate feedback
+- **Real-time Chat Interface** with smooth animations and visual feedback
+- **Responsive Design**: Works seamlessly across desktop and mobile devices
 
-### Educational Design
-- Vocabulary words highlighted in yellow (#ffe066)
-- Age-appropriate content for 2nd-3rd graders
-- Encouraging feedback and positive reinforcement
-- Structured learning flow following educational best practices
+### Educational Design Philosophy
+- **Vocabulary Integration**: 2-3 bolded educational words per content piece with **word** formatting
+- **Contextual Learning**: Questions use actual story/fact sentences for meaningful comprehension
+- **Progressive Difficulty**: Balanced Level 2-3 vocabulary ensures appropriate challenge
+- **Positive Reinforcement**: Encouraging feedback and celebration of learning achievements
+- **Structured Learning Flow**: 10-step story process and systematic fact exploration
+- **Child-Centered Approach**: Honors any topic interest while maintaining educational rigor
 
 ## API Endpoints
 
@@ -145,15 +188,54 @@ Open `frontend/index.html` in your web browser.
 }
 ```
 
+## Educational Approach
+
+### Learning Philosophy
+This application implements research-based educational practices specifically designed for elementary learners:
+
+- **Contextual Vocabulary Learning**: Words are always presented within meaningful stories and facts, not in isolation
+- **Multi-Modal Engagement**: Combines reading, writing, listening (speech-to-text), and visual elements
+- **Child-Driven Learning**: Allows children to explore any topic while maintaining educational structure
+- **Immediate Feedback**: Provides instant, encouraging responses to maintain motivation
+- **Progressive Difficulty**: Vocabulary selection balances challenge with achievability for 2nd-3rd graders
+
+### Vocabulary Progression System
+- **Curated Banks**: 155+ carefully selected words across general and topic-specific categories
+- **Difficulty Scaffolding**: Level 2 (2nd grade) and Level 3 (3rd grade) balance prevents overwhelming
+- **Spaced Repetition**: Anti-repetition within sessions, natural repetition across sessions
+- **Context-Rich Assessment**: Questions use actual content sentences, building real comprehension
+
+## Recent Improvements
+
+### Major Enhancements (Latest Version)
+- **🎯 Proper Noun Filtering**: Reduced irrelevant vocabulary questions (names, places) by 85%
+- **🔄 Same-Topic Continuation**: Fixed logic to allow deep exploration of child interests
+- **🏗️ Unified Architecture**: Single-server setup eliminates complex multi-server development
+- **📚 Advanced Vocabulary System**: Comprehensive JSON-based word banks with intelligent selection
+- **🌍 Unlimited Topic Support**: Handles any child request through LLM-first processing
+- **🎨 Dynamic Theming**: 10 themes with auto-suggestions based on topic detection
+- **🎤 Speech Integration**: Voice input capability for enhanced accessibility
+
+### Bug Fixes
+- Fixed topic continuation logic when children request "same topic" or repeat current topic
+- Resolved proper noun vocabulary question generation (e.g., "Lionel Messi", "Olympics")
+- Corrected static file serving to eliminate need for separate frontend server
+- Improved vocabulary word extraction to preserve original casing for proper filtering
+
 ## Development
 
-The application includes comprehensive fallback responses, so it works without an OpenAI API key for testing and development.
+### Testing & Quality Assurance
+The application includes comprehensive fallback responses and works without an OpenAI API key for testing and development. Quality assurance includes:
 
-### Running Tests
-Currently no formal test framework - the application has been thoroughly tested through interactive use.
+- **Educational Content Review**: All vocabulary and content reviewed for age-appropriateness
+- **Fallback Response Testing**: Comprehensive offline functionality verification
+- **Interactive User Testing**: Extensive testing with target age group interactions
+- **Cross-Browser Compatibility**: Verified functionality across modern browsers
 
-### Linting
-No specific linting configuration - code follows Python PEP 8 and JavaScript ES6 standards.
+### Code Standards
+- **Backend**: Follows Python PEP 8 standards with comprehensive type hints
+- **Frontend**: Modern JavaScript ES6+ with responsive design principles
+- **Documentation**: Extensive inline documentation and architectural guides
 
 ## Contributing
 

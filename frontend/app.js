@@ -417,7 +417,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 isComplete: false
             };
             
-            const response = await fetch("http://localhost:8000/chat", {
+            const response = await fetch("/chat", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -463,7 +463,7 @@ document.addEventListener("DOMContentLoaded", function () {
         try {
             console.log(`Requesting vocabulary question ${sessionData.storywriting.vocabularyPhase.questionsAsked + 1} of ${sessionData.storywriting.vocabularyPhase.maxQuestions}`);
             
-            const response = await fetch("http://localhost:8000/chat", {
+            const response = await fetch("/chat", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -513,7 +513,7 @@ document.addEventListener("DOMContentLoaded", function () {
             sessionData.storywriting.vocabularyPhase.isComplete = true;
             sessionData.storywriting.vocabularyPhase.isActive = false;
             
-            const response = await fetch("http://localhost:8000/chat", {
+            const response = await fetch("/chat", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -550,7 +550,7 @@ document.addEventListener("DOMContentLoaded", function () {
             appendMessage("bot", "Let me share another cool fact...");
 
             // Send continue request to backend
-            const response = await fetch("http://localhost:8000/chat", {
+            const response = await fetch("/chat", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -657,7 +657,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         try {
             // Send to backend
-            const response = await fetch("http://localhost:8000/chat", {
+            const response = await fetch("/chat", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"

@@ -27,12 +27,12 @@ Required environment variables in `backend/.env`:
 **Security Note**: Never commit your `.env` file to git. The `.env.example` file shows required variables without exposing secrets.
 
 ### Frontend
-The frontend is static HTML/CSS/JS that runs directly in the browser. Open `frontend/index.html` in a web browser.
+The frontend is static HTML/CSS/JS served by the FastAPI backend server.
 
 ### Testing the Full Application
 1. Start backend server: `uvicorn app:app --reload` (from backend directory)
-2. Open `frontend/index.html` in browser
-3. Backend runs on http://localhost:8000
+2. Open http://localhost:8000 in browser
+3. Application runs entirely on http://localhost:8000
 
 ## Project Architecture
 
