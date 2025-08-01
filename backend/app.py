@@ -659,10 +659,14 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
             message_lower = user_message.lower().strip()
             if message_lower == "continue":
                 new_topic = None  # Ignore topic extraction for continue signals
+                logger.info(f"User requested continue - no topic change")
             elif message_lower in ["same topic", "same", "more", "keep going", "this topic"]:
                 new_topic = session_data.topic  # Explicitly set to current topic for same-topic continuation
+                logger.info(f"User requested same topic continuation - current topic: {session_data.topic}")
             else:
                 new_topic = extract_topic_from_message(user_message)
+                logger.info(f"Extracted topic from message '{user_message}': {new_topic}")
+                logger.info(f"Current session topic: {session_data.topic}")
             
             # Check if user wants to continue with same topic or switch to new topic
             if new_topic and new_topic == session_data.topic:
@@ -678,7 +682,9 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
                     base_prompt, session_data.topic, session_data.askedVocabWords
                 )
+                logger.info(f"Continuing same topic '{session_data.topic}' - generated prompt: {enhanced_prompt[:200]}...")
                 fact_response = llm_provider.generate_response(enhanced_prompt, system_prompt=llm_provider.fun_facts_system_prompt)
+                logger.info(f"LLM response for same topic continuation: {fact_response[:100]}...")
                 session_data.currentFact = fact_response
                 session_data.allFacts.append(fact_response)
                 session_data.factsShown += 1
@@ -780,8 +786,9 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 )
             else:
                 # No new topic detected, ask if they want to switch topics
+                topic_name = session_data.topic if session_data.topic else "general"
                 return ChatResponse(
-                    response=f"We've explored some great {session_data.topic} facts! Would you like to learn about a different topic? Try animals, space, inventions, or something else!",
+                    response=f"We've explored some great {topic_name} facts! Would you like to learn about a different topic? Try animals, space, inventions, or something else!",
                     sessionData=session_data
                 )
 
