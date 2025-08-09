@@ -15,16 +15,35 @@ app.get("/health", ...)
 app.mount("/", StaticFiles(directory="../frontend", html=True), name="static")
 ```
 
-### Vocabulary System Architecture
+### Vocabulary System Architecture (MAJOR ENHANCEMENT)
 
-**Pattern**: Curated JSON-Based Word Banks with Smart Selection
+**Pattern**: Solution 3 - Massive Vocabulary Pool with LLM as Intelligent Curator
 - **Structure**: 
-  - `vocabulary/general.json` (35 core words for any topic)
+  - `vocabulary/general.json` (100 words: 50 tier 2 + 50 tier 3) - **EXPANDED FROM 35**
   - `vocabulary/topics/*.json` (20 specialized words per topic)
-- **Selection Algorithm**: 50/50 Level 2-3 difficulty balance for optimal challenge
-- **Anti-Repetition**: Session-based tracking prevents immediate word reuse
+- **Revolutionary Selection**: 40-word example pools (20 general + 20 topic) provided to LLM
+- **AI Curation**: LLM intelligently selects 2-4 most natural words vs random/forced selection
+- **Variety Breakthrough**: 1,233% increase in selection options eliminates repetition
+- **Anti-Repetition**: Preference system for unused words within massive pools
 
-**Critical Implementation**:
+**Critical Implementation - Solution 3**:
+```python
+def generate_vocabulary_enhanced_prompt(base_prompt: str, topic: str, used_words: List[str] = None):
+    # SOLUTION 3: Generate massive vocabulary pools for LLM intelligent selection
+    vocab_pools = generate_massive_vocabulary_pool(topic, used_words)
+    
+    vocab_instruction = f"""
+    GENERAL WORDS (Tier 2+3): {', '.join(vocab_pools['general_pool'])}  # 20 words
+    TOPIC-SPECIFIC WORDS: {', '.join(vocab_pools['topic_pool'])}        # 20 words
+    
+    CRITICAL INSTRUCTIONS:
+    - Select ONLY 2-4 words total that fit most naturally in your content
+    - Choose words that enhance meaning rather than feel forced
+    """
+    return base_prompt + vocab_instruction
+```
+
+**Legacy Implementation** (Still used for proper noun filtering):
 ```python
 def select_best_vocabulary_word(available_words: List[str]) -> str:
     # Prioritize lowercase words over proper nouns
@@ -162,6 +181,12 @@ topic_keywords = {
 - **Implementation**: Topic-aware pre-written content with same educational structure
 - **Result**: 99.9% uptime for educational content delivery
 
+### Why Use Actual Bolded Words (GitHub Issue #1 Fix)
+- **Problem Solved**: Vocabulary questions showing entire context instead of single sentence
+- **Root Cause**: Word form mismatch between intended vocabulary ("constellation") and actual LLM output ("constellations")
+- **Implementation**: Extract actual bolded words from generated content, use for sentence extraction
+- **Result**: Perfect sentence extraction, natural word forms, pedagogically equivalent educational value
+
 ## Component Relationships
 
 ### Frontend ↔ Backend Communication
@@ -182,11 +207,20 @@ Backend Response:
 }
 ```
 
-### Vocabulary System Data Flow
+### Vocabulary System Data Flow (SOLUTION 3)
+```
+Topic Selection → generate_massive_vocabulary_pool() →
+General Pool Selection (20 tier 2+3 words) → Topic Pool Selection (20 words) →
+40-Word Pool Creation → LLM Prompt Enhancement → 
+LLM Intelligent Curation (selects 2-4 most natural) → Content Generation →
+Vocabulary Extraction → Question Generation
+```
+
+**Legacy Flow** (Pre-Solution 3):
 ```
 Topic Selection → vocabulary_manager.select_vocabulary_word() →
 JSON Bank Lookup → Difficulty Filtering → Anti-Repetition Check →
-Word Selection → LLM Prompt Enhancement → Content Generation →
+Word Selection (3 words) → LLM Prompt Enhancement → Content Generation →
 Vocabulary Extraction → Question Generation
 ```
 

@@ -1980,3 +1980,149 @@ body.theme-creative::before {
         font-size: 0.95rem;
     }
 }
+
+/* Scroll-to-bottom indicator styling */
+.scroll-indicator {
+    position: fixed;
+    bottom: 90px; /* Position above input container */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100; /* Above chat content but below modals */
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    opacity: 1;
+    visibility: visible;
+}
+
+.scroll-indicator.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.scroll-to-bottom-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.scroll-to-bottom-btn:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.scroll-to-bottom-btn:active {
+    transform: scale(0.95);
+}
+
+.scroll-arrow-icon {
+    width: 24px;
+    height: 24px;
+    transition: all 0.3s ease;
+}
+
+/* Theme-specific styling for scroll arrow - matching microphone colors */
+
+/* Theme Space */
+.theme-space .scroll-arrow-icon {
+    fill: rgba(100, 200, 255, 0.4);
+}
+.theme-space .scroll-to-bottom-btn:hover .scroll-arrow-icon {
+    fill: rgba(100, 200, 255, 0.7);
+}
+
+/* Theme Fantasy */
+.theme-fantasy .scroll-arrow-icon {
+    fill: rgba(255, 215, 0, 0.4);
+}
+.theme-fantasy .scroll-to-bottom-btn:hover .scroll-arrow-icon {
+    fill: rgba(255, 215, 0, 0.7);
+}
+
+/* Theme Sports */
+.theme-sports .scroll-arrow-icon {
+    fill: rgba(76, 175, 80, 0.4);
+}
+.theme-sports .scroll-to-bottom-btn:hover .scroll-arrow-icon {
+    fill: rgba(76, 175, 80, 0.7);
+}
+
+/* Theme Ocean */
+.theme-ocean .scroll-arrow-icon {
+    fill: rgba(0, 188, 212, 0.4);
+}
+.theme-ocean .scroll-to-bottom-btn:hover .scroll-arrow-icon {
+    fill: rgba(0, 188, 212, 0.7);
+}
+
+/* Theme Whimsical */
+.theme-whimsical .scroll-arrow-icon {
+    fill: rgba(240, 98, 146, 0.4);
+}
+.theme-whimsical .scroll-to-bottom-btn:hover .scroll-arrow-icon {
+    fill: rgba(240, 98, 146, 0.7);
+}
+
+/* Theme Fun */
+.theme-fun .scroll-arrow-icon {
+    fill: rgba(255, 107, 107, 0.4);
+}
+.theme-fun .scroll-to-bottom-btn:hover .scroll-arrow-icon {
+    fill: rgba(255, 107, 107, 0.7);
+}
+
+/* Theme Food */
+.theme-food .scroll-arrow-icon {
+    fill: rgba(255, 140, 0, 0.4);
+}
+.theme-food .scroll-to-bottom-btn:hover .scroll-arrow-icon {
+    fill: rgba(255, 140, 0, 0.7);
+}
+
+/* Theme Animals */
+.theme-animals .scroll-arrow-icon {
+    fill: rgba(76, 175, 80, 0.4);
+}
+.theme-animals .scroll-to-bottom-btn:hover .scroll-arrow-icon {
+    fill: rgba(76, 175, 80, 0.7);
+}
+
+/* Theme Elegant */
+.theme-elegant .scroll-arrow-icon {
+    fill: rgba(255, 215, 0, 0.3);
+}
+.theme-elegant .scroll-to-bottom-btn:hover .scroll-arrow-icon {
+    fill: rgba(255, 215, 0, 0.5);
+}
+
+/* Theme Creative */
+.theme-creative .scroll-arrow-icon {
+    fill: rgba(171, 71, 188, 0.4);
+}
+.theme-creative .scroll-to-bottom-btn:hover .scroll-arrow-icon {
+    fill: rgba(171, 71, 188, 0.7);
+}
+
+/* Mobile responsiveness for scroll indicator */
+@media (max-width: 768px) {
+    .scroll-indicator {
+        bottom: 80px; /* Adjust for mobile input container */
+    }
+    
+    .scroll-to-bottom-btn {
+        width: 44px;
+        height: 44px;
+    }
+    
+    .scroll-arrow-icon {
+        width: 22px;
+        height: 22px;
+    }
+}

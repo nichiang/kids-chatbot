@@ -120,16 +120,27 @@ What happens next in our story? Tell me how our hero begins their adventure!"""
         """Generate vocabulary questions following Step 8 format"""
         if self.client and self.api_key:
             try:
-                # Extract just the sentence containing the word using improved matching
-                sentence_with_word = self._extract_sentence_with_word(word, context)
+                # Use actual bolded words from generated content, but apply proper noun filtering
+                actual_words = self.extract_vocabulary_words(context)
+                if actual_words:
+                    # Apply the same filtering logic as select_best_vocabulary_word
+                    from app import select_best_vocabulary_word
+                    filtered_word = select_best_vocabulary_word(actual_words)
+                    # If filtering returns nothing (all words filtered out), fallback to passed word
+                    actual_word = filtered_word if filtered_word else word
+                    sentence_with_word = self._extract_sentence_with_word(actual_word, context)
+                else:
+                    # Fallback to original logic if no bolded words found
+                    actual_word = word
+                    sentence_with_word = self._extract_sentence_with_word(word, context)
                 
                 if not sentence_with_word:
                     sentence_with_word = context  # Fallback to full context
                 
-                prompt = f"""Following Step 8 of the story process, create a vocabulary question for the word "{word}" from this sentence: "{sentence_with_word}"
+                prompt = f"""Following Step 8 of the story process, create a vocabulary question for the word "{actual_word}" from this sentence: "{sentence_with_word}"
 
 Create the question in this exact format:
-What does the word **{word}** mean?
+What does the word **{actual_word}** mean?
 
 Show the sentence where it was used: "{sentence_with_word}"
 
@@ -166,8 +177,19 @@ Return ONLY valid JSON with: question, options (array of 4 strings), correctInde
 
     def _get_fallback_vocab_question(self, word: str, context: str) -> Dict:
         """Fallback vocabulary questions with proper sentence extraction"""
-        # Extract just the sentence containing the word using improved matching
-        sentence_with_word = self._extract_sentence_with_word(word, context)
+        # Use actual bolded words from generated content, but apply proper noun filtering
+        actual_words = self.extract_vocabulary_words(context)
+        if actual_words:
+            # Apply the same filtering logic as select_best_vocabulary_word
+            from app import select_best_vocabulary_word
+            filtered_word = select_best_vocabulary_word(actual_words)
+            # If filtering returns nothing (all words filtered out), fallback to passed word
+            actual_word = filtered_word if filtered_word else word
+            sentence_with_word = self._extract_sentence_with_word(actual_word, context)
+        else:
+            # Fallback to original logic if no bolded words found
+            actual_word = word
+            sentence_with_word = self._extract_sentence_with_word(word, context)
         
         if not sentence_with_word:
             sentence_with_word = context  # Fallback to full context
@@ -261,19 +283,19 @@ Return ONLY valid JSON with: question, options (array of 4 strings), correctInde
         }
         
         # Generate reasonable definitions for unknown words
-        if word.lower() not in vocab_questions:
+        if actual_word.lower() not in vocab_questions:
             return {
-                "question": f'What does the word **{word}** mean?\n\n"{sentence_with_word}"',
+                "question": f'What does the word **{actual_word}** mean?\n\n"{sentence_with_word}"',
                 "options": [
-                    f"a) something related to {word}",
-                    f"b) the opposite of {word}",
-                    f"c) a type of {word}",
-                    f"d) similar to {word}"
+                    f"a) something related to {actual_word}",
+                    f"b) the opposite of {actual_word}",
+                    f"c) a type of {actual_word}",
+                    f"d) similar to {actual_word}"
                 ],
                 "correctIndex": 0
             }
         
-        return vocab_questions.get(word.lower())
+        return vocab_questions.get(actual_word.lower())
 
     def _extract_sentence_with_word(self, word: str, context: str) -> Optional[str]:
         """
@@ -306,7 +328,13 @@ Return ONLY valid JSON with: question, options (array of 4 strings), correctInde
         """Extract vocabulary words from text (words between ** markers)"""
         import re
         words = re.findall(r'\*\*(.*?)\*\*', text)
-        return words
+        # Strip punctuation from extracted words for cleaner questions
+        cleaned_words = []
+        for word in words:
+            cleaned_word = re.sub(r'[,;:.!?]+$', '', word.strip())
+            if cleaned_word:  # Only add non-empty words
+                cleaned_words.append(cleaned_word)
+        return cleaned_words
 
     def provide_grammar_feedback(self, user_text: str) -> Optional[str]:
         """Provide grammar feedback following Step 5 of the story process"""

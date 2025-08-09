@@ -1,0 +1,19 @@
+# Testing dependencies for English Learning Chatbot
+
+# Core testing framework
+pytest>=7.0.0
+pytest-cov>=4.0.0  # Coverage reporting
+pytest-mock>=3.10.0  # Mocking utilities
+pytest-asyncio>=0.21.0  # Async test support
+
+# Educational content testing
+textstat>=0.7.0  # Reading level analysis (Flesch-Kincaid)
+nltk>=3.8  # Natural language processing for educational content
+
+# Test utilities and fixtures
+factory-boy>=3.2.0  # Test data generation
+faker>=18.0.0  # Fake data for testing
+
+# Development and debugging
+pytest-sugar>=0.9.0  # Better test output formatting
+pytest-clarity>=1.0.0  # Better assertion error messages

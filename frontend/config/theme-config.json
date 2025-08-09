@@ -1,0 +1,26 @@
+{
+  "topicKeywords": {
+    "space": ["space", "planet", "star", "rocket", "astronaut", "jupiter", "mars", "galaxy", "alien"],
+    "animals": ["animal", "dog", "cat", "elephant", "lion", "whale", "bird"],
+    "fantasy": ["fantasy", "magic", "magical", "dragon", "unicorn", "wizard", "fairy", "enchanted", "mystical", "creature"],
+    "inventions": ["invention", "science", "technology", "robot", "computer"],
+    "sports": ["sport", "soccer", "football", "basketball", "tennis", "baseball"],
+    "food": ["food", "cooking", "eat", "pizza", "ice cream", "fruit"],
+    "ocean": ["ocean", "sea", "fish", "shark", "whale", "coral", "water"],
+    "mystery": ["mystery", "detective", "clue", "solve", "secret", "hidden"],
+    "adventure": ["adventure", "explore", "journey", "quest", "travel"]
+  },
+  "themeMapping": {
+    "fantasy": "theme-fantasy",
+    "sports": "theme-sports", 
+    "food": "theme-food",
+    "animals": "theme-animals",
+    "ocean": "theme-ocean",
+    "space": "theme-space",
+    "mystery": "theme-elegant",
+    "adventure": "theme-elegant",
+    "inventions": "theme-space"
+  },
+  "defaultTheme": "theme-space",
+  "description": "Centralized configuration for topic keyword detection and theme mapping. Edit this file to customize how topics are detected and which themes they map to."
+}

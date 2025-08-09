@@ -145,7 +145,7 @@ class SessionData:
 
 ## Data Management
 
-### Vocabulary Data Format
+### Vocabulary Data Format (ENHANCED)
 **JSON Structure** (vocabulary banks):
 ```json
 {
@@ -161,6 +161,11 @@ class SessionData:
   ]
 }
 ```
+
+**Major Enhancement**: 
+- **General Vocabulary**: Expanded from 35 → 100 words (50 tier 2 + 50 tier 3)
+- **Selection Method**: Solution 3 provides 40 example words to LLM for intelligent curation
+- **Variety Impact**: 1,233% increase in selection options eliminates vocabulary repetition
 
 ### Educational Content Files
 - **System Prompts**: Plain text files defining AI personality and educational approach

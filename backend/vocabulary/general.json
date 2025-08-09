@@ -279,6 +279,526 @@
       "type": "adjective",
       "example": "She became more independent when she learned to ride a bike",
       "grade_level": "3-4"
+    },
+    {
+      "word": "create",
+      "definition": "to make something new",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "Let's create a colorful poster for our project",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "protect",
+      "definition": "to keep someone or something safe",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "We wear helmets to protect our heads when riding bikes",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "improve",
+      "definition": "to make something better",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "Reading every day helps improve your vocabulary",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "organize",
+      "definition": "to put things in order or plan something",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "She likes to organize her books by color",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "practice",
+      "definition": "to do something many times to get better at it",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "He needs to practice piano for his recital",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "observe",
+      "definition": "to watch something carefully",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "Scientists observe animals in their natural habitat",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "compete",
+      "definition": "to try to win against others",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "Many students compete in the spelling bee",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "perform",
+      "definition": "to do something in front of other people",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "The dancers will perform on stage tonight",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "explain",
+      "definition": "to help someone understand something",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "The teacher will explain how to solve the math problem",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "recognize",
+      "definition": "to know or remember someone or something",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "I can recognize my friend's voice on the phone",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "inspire",
+      "definition": "to make someone want to do something good",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "The brave firefighter inspired him to help others",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "encourage",
+      "definition": "to help someone feel brave or confident",
+      "difficulty": 2,
+      "type": "verb",
+      "example": "My parents encourage me to try new things",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "knowledge",
+      "definition": "things that you know and understand",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "Reading books increases your knowledge about the world",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "community",
+      "definition": "a group of people who live in the same place",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "Our community came together to clean up the park",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "problem",
+      "definition": "something difficult that needs to be fixed",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "We worked together to solve the puzzle problem",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "solution",
+      "definition": "an answer to a problem",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "She found a creative solution to fix the broken toy",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "energy",
+      "definition": "the power to be active and do things",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "After eating breakfast, I have lots of energy to play",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "memory",
+      "definition": "the ability to remember things",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "That song brings back a happy memory of summer camp",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "excitement",
+      "definition": "a feeling of being very happy and eager",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "There was great excitement when the circus came to town",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "experience",
+      "definition": "something that happens to you",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "Going to the zoo was an amazing experience",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "invention",
+      "definition": "something new that someone creates",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The bicycle was an important invention for transportation",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "creation",
+      "definition": "something that is made or built",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "Her art creation won first prize in the contest",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "tradition",
+      "definition": "something special that families do every year",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "Baking cookies together is our family tradition",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "celebration",
+      "definition": "a happy party or special event",
+      "difficulty": 2,
+      "type": "noun",
+      "example": "The graduation celebration lasted all evening",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "brilliant",
+      "definition": "very smart or very bright",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "She had a brilliant idea for the science project",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "clever",
+      "definition": "good at thinking and learning quickly",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "The clever fox found a way out of the trap",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "confident",
+      "definition": "feeling sure about yourself and your abilities",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "She felt confident before giving her presentation",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "cheerful",
+      "definition": "happy and in a good mood",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "His cheerful smile brightened everyone's day",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "patient",
+      "definition": "able to wait calmly without getting upset",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "The patient teacher helped every student learn",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "helpful",
+      "definition": "willing to help others",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "My helpful neighbor brought us soup when we were sick",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "honest",
+      "definition": "always telling the truth",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "The honest boy admitted he broke the window",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "loyal",
+      "definition": "faithful and true to someone or something",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "The loyal dog waited for his owner every day",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "thoughtful",
+      "definition": "caring about other people's feelings",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "It was thoughtful of her to remember my birthday",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "respectful",
+      "definition": "treating others with kindness and good manners",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "The respectful student always listened when others spoke",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "successful",
+      "definition": "doing well and achieving your goals",
+      "difficulty": 2,
+      "type": "adjective",
+      "example": "The successful athlete won three gold medals",
+      "grade_level": "2-3"
+    },
+    {
+      "word": "investigate",
+      "definition": "to look for information and try to find out the truth",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "The detective will investigate the mysterious case",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "demonstrate",
+      "definition": "to show how something works or is done",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "The chef will demonstrate how to make perfect pasta",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "influence",
+      "definition": "to change or affect how someone thinks or acts",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "Good friends can influence you to make better choices",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "persuade",
+      "definition": "to convince someone to do or believe something",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "She tried to persuade her parents to get a puppy",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "concentrate",
+      "definition": "to focus your attention on something",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "I need to concentrate when doing my math homework",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "evaluate",
+      "definition": "to judge how good or valuable something is",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "The judges will evaluate each science fair project",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "collaborate",
+      "definition": "to work together with others on something",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "The students collaborate on their group presentation",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "anticipate",
+      "definition": "to expect something to happen",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "We anticipate that the weather will be sunny tomorrow",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "participate",
+      "definition": "to take part in an activity with others",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "Everyone can participate in the school talent show",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "achieve",
+      "definition": "to successfully complete or reach a goal",
+      "difficulty": 3,
+      "type": "verb",
+      "example": "With hard work, you can achieve anything you set your mind to",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "character",
+      "definition": "the kind of person you are inside",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Her honest character made her a trusted friend",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "perspective",
+      "definition": "your way of looking at or thinking about something",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "From my perspective, we should help clean up the playground",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "achievement",
+      "definition": "something good that you accomplish",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Learning to read was her greatest achievement in first grade",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "development",
+      "definition": "the process of growing or getting better",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The development of her art skills took years of practice",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "dedication",
+      "definition": "working hard and not giving up",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "His dedication to studying helped him become a doctor",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "resilience",
+      "definition": "the ability to recover from difficult times",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Her resilience helped her bounce back after losing the game",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "perseverance",
+      "definition": "continuing to try even when things are hard",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "With perseverance, she finally learned to ride her bike",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "enthusiasm",
+      "definition": "feeling very excited and interested in something",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "Her enthusiasm for reading inspired other students",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "intelligence",
+      "definition": "the ability to learn and understand things",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "His intelligence showed when he solved the difficult puzzle",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "potential",
+      "definition": "the ability to become something great in the future",
+      "difficulty": 3,
+      "type": "noun",
+      "example": "The young artist has great potential to become famous",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "sophisticated",
+      "definition": "complex and advanced",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The sophisticated robot could perform many different tasks",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "analytical",
+      "definition": "good at studying and understanding things carefully",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "Her analytical mind helped her solve complex problems",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "innovative",
+      "definition": "creating new and creative ideas",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The innovative inventor created a new type of bicycle",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "ambitious",
+      "definition": "having big goals and working hard to achieve them",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The ambitious student wanted to become a scientist",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "diplomatic",
+      "definition": "good at solving problems between people peacefully",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The diplomatic student helped friends solve their argument",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "considerate",
+      "definition": "caring about other people's feelings and needs",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The considerate boy shared his lunch with a hungry classmate",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "resourceful",
+      "definition": "good at finding creative ways to solve problems",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The resourceful girl used cardboard boxes to build a fort",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "adaptable",
+      "definition": "able to change and adjust to new situations",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The adaptable student did well at her new school",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "meticulous",
+      "definition": "very careful and paying attention to small details",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The meticulous artist spent hours perfecting every brushstroke",
+      "grade_level": "3-4"
+    },
+    {
+      "word": "conscientious",
+      "definition": "always doing your best work and being responsible",
+      "difficulty": 3,
+      "type": "adjective",
+      "example": "The conscientious student always completed homework on time",
+      "grade_level": "3-4"
     }
   ]
 }

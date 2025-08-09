@@ -4,45 +4,225 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 import logging
+import json
+import os
 from llm_provider import llm_provider
 from generate_prompt import generate_prompt, load_file, generate_fun_facts_prompt
 from vocabulary_manager import vocabulary_manager
 
-def generate_vocabulary_enhanced_prompt(base_prompt: str, topic: str, used_words: List[str] = None, word_count: int = 3) -> tuple[str, List[str]]:
+# Load centralized theme configuration
+def load_theme_config():
+    """Load theme configuration from centralized JSON file"""
+    config_path = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'config', 'theme-config.json')
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+            logging.info("Theme configuration loaded successfully from JSON file")
+            return config
+    except Exception as e:
+        logging.error(f"Failed to load theme configuration: {e}")
+        # Fallback configuration
+        return {
+            "topicKeywords": {
+                "space": ["space", "planet", "star", "rocket", "astronaut"],
+                "animals": ["animal", "dog", "cat"],
+                "fantasy": ["fantasy", "magic", "magical", "dragon", "creature"],
+                "sports": ["sport", "soccer", "football"],
+                "ocean": ["ocean", "sea", "fish"]
+            },
+            "themeMapping": {
+                "fantasy": "theme-fantasy",
+                "sports": "theme-sports",
+                "animals": "theme-animals",
+                "ocean": "theme-ocean",
+                "space": "theme-space"
+            },
+            "defaultTheme": "theme-space"
+        }
+
+# Load theme configuration at startup
+THEME_CONFIG = load_theme_config()
+
+class VocabularyDebugInfo(BaseModel):
+    """Debug information about vocabulary generation and selection"""
+    general_pool: List[str] = []
+    topic_pool: List[str] = []
+    excluded_words: List[str] = []
+    total_available: int = 0
+    llm_selected_words: List[str] = []
+    context: str = ""
+    content_preview: str = ""
+    session_total: int = 0
+
+def generate_vocabulary_enhanced_prompt(base_prompt: str, topic: str, used_words: List[str] = None, word_count: int = 3, vocab_pools: dict = None) -> tuple[str, List[str]]:
     """
-    Generate a prompt enhanced with vocabulary integration and return selected vocabulary words
+    Generate a prompt enhanced with massive vocabulary pool for LLM intelligent selection
+    
+    SOLUTION 3: Massive Vocabulary Pool with LLM as Intelligent Curator
+    - Provides 40 example words (20 general tier 2+3 + 20 topic words) 
+    - LLM intelligently selects 2-4 most natural words for content
+    - Eliminates repetition through massive selection pool
+    - Maintains optimal learning targets for 2nd-3rd graders
     
     Args:
         base_prompt: The base prompt template
         topic: Topic for vocabulary selection
         used_words: Previously used words to avoid
-        word_count: Number of vocabulary words to include
+        word_count: Ignored - now controlled by LLM intelligent selection
+        vocab_pools: Optional pre-generated vocabulary pools (for debug consistency)
     
     Returns:
-        Tuple of (enhanced_prompt, selected_vocabulary_words)
+        Tuple of (enhanced_prompt, expected_vocabulary_range)
     """
     if used_words is None:
         used_words = []
     
-    # Pre-select vocabulary words from curated banks
-    selected_vocab_words = []
-    for _ in range(word_count):
-        vocab_word_data = vocabulary_manager.select_vocabulary_word(
-            topic=topic,
-            used_words=used_words + selected_vocab_words
-        )
-        if vocab_word_data:
-            selected_vocab_words.append(vocab_word_data['word'])
+    # SOLUTION 3: Generate massive vocabulary pools for LLM selection (if not provided)
+    if vocab_pools is None:
+        vocab_pools = generate_massive_vocabulary_pool(topic, used_words)
     
-    if selected_vocab_words:
-        vocab_instruction = f" Naturally incorporate these educational vocabulary words into your content: {', '.join(selected_vocab_words)}. Bold these words using **word** format. DO NOT include vocabulary questions, definitions, or explanations - just use the words naturally in the content."
+    if vocab_pools['general_pool'] or vocab_pools['topic_pool']:
+        # Create enhanced prompt with massive vocabulary selection
+        vocab_instruction = f"""
+
+You have access to these educational vocabulary words for natural integration:
+
+GENERAL WORDS (Tier 2+3): {', '.join(vocab_pools['general_pool'])}
+
+TOPIC-SPECIFIC WORDS: {', '.join(vocab_pools['topic_pool'])}
+
+CRITICAL INSTRUCTIONS:
+- Select ONLY 2-4 words total that fit most naturally in your content
+- Choose words that enhance meaning rather than feel forced
+- Bold selected words using **word** format  
+- Prioritize natural, engaging flow over vocabulary count
+- Mix general and topic words for variety
+- Content must feel captivating, not educational-sounding
+
+EXAMPLE POOLS PROVIDED: {vocab_pools['total_examples']} words
+TARGET USAGE: Select 2-4 most natural words only"""
+
         enhanced_prompt = base_prompt + vocab_instruction
+        # Return expected vocabulary range instead of pre-selected words
+        expected_vocab = ['LLM_SELECTED_2_TO_4_WORDS']
+        
     else:
         # Fallback if no vocabulary available
-        enhanced_prompt = base_prompt + " Bold 2-3 challenging or important words using **word** format. DO NOT include vocabulary questions or definitions in the content."
-        selected_vocab_words = []
+        enhanced_prompt = base_prompt + " Bold 2-4 challenging or important words using **word** format. DO NOT include vocabulary questions or definitions in the content."
+        expected_vocab = []
+        vocab_pools = {'general_pool': [], 'topic_pool': [], 'excluded_words': used_words, 'total_examples': 0}
     
-    return enhanced_prompt, selected_vocab_words
+    return enhanced_prompt, expected_vocab
+
+def generate_vocabulary_enhanced_prompt_with_debug(base_prompt: str, topic: str, used_words: List[str] = None) -> tuple[str, List[str], dict]:
+    """
+    Generate vocabulary enhanced prompt and return debug info for browser console
+    
+    Returns:
+        Tuple of (enhanced_prompt, expected_vocab, vocab_pools)
+    """
+    if used_words is None:
+        used_words = []
+    
+    # Generate vocabulary pools for debug info
+    vocab_pools = generate_massive_vocabulary_pool(topic, used_words)
+    
+    # Generate the enhanced prompt using the same vocab_pools to ensure consistency
+    enhanced_prompt, expected_vocab = generate_vocabulary_enhanced_prompt(base_prompt, topic, used_words, vocab_pools=vocab_pools)
+    
+    return enhanced_prompt, expected_vocab, vocab_pools
+
+
+def generate_massive_vocabulary_pool(topic: str, used_words: List[str] = None) -> Dict[str, any]:
+    """
+    SOLUTION 3: Generate massive vocabulary pools for LLM intelligent selection
+    
+    Returns 40 total example words (20 general + 20 topic) for LLM to choose from,
+    while maintaining optimal 2-4 word learning targets for children.
+    
+    Args:
+        topic: Topic for vocabulary selection
+        used_words: Previously used words to prefer fresh options
+    
+    Returns:
+        Dictionary with general_pool, topic_pool, total_examples, and target_usage
+    """
+    if used_words is None:
+        used_words = []
+    
+    # Get 20 tier 2+3 words from general pool (skip tier 1 - too easy for advanced learners)
+    general_pool = select_advanced_general_words(count=20, exclude=used_words)
+    
+    # Get all available topic-specific words (typically 20 words per topic)
+    topic_pool = get_all_topic_vocabulary(topic)
+    
+    return {
+        'general_pool': general_pool,     # 20 tier 2+3 words
+        'topic_pool': topic_pool,         # 20 topic words  
+        'total_examples': len(general_pool) + len(topic_pool),  # ~40 words total
+        'target_usage': '2-4 words only',  # Still optimal for learning
+        'excluded_words': used_words  # For debug info
+    }
+
+
+def select_advanced_general_words(count: int = 20, exclude: List[str] = None) -> List[str]:
+    """
+    Select tier 2+3 words from the expanded 100-word general vocabulary pool
+    
+    Args:
+        count: Number of words to select (default 20)
+        exclude: Words to avoid selecting (prefer fresh options)
+    
+    Returns:
+        List of tier 2+3 general vocabulary words
+    """
+    if exclude is None:
+        exclude = []
+    
+    # Get all tier 2 and tier 3 words from general pool
+    general_vocabulary = vocabulary_manager.general_vocabulary
+    advanced_words = [word for word in general_vocabulary 
+                     if word['difficulty'] in [2, 3]]  # Tier 2+3 only
+    
+    # Prefer words not recently used
+    preferred_words = [word for word in advanced_words 
+                      if word['word'] not in exclude]
+    
+    # If we have enough preferred words, use them; otherwise include some used words
+    if len(preferred_words) >= count:
+        selected_words = preferred_words[:count]
+    else:
+        # Use all preferred words + some used words to reach target count
+        additional_needed = count - len(preferred_words)
+        used_words = [word for word in advanced_words 
+                     if word['word'] in exclude]
+        selected_words = preferred_words + used_words[:additional_needed]
+    
+    # Return just the word strings
+    return [word['word'] for word in selected_words[:count]]
+
+
+def get_all_topic_vocabulary(topic: str) -> List[str]:
+    """
+    Get all available vocabulary words for a specific topic
+    
+    Args:
+        topic: The topic name (space, animals, sports, etc.)
+    
+    Returns:
+        List of all topic-specific vocabulary words
+    """
+    # Get topic vocabulary from vocabulary manager
+    topic_vocabulary = vocabulary_manager.get_vocabulary_for_topic(topic)
+    
+    # Filter to get only topic-specific words (not general words)
+    topic_lower = topic.lower()
+    if topic_lower in vocabulary_manager.topic_vocabularies:
+        topic_words = vocabulary_manager.topic_vocabularies[topic_lower]
+        return [word['word'] for word in topic_words]
+    
+    # Fallback: return empty list if no topic-specific vocabulary
+    return []
 
 def extract_vocabulary_from_content(content: str, content_vocabulary: List[str] = None) -> List[str]:
     """
@@ -92,27 +272,71 @@ def extract_vocabulary_from_content(content: str, content_vocabulary: List[str] 
     logger.info(f"Extracted vocabulary from content: {unique_words}")
     return unique_words
 
+def create_vocabulary_debug_info(vocab_pools: dict, content: str, context: str, session_total: int) -> VocabularyDebugInfo:
+    """
+    Create vocabulary debug information for browser console display
+    
+    Args:
+        vocab_pools: The vocabulary pools that were generated
+        content: The LLM response content
+        context: Context description (e.g., "Story generation", "Fun fact")
+        session_total: Total vocabulary words tracked in session
+    
+    Returns:
+        VocabularyDebugInfo object for frontend display
+    """
+    import re
+    bolded_words = re.findall(r'\*\*(.*?)\*\*', content)
+    
+    return VocabularyDebugInfo(
+        general_pool=vocab_pools.get('general_pool', []),
+        topic_pool=vocab_pools.get('topic_pool', []),
+        excluded_words=vocab_pools.get('excluded_words', []),
+        total_available=vocab_pools.get('total_examples', 0),
+        llm_selected_words=bolded_words,
+        context=context,
+        content_preview=content[:100] + ('...' if len(content) > 100 else ''),
+        session_total=session_total
+    )
+
 def select_best_vocabulary_word(available_words: List[str]) -> str:
     """
-    Select the best vocabulary word, prioritizing lowercase words over capitalized words
-    to avoid proper nouns like names and places.
+    Select the best vocabulary word, filtering out multi-word proper nouns (like names)
+    while preserving single words that could be legitimate vocabulary.
     
     Args:
         available_words: List of available vocabulary words to choose from
     
     Returns:
-        The best vocabulary word (lowercase prioritized over uppercase)
+        The best vocabulary word (multi-word proper nouns filtered out)
     """
     if not available_words:
+        logger.info("select_best_vocabulary_word: No available words")
         return None
     
-    # Prioritize words that start with lowercase letters (likely common vocabulary)
-    lowercase_words = [word for word in available_words if word and word[0].islower()]
+    logger.info(f"select_best_vocabulary_word: Available words: {available_words}")
     
-    if lowercase_words:
-        return lowercase_words[0]  # Return first lowercase word
+    # Filter out multi-word phrases (likely proper nouns like names)
+    single_word_candidates = []
+    for word in available_words:
+        if word and len(word.split()) == 1:  # Only single words
+            single_word_candidates.append(word)
+        else:
+            logger.info(f"select_best_vocabulary_word: Skipping multi-word: '{word}'")
+    
+    logger.info(f"select_best_vocabulary_word: Single word candidates: {single_word_candidates}")
+    
+    # Use the first single word (don't overly prioritize case)
+    # This maintains original behavior for legitimate vocabulary words
+    if single_word_candidates:
+        selected = single_word_candidates[0]
+        logger.info(f"select_best_vocabulary_word: Selected: '{selected}'")
+        return selected
     else:
-        return available_words[0]  # Fallback to first available word (even if capitalized)
+        # Last resort - return first available even if multi-word (shouldn't happen)
+        selected = available_words[0]
+        logger.warning(f"select_best_vocabulary_word: Using last resort word: '{selected}'")
+        return selected
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -160,11 +384,13 @@ class VocabQuestion(BaseModel):
     options: List[str]
     correctIndex: int
 
+
 class ChatResponse(BaseModel):
     response: str
     vocabQuestion: Optional[VocabQuestion] = None
     sessionData: Optional[SessionData] = None
     suggestedTheme: Optional[str] = None
+    vocabularyDebug: Optional[VocabularyDebugInfo] = None
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(chat_request: ChatRequest):
@@ -206,7 +432,7 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
         
         # Generate story beginning with vocabulary integration
         base_prompt = f"The child has chosen the topic: {topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."
-        enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+        enhanced_prompt, selected_vocab, vocab_pools = generate_vocabulary_enhanced_prompt_with_debug(
             base_prompt, topic, session_data.askedVocabWords
         )
         story_response = llm_provider.generate_response(enhanced_prompt)
@@ -217,14 +443,24 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
             logger.info(f"Story generation included vocabulary: {selected_vocab}")
             # Store them for later vocabulary question generation
             session_data.contentVocabulary.extend(selected_vocab)
+            logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+        
+        # Create vocabulary debug info for browser console
+        vocab_debug = create_vocabulary_debug_info(
+            vocab_pools, story_response, "Initial Story Generation", len(session_data.contentVocabulary)
+        )
+        logger.info(f"🔍 DEBUG: Created vocab debug info: {vocab_debug.model_dump()}")
         
         # Get theme suggestion for this topic
         suggested_theme = get_theme_suggestion(topic)
         
+        logger.info(f"🔍 DEBUG: Returning ChatResponse with vocabularyDebug: {vocab_debug is not None}")
+        
         return ChatResponse(
             response=story_response,
             sessionData=session_data,
-            suggestedTheme=suggested_theme
+            suggestedTheme=suggested_theme,
+            vocabularyDebug=vocab_debug
         )
     
     # Check if story is already complete - handle vocabulary questions or new story
@@ -263,7 +499,7 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
                 
                 # Generate story beginning with vocabulary integration
                 base_prompt = f"The child has chosen the topic: {potential_new_topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."
-                enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+                enhanced_prompt, selected_vocab, vocab_pools = generate_vocabulary_enhanced_prompt_with_debug(
                     base_prompt, potential_new_topic, session_data.askedVocabWords
                 )
                 story_response = llm_provider.generate_response(enhanced_prompt)
@@ -273,6 +509,12 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
                 if selected_vocab:
                     logger.info(f"New story generation included vocabulary: {selected_vocab}")
                     session_data.contentVocabulary.extend(selected_vocab)
+                    logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+                
+                # Create vocabulary debug info for browser console
+                vocab_debug = create_vocabulary_debug_info(
+                    vocab_pools, story_response, "New Story Generation", len(session_data.contentVocabulary)
+                )
                 
                 # Get theme suggestion for new topic
                 suggested_theme = get_theme_suggestion(potential_new_topic)
@@ -280,7 +522,8 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
                 return ChatResponse(
                     response=f"Great choice! Let's write a {potential_new_topic} story! 🌟\\n\\n{story_response}",
                     sessionData=session_data,
-                    suggestedTheme=suggested_theme
+                    suggestedTheme=suggested_theme,
+                    vocabularyDebug=vocab_debug
                 )
             else:
                 # Unclear response - ask for clarification
@@ -317,7 +560,7 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
                     
                     # Generate story beginning with vocabulary integration
                     base_prompt = f"The child has chosen the topic: {potential_new_topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."
-                    enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+                    enhanced_prompt, selected_vocab, vocab_pools = generate_vocabulary_enhanced_prompt_with_debug(
                         base_prompt, potential_new_topic, session_data.askedVocabWords
                     )
                     story_response = llm_provider.generate_response(enhanced_prompt)
@@ -327,6 +570,12 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
                     if selected_vocab:
                         logger.info(f"Story topic switch included vocabulary: {selected_vocab}")
                         session_data.contentVocabulary.extend(selected_vocab)
+                        logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+                    
+                    # Create vocabulary debug info for browser console
+                    vocab_debug = create_vocabulary_debug_info(
+                        vocab_pools, story_response, "Story Topic Switch", len(session_data.contentVocabulary)
+                    )
                     
                     # Get theme suggestion for new topic
                     suggested_theme = get_theme_suggestion(potential_new_topic)
@@ -334,7 +583,8 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
                     return ChatResponse(
                         response=story_response,
                         sessionData=session_data,
-                        suggestedTheme=suggested_theme
+                        suggestedTheme=suggested_theme,
+                        vocabularyDebug=vocab_debug
                     )
         
         # Story is done - vocabulary phase will be handled by new system
@@ -361,7 +611,7 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
         if should_end_story:
             # End the story with vocabulary integration
             base_prompt = f"End the story about {session_data.topic}. Previous context: {story_context}. Write a final paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. End the story with a satisfying conclusion and add 'The end!' at the very end. DO NOT ask the child to continue. DO NOT include vocabulary questions - those will be handled separately."
-            enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+            enhanced_prompt, selected_vocab, vocab_pools = generate_vocabulary_enhanced_prompt_with_debug(
                 base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
             )
             story_response = llm_provider.generate_response(enhanced_prompt)
@@ -370,6 +620,12 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
             if selected_vocab:
                 logger.info(f"Story ending included vocabulary: {selected_vocab}")
                 session_data.contentVocabulary.extend(selected_vocab)
+                logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+            
+            # Create vocabulary debug info for browser console
+            vocab_debug = create_vocabulary_debug_info(
+                vocab_pools, story_response, "Story Ending", len(session_data.contentVocabulary)
+            )
             
             # Add grammar feedback if available
             if grammar_feedback:
@@ -384,12 +640,13 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
             return ChatResponse(
                 response=story_response,
                 vocabQuestion=None,  # No vocab question with story ending
-                sessionData=session_data
+                sessionData=session_data,
+                vocabularyDebug=vocab_debug
             )
         else:
             # Continue story with vocabulary integration
             base_prompt = f"Continue the story about {session_data.topic}. Previous context: {story_context}. Write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. Keep this a short story - try to end it before it goes over 300 words total. DO NOT include vocabulary questions - those will be handled separately."
-            enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+            enhanced_prompt, selected_vocab, vocab_pools = generate_vocabulary_enhanced_prompt_with_debug(
                 base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
             )
             story_response = llm_provider.generate_response(enhanced_prompt)
@@ -398,6 +655,12 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
             if selected_vocab:
                 logger.info(f"Story continuation included vocabulary: {selected_vocab}")
                 session_data.contentVocabulary.extend(selected_vocab)
+                logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+            
+            # Create vocabulary debug info for browser console
+            vocab_debug = create_vocabulary_debug_info(
+                vocab_pools, story_response, "Story Continuation", len(session_data.contentVocabulary)
+            )
             
             # Add grammar feedback if available
             if grammar_feedback:
@@ -408,7 +671,8 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
             
             return ChatResponse(
                 response=story_response,
-                sessionData=session_data
+                sessionData=session_data,
+                vocabularyDebug=vocab_debug
             )
 
 async def handle_start_vocabulary(session_data: SessionData) -> ChatResponse:
@@ -549,7 +813,7 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
         
         # Generate first fact with vocabulary integration using external prompt system
         base_prompt = generate_fun_facts_prompt('first_fact', topic=topic)
-        enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+        enhanced_prompt, selected_vocab, vocab_pools = generate_vocabulary_enhanced_prompt_with_debug(
             base_prompt, topic, session_data.askedVocabWords
         )
         fact_response = llm_provider.generate_response(enhanced_prompt, system_prompt=llm_provider.fun_facts_system_prompt)
@@ -561,6 +825,13 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
         if selected_vocab:
             logger.info(f"Fun fact generation included vocabulary: {selected_vocab}")
             session_data.contentVocabulary.extend(selected_vocab)
+            logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+        
+        # Create vocabulary debug info for browser console
+        vocab_debug = create_vocabulary_debug_info(
+            vocab_pools, fact_response, "Initial Fun Fact", len(session_data.contentVocabulary)
+        )
+        logger.info(f"🔍 DEBUG: Created fun fact vocab debug info: {vocab_debug.model_dump()}")
         
         # Generate vocabulary question using content-based extraction
         fact_vocab_words = extract_vocabulary_from_content(fact_response, session_data.contentVocabulary)
@@ -591,11 +862,14 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
         # Get theme suggestion for this topic
         suggested_theme = get_theme_suggestion(topic)
         
+        logger.info(f"🔍 DEBUG: Returning fun fact ChatResponse with vocabularyDebug: {vocab_debug is not None}")
+        
         return ChatResponse(
             response=fact_response,
             vocabQuestion=VocabQuestion(**vocab_question) if vocab_question else None,
             sessionData=session_data,
-            suggestedTheme=suggested_theme
+            suggestedTheme=suggested_theme,
+            vocabularyDebug=vocab_debug
         )
     
     # Topic is set, continue with more facts
@@ -609,7 +883,7 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 fact_number=session_data.factsShown + 1,
                 previous_facts=previous_facts
             )
-            enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+            enhanced_prompt, selected_vocab, vocab_pools = generate_vocabulary_enhanced_prompt_with_debug(
                 base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
             )
             fact_response = llm_provider.generate_response(enhanced_prompt, system_prompt=llm_provider.fun_facts_system_prompt)
@@ -621,6 +895,12 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
             if selected_vocab:
                 logger.info(f"Continuing fun fact included vocabulary: {selected_vocab}")
                 session_data.contentVocabulary.extend(selected_vocab)
+                logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+            
+            # Create vocabulary debug info for browser console
+            vocab_debug = create_vocabulary_debug_info(
+                vocab_pools, fact_response, "Continuing Fun Fact", len(session_data.contentVocabulary)
+            )
             
             # Generate vocabulary question using content-based extraction
             fact_vocab_words = extract_vocabulary_from_content(fact_response, session_data.contentVocabulary)
@@ -651,7 +931,8 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
             return ChatResponse(
                 response=fact_response,
                 vocabQuestion=VocabQuestion(**vocab_question) if vocab_question else None,
-                sessionData=session_data
+                sessionData=session_data,
+                vocabularyDebug=vocab_debug
             )
         else:
             # Check if user wants to switch to a new topic
@@ -679,7 +960,7 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 
                 # Generate first fact for continuing topic using external prompt system
                 base_prompt = generate_fun_facts_prompt('new_topic', topic=session_data.topic)
-                enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+                enhanced_prompt, selected_vocab, vocab_pools = generate_vocabulary_enhanced_prompt_with_debug(
                     base_prompt, session_data.topic, session_data.askedVocabWords
                 )
                 logger.info(f"Continuing same topic '{session_data.topic}' - generated prompt: {enhanced_prompt[:200]}...")
@@ -693,6 +974,12 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 if selected_vocab:
                     logger.info(f"Same topic continuation included vocabulary: {selected_vocab}")
                     session_data.contentVocabulary.extend(selected_vocab)
+                    logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+                
+                # Create vocabulary debug info for browser console
+                vocab_debug = create_vocabulary_debug_info(
+                    vocab_pools, fact_response, "Same Topic Continuation", len(session_data.contentVocabulary)
+                )
                 
                 # Generate vocabulary question using content-based extraction
                 fact_vocab_words = extract_vocabulary_from_content(fact_response, session_data.contentVocabulary)
@@ -723,7 +1010,8 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 return ChatResponse(
                     response=f"Great! Let's continue with more {session_data.topic} facts!\n\n{fact_response}",
                     vocabQuestion=VocabQuestion(**vocab_question) if vocab_question else None,
-                    sessionData=session_data
+                    sessionData=session_data,
+                    vocabularyDebug=vocab_debug
                 )
             elif new_topic and new_topic != session_data.topic:
                 # Reset session state for new topic
@@ -736,7 +1024,7 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 
                 # Generate first fact for new topic with vocabulary integration using external prompt system
                 base_prompt = generate_fun_facts_prompt('new_topic', topic=new_topic)
-                enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+                enhanced_prompt, selected_vocab, vocab_pools = generate_vocabulary_enhanced_prompt_with_debug(
                     base_prompt, new_topic, session_data.askedVocabWords
                 )
                 fact_response = llm_provider.generate_response(enhanced_prompt, system_prompt=llm_provider.fun_facts_system_prompt)
@@ -748,6 +1036,12 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 if selected_vocab:
                     logger.info(f"New topic fun fact included vocabulary: {selected_vocab}")
                     session_data.contentVocabulary.extend(selected_vocab)
+                    logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+                
+                # Create vocabulary debug info for browser console
+                vocab_debug = create_vocabulary_debug_info(
+                    vocab_pools, fact_response, "New Topic Fun Fact", len(session_data.contentVocabulary)
+                )
                 
                 # Generate vocabulary question using content-based extraction
                 fact_vocab_words = extract_vocabulary_from_content(fact_response, session_data.contentVocabulary)
@@ -782,7 +1076,8 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                     response=fact_response,
                     vocabQuestion=VocabQuestion(**vocab_question) if vocab_question else None,
                     sessionData=session_data,
-                    suggestedTheme=suggested_theme
+                    suggestedTheme=suggested_theme,
+                    vocabularyDebug=vocab_debug
                 )
             else:
                 # No new topic detected, ask if they want to switch topics
@@ -795,23 +1090,11 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
 # Legacy function removed - now using vocabulary_manager.select_vocabulary_word()
 
 def extract_topic_from_message(message: str) -> str:
-    """Extract topic from user message"""
+    """Extract topic from user message using centralized config"""
     message_lower = message.lower()
     
-    # Topic mapping
-    topic_keywords = {
-        "space": ["space", "planet", "star", "rocket", "astronaut", "jupiter", "mars", "galaxy", "alien"],
-        "animals": ["animal", "dog", "cat", "elephant", "lion", "whale", "bird", "creature"],
-        "inventions": ["invention", "science", "technology", "robot", "computer"],
-        "sports": ["sport", "soccer", "football", "basketball", "tennis", "baseball"],
-        "food": ["food", "cooking", "eat", "pizza", "ice cream", "fruit"],
-        "ocean": ["ocean", "sea", "fish", "shark", "whale", "coral", "water"],
-        "fantasy": ["fantasy", "magic", "magical", "dragon", "unicorn", "wizard", "fairy", "enchanted", "mystical"],
-        "mystery": ["mystery", "detective", "clue", "solve", "secret", "hidden"],
-        "adventure": ["adventure", "explore", "journey", "quest", "travel"]
-    }
-    
-    for topic, keywords in topic_keywords.items():
+    # Use centralized topic keywords from config
+    for topic, keywords in THEME_CONFIG['topicKeywords'].items():
         if any(keyword in message_lower for keyword in keywords):
             return topic
     
@@ -820,20 +1103,8 @@ def extract_topic_from_message(message: str) -> str:
     return words[0] if words else "adventure"
 
 def get_theme_suggestion(topic: str) -> str:
-    """Map topic to theme suggestion for frontend"""
-    topic_to_theme = {
-        'fantasy': 'theme-fantasy',
-        'sports': 'theme-sports', 
-        'food': 'theme-food',
-        'animals': 'theme-animals',
-        'ocean': 'theme-ocean',
-        'space': 'theme-space',
-        'mystery': 'theme-elegant',
-        'adventure': 'theme-elegant',
-        'inventions': 'theme-space'  # Technical topics default to space
-    }
-    
-    return topic_to_theme.get(topic.lower(), 'theme-space')
+    """Map topic to theme suggestion for frontend using centralized config"""
+    return THEME_CONFIG['themeMapping'].get(topic.lower(), THEME_CONFIG['defaultTheme'])
 
 # Health check endpoint
 @app.get("/health")

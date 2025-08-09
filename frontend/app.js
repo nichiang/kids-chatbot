@@ -1,10 +1,39 @@
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", async function () {
     const chatForm = document.getElementById("chat-form");
     const chatInput = document.getElementById("chat-input");
     const chatLog = document.getElementById("chat-log");
     const storywritingBtn = document.getElementById("storywriting-btn");
     const funFactsBtn = document.getElementById("fun-facts-btn");
     const micButton = document.getElementById("mic-button");
+
+    // Load theme configuration from centralized JSON file
+    let themeConfig = null;
+    try {
+        const response = await fetch('/config/theme-config.json');
+        themeConfig = await response.json();
+        console.log('Theme configuration loaded successfully');
+    } catch (error) {
+        console.error('Failed to load theme configuration, using fallback:', error);
+        // Fallback configuration in case JSON loading fails
+        themeConfig = {
+            topicKeywords: {
+                "space": ["space", "planet", "star", "rocket", "astronaut"],
+                "animals": ["animal", "dog", "cat", "creature"],
+                "fantasy": ["fantasy", "magic", "magical", "dragon"],
+                "sports": ["sport", "soccer", "football"],
+                "ocean": ["ocean", "sea", "fish"],
+                "food": ["food", "cooking", "eat"]
+            },
+            themeMapping: {
+                "fantasy": "theme-fantasy",
+                "sports": "theme-sports",
+                "animals": "theme-animals",
+                "ocean": "theme-ocean",
+                "space": "theme-space"
+            },
+            defaultTheme: "theme-space"
+        };
+    }
 
     // App state
     let currentMode = 'funfacts'; // 'storywriting' or 'funfacts'
@@ -183,34 +212,122 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Smart auto-scroll function - only scrolls when content goes below viewport
-    function scrollToBottom() {
+    // Global scroll indicator element (will be created dynamically)
+    let scrollIndicator = null;
+
+    // Check if content overflows the viewport
+    function checkContentOverflow() {
+        const windowHeight = window.innerHeight;
+        const chatLog = document.getElementById('chat-log');
+        const inputContainer = document.getElementById('chat-form');
+        
+        // Use chat log content height instead of entire document
+        const chatLogHeight = chatLog ? chatLog.scrollHeight : 0;
+        const inputContainerHeight = inputContainer ? inputContainer.offsetHeight : 0;
+        
+        // Add buffer for anticipated AI response (approximately 200px)
+        const contentBuffer = 200;
+        const totalContentHeight = chatLogHeight + inputContainerHeight + contentBuffer;
+        
+        return {
+            overflows: totalContentHeight > windowHeight,
+            chatLogHeight: chatLogHeight,
+            windowHeight: windowHeight,
+            inputContainerHeight: inputContainerHeight
+        };
+    }
+
+    // Check if user is near the bottom of the page
+    function isUserNearBottom() {
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.body.scrollHeight;
+        const currentScrollPosition = window.scrollY;
+        
+        return (currentScrollPosition + windowHeight) >= (documentHeight - 50);
+    }
+
+    // Reposition user input to top of viewport (ChatGPT-style)
+    function repositionUserInputToTop() {
         requestAnimationFrame(() => {
-            // Check if content actually extends beyond the viewport
-            const windowHeight = window.innerHeight;
-            const documentHeight = document.body.scrollHeight;
-            const currentScrollPosition = window.scrollY;
+            const chatLog = document.getElementById('chat-log');
+            const userMessages = chatLog.querySelectorAll('.chat-message.user');
             
-            // Only scroll if:
-            // 1. Document is taller than viewport AND
-            // 2. User is not already at the bottom (within 100px tolerance)
-            const isContentBelowFold = documentHeight > windowHeight;
-            const isNearBottom = (currentScrollPosition + windowHeight) >= (documentHeight - 100);
+            if (userMessages.length > 0) {
+                const lastUserMessage = userMessages[userMessages.length - 1];
+                
+                // Scroll to position the user's message at the top
+                lastUserMessage.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start'
+                });
+            }
+        });
+    }
+
+    // Smart repositioning - only reposition if content would overflow
+    function repositionIfNeeded() {
+        requestAnimationFrame(() => {
+            const overflowCheck = checkContentOverflow();
             
-            if (isContentBelowFold && !isNearBottom) {
-                // Content extends beyond viewport and user is not at bottom - scroll smoothly
+            if (overflowCheck.overflows) {
+                // Content will overflow - reposition user input to top
+                repositionUserInputToTop();
+            }
+            // If content fits in viewport, don't reposition - keep natural position
+            
+            // Always update scroll indicator state
+            updateScrollIndicator();
+        });
+    }
+
+    // Create scroll-to-bottom indicator if it doesn't exist
+    function createScrollIndicator() {
+        if (!scrollIndicator) {
+            scrollIndicator = document.createElement('div');
+            scrollIndicator.id = 'scroll-indicator';
+            scrollIndicator.className = 'scroll-indicator hidden';
+            scrollIndicator.innerHTML = `
+                <button class="scroll-to-bottom-btn" aria-label="Scroll to bottom" title="Scroll to bottom">
+                    <svg class="scroll-arrow-icon" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="-5.0 -10.0 110.0 135.0">
+                        <path d="m77.723 55.414c-2.2109-2.2031-5.7852-2.2031-7.9883 0l-14.086 14.086v-52.641c0-3.1172-2.5312-5.6484-5.6484-5.6484s-5.6484 2.5312-5.6484 5.6484v52.637l-14.086-14.086c-2.2109-2.2031-5.7852-2.2031-7.9883 0-2.2109 2.2109-2.2109 5.7852 0 7.9883l23.73 23.73c1.1016 1.1016 2.5469 1.6562 3.9961 1.6562 1.4453 0 2.8945-0.55469 3.9961-1.6562l23.73-23.73c2.2109-2.2109 2.2109-5.7852 0-7.9883z"/>
+                    </svg>
+                </button>
+            `;
+            
+            // Add click handler for scroll to bottom
+            const scrollBtn = scrollIndicator.querySelector('.scroll-to-bottom-btn');
+            scrollBtn.addEventListener('click', () => {
                 window.scrollTo({
-                    top: documentHeight,
+                    top: document.body.scrollHeight,
                     behavior: 'smooth'
                 });
-                
-                // Fallback for older browsers
-                setTimeout(() => {
-                    window.scrollTo(0, document.body.scrollHeight);
-                }, 150);
-            }
-            // If content fits in viewport or user is already at bottom, don't scroll
-        });
+            });
+            
+            // Insert before chat form
+            const chatContainer = document.getElementById('chat-container');
+            const chatForm = document.getElementById('chat-form');
+            chatContainer.insertBefore(scrollIndicator, chatForm);
+        }
+    }
+
+    // Update scroll indicator visibility
+    function updateScrollIndicator() {
+        createScrollIndicator();
+        
+        const overflowCheck = checkContentOverflow();
+        const userNearBottom = isUserNearBottom();
+        
+        // Show indicator if content overflows AND user is not at bottom
+        if (overflowCheck.overflows && !userNearBottom) {
+            scrollIndicator.classList.remove('hidden');
+        } else {
+            scrollIndicator.classList.add('hidden');
+        }
+    }
+
+    // Legacy function for backward compatibility - now uses smart repositioning
+    function scrollToBottom() {
+        repositionIfNeeded();
     }
 
     // Split long messages into multiple bubbles
@@ -382,6 +499,9 @@ document.addEventListener("DOMContentLoaded", function () {
         appendMessage("bot", feedback);
 
         // Keep vocab container visible (don't remove it)
+        
+        // Apply smart repositioning after vocabulary feedback (same as regular user input)
+        repositionIfNeeded();
 
         // Continue flow automatically after vocabulary answer
         setTimeout(() => {
@@ -671,6 +791,46 @@ document.addEventListener("DOMContentLoaded", function () {
 
             const data = await response.json();
             
+            // DEBUG: Log all response data to see what's being received
+            console.log("🔍 DEBUG: Full response data:", data);
+            console.log("🔍 DEBUG: vocabularyDebug exists?", !!data.vocabularyDebug);
+            console.log("🔍 DEBUG: Response keys:", Object.keys(data));
+            
+            // Enhanced vocabulary debug information display with error handling
+            if (data.vocabularyDebug) {
+                try {
+                    console.log("🔍 DEBUG: vocabularyDebug raw data:", data.vocabularyDebug);
+                    
+                    const debug = data.vocabularyDebug;
+                    
+                    // Validate required fields
+                    if (!debug.context) {
+                        console.warn("⚠️ vocabularyDebug missing context field");
+                    }
+                    if (!Array.isArray(debug.general_pool)) {
+                        console.warn("⚠️ vocabularyDebug.general_pool is not an array:", debug.general_pool);
+                    }
+                    if (!Array.isArray(debug.topic_pool)) {
+                        console.warn("⚠️ vocabularyDebug.topic_pool is not an array:", debug.topic_pool);
+                    }
+                    
+                    console.group(`🎯 VOCABULARY DEBUG - ${debug.context || 'Unknown Context'}`);
+                    console.log(`📚 General Words (${debug.general_pool?.length || 0}):`, debug.general_pool || []);
+                    console.log(`🏷️ Topic Words (${debug.topic_pool?.length || 0}):`, debug.topic_pool || []);
+                    console.log(`🚫 Excluded Words (${debug.excluded_words?.length || 0}):`, debug.excluded_words || []);
+                    console.log(`📊 Total Available to LLM:`, debug.total_available || 0);
+                    console.log(`✨ LLM Selected Words (${debug.llm_selected_words?.length || 0}):`, debug.llm_selected_words || []);
+                    console.log(`📄 Content Preview:`, debug.content_preview || 'No preview');
+                    console.log(`📋 Session Total Tracked:`, debug.session_total || 0);
+                    console.groupEnd();
+                } catch (error) {
+                    console.error("❌ Error displaying vocabulary debug info:", error);
+                    console.log("Raw vocabularyDebug data:", data.vocabularyDebug);
+                }
+            } else {
+                console.log("❌ No vocabularyDebug in response");
+            }
+            
             // Remove thinking message
             chatLog.removeChild(chatLog.lastChild);
             
@@ -932,22 +1092,12 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Client-side topic extraction (mirrors backend logic)
+    // Client-side topic extraction (using centralized configuration)
     function extractTopicFromMessage(message) {
         const messageLower = message.toLowerCase();
         
-        // Topic mapping (same as backend)
-        const topicKeywords = {
-            "space": ["space", "planet", "star", "rocket", "astronaut", "jupiter", "mars", "galaxy", "alien"],
-            "animals": ["animal", "dog", "cat", "elephant", "lion", "whale", "bird", "creature"],
-            "inventions": ["invention", "science", "technology", "robot", "computer"],
-            "sports": ["sport", "soccer", "football", "basketball", "tennis", "baseball"],
-            "food": ["food", "cooking", "eat", "pizza", "ice cream", "fruit"],
-            "ocean": ["ocean", "sea", "fish", "shark", "whale", "coral", "water"],
-            "fantasy": ["fantasy", "magic", "magical", "dragon", "unicorn", "wizard", "fairy", "enchanted", "mystical"],
-            "mystery": ["mystery", "detective", "clue", "solve", "secret", "hidden"],
-            "adventure": ["adventure", "explore", "journey", "quest", "travel"]
-        };
+        // Use loaded theme configuration
+        const topicKeywords = themeConfig.topicKeywords;
         
         for (const [topic, keywords] of Object.entries(topicKeywords)) {
             if (keywords.some(keyword => messageLower.includes(keyword))) {
@@ -960,21 +1110,12 @@ document.addEventListener("DOMContentLoaded", function () {
         return words[0] || "adventure";
     }
 
-    // Client-side theme suggestion (mirrors backend logic)
+    // Client-side theme suggestion (using centralized configuration)
     function getThemeSuggestion(topic) {
-        const topicToTheme = {
-            'fantasy': 'theme-fantasy',
-            'sports': 'theme-sports', 
-            'food': 'theme-food',
-            'animals': 'theme-animals',
-            'ocean': 'theme-ocean',
-            'space': 'theme-space',
-            'mystery': 'theme-elegant',
-            'adventure': 'theme-elegant',
-            'inventions': 'theme-space'  // Technical topics default to space
-        };
+        // Use loaded theme configuration
+        const topicToTheme = themeConfig.themeMapping;
         
-        return topicToTheme[topic.toLowerCase()] || 'theme-space';
+        return topicToTheme[topic.toLowerCase()] || themeConfig.defaultTheme;
     }
 
     // Make theme switching available globally
@@ -1023,6 +1164,16 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
+
+    // Add scroll event listener to update scroll indicator
+    window.addEventListener('scroll', () => {
+        updateScrollIndicator();
+    });
+
+    // Add resize event listener to handle window resizing
+    window.addEventListener('resize', () => {
+        updateScrollIndicator();
+    });
 
     // Initialize the app
     loadInitialTheme(); // Load initial theme (random Space/Ocean for new users)
