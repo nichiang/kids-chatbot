@@ -791,46 +791,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             const data = await response.json();
             
-            // DEBUG: Log all response data to see what's being received
-            console.log("🔍 DEBUG: Full response data:", data);
-            console.log("🔍 DEBUG: vocabularyDebug exists?", !!data.vocabularyDebug);
-            console.log("🔍 DEBUG: Response keys:", Object.keys(data));
-            
-            // Enhanced vocabulary debug information display with error handling
-            if (data.vocabularyDebug) {
-                try {
-                    console.log("🔍 DEBUG: vocabularyDebug raw data:", data.vocabularyDebug);
-                    
-                    const debug = data.vocabularyDebug;
-                    
-                    // Validate required fields
-                    if (!debug.context) {
-                        console.warn("⚠️ vocabularyDebug missing context field");
-                    }
-                    if (!Array.isArray(debug.general_pool)) {
-                        console.warn("⚠️ vocabularyDebug.general_pool is not an array:", debug.general_pool);
-                    }
-                    if (!Array.isArray(debug.topic_pool)) {
-                        console.warn("⚠️ vocabularyDebug.topic_pool is not an array:", debug.topic_pool);
-                    }
-                    
-                    console.group(`🎯 VOCABULARY DEBUG - ${debug.context || 'Unknown Context'}`);
-                    console.log(`📚 General Words (${debug.general_pool?.length || 0}):`, debug.general_pool || []);
-                    console.log(`🏷️ Topic Words (${debug.topic_pool?.length || 0}):`, debug.topic_pool || []);
-                    console.log(`🚫 Excluded Words (${debug.excluded_words?.length || 0}):`, debug.excluded_words || []);
-                    console.log(`📊 Total Available to LLM:`, debug.total_available || 0);
-                    console.log(`✨ LLM Selected Words (${debug.llm_selected_words?.length || 0}):`, debug.llm_selected_words || []);
-                    console.log(`📄 Content Preview:`, debug.content_preview || 'No preview');
-                    console.log(`📋 Session Total Tracked:`, debug.session_total || 0);
-                    console.groupEnd();
-                } catch (error) {
-                    console.error("❌ Error displaying vocabulary debug info:", error);
-                    console.log("Raw vocabularyDebug data:", data.vocabularyDebug);
-                }
-            } else {
-                console.log("❌ No vocabularyDebug in response");
-            }
-            
             // Remove thinking message
             chatLog.removeChild(chatLog.lastChild);
             
