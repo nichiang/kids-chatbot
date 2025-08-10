@@ -10,6 +10,72 @@ from llm_provider import llm_provider
 from generate_prompt import generate_prompt, load_file, generate_fun_facts_prompt
 from vocabulary_manager import vocabulary_manager
 
+# Design Phase Models - Must be defined before functions that use them
+class StoryMetadata(BaseModel):
+    """Metadata about characters and locations introduced in the story"""
+    character_name: Optional[str] = None
+    character_description: Optional[str] = None
+    location_name: Optional[str] = None
+    location_description: Optional[str] = None
+    design_options: List[str] = []  # ["character", "location"] or subset
+
+class StructuredStoryResponse(BaseModel):
+    """Response format for story generation with metadata"""
+    story: str
+    metadata: StoryMetadata
+
+class DesignPrompt(BaseModel):
+    """Design prompt information for frontend UI"""
+    type: str  # "character" or "location"
+    subject_name: str  # The character or location name
+    aspect: str  # Current aspect being designed (e.g., "appearance", "personality")
+    prompt_text: str  # "Help us bring Luna to life! They are very..."
+    suggested_words: List[str]  # Max 8 vocabulary suggestions
+    input_placeholder: str  # Custom placeholder text for input
+
+class VocabularyPhase(BaseModel):
+    isActive: bool = False
+    questionsAsked: int = 0
+    maxQuestions: int = 3
+    isComplete: bool = False
+
+class SessionData(BaseModel):
+    topic: Optional[str] = None
+    storyParts: List[str] = []
+    currentStep: int = 0
+    isComplete: bool = False
+    factsShown: int = 0
+    currentFact: Optional[str] = None
+    allFacts: List[str] = []
+    askedVocabWords: List[str] = []  # Track vocabulary words that have been asked
+    awaiting_story_confirmation: bool = False  # Track if waiting for user to confirm new story
+    vocabularyPhase: VocabularyPhase = VocabularyPhase()  # Track vocabulary phase state
+    contentVocabulary: List[str] = []  # Track vocabulary words used in generated content
+    
+    # Design Phase Fields
+    designPhase: Optional[str] = None  # "character", "location", or None
+    currentDesignAspect: Optional[str] = None  # Current aspect being designed
+    designAspectHistory: List[str] = []  # Track used aspects to ensure rotation
+    storyMetadata: Optional[StoryMetadata] = None  # Store LLM metadata about story elements
+    designComplete: bool = False  # Track if design phase is finished
+
+class ChatRequest(BaseModel):
+    message: str
+    mode: str = "storywriting"  # "storywriting" or "funfacts"
+    sessionData: Optional[SessionData] = None
+
+class VocabQuestion(BaseModel):
+    question: str
+    options: List[str]
+    correctIndex: int
+
+class ChatResponse(BaseModel):
+    response: str
+    vocabQuestion: Optional[VocabQuestion] = None
+    sessionData: Optional[SessionData] = None
+    suggestedTheme: Optional[str] = None
+    designPrompt: Optional[DesignPrompt] = None  # New field for design phase prompts
+
 # Load centralized theme configuration
 def load_theme_config():
     """Load theme configuration from centralized JSON file"""
@@ -311,6 +377,401 @@ def select_best_vocabulary_word(available_words: List[str]) -> str:
         logger.warning(f"select_best_vocabulary_word: Using last resort word: '{selected}'")
         return selected
 
+def generate_structured_story_prompt(topic: str) -> str:
+    """
+    Generate a prompt that requests JSON format with story and metadata
+    
+    Args:
+        topic: The story topic chosen by the child
+        
+    Returns:
+        Structured prompt requesting JSON response with story and character/location metadata
+    """
+    return f"""Create a story opening for the topic: {topic}
+
+REQUIREMENTS:
+- Write 2-4 sentences suitable for strong 2nd graders or 3rd graders
+- Introduce a named character AND/OR a specific location with clear names
+- End by inviting the child to continue (no multiple choice options)
+- Bold 2-3 vocabulary words using **word** format
+- Use engaging, age-appropriate language that sparks imagination
+
+RETURN AS VALID JSON in this exact format:
+{{
+  "story": "your story text here with **bolded** vocabulary words...",
+  "metadata": {{
+    "character_name": "character name if introduced, otherwise null",
+    "character_description": "brief description if character introduced, otherwise null",
+    "location_name": "location name if introduced, otherwise null", 
+    "location_description": "brief description if location introduced, otherwise null",
+    "design_options": ["character", "location"]
+  }}
+}}
+
+IMPORTANT NOTES:
+- design_options should only include elements you actually introduced
+- If only character introduced: design_options: ["character"]
+- If only location introduced: design_options: ["location"]  
+- If both introduced: design_options: ["character", "location"]
+- Character and location names should be clearly identifiable, not vague
+- Make the story exciting and engaging for young children
+
+Example topics and approaches:
+- Space: Introduce astronaut character or space station location
+- Fantasy: Introduce magical character or enchanted place
+- Ocean: Introduce sea creature character or underwater location
+- Animals: Introduce animal character or habitat location"""
+
+def parse_structured_story_response(llm_response: str) -> StructuredStoryResponse:
+    """
+    Parse JSON response with fallback to plain text if parsing fails
+    
+    Args:
+        llm_response: Raw LLM response (should be JSON)
+        
+    Returns:
+        StructuredStoryResponse with story and metadata
+    """
+    try:
+        # Try to parse as JSON
+        import json
+        data = json.loads(llm_response.strip())
+        
+        # Validate that we have the required structure
+        if not isinstance(data, dict) or "story" not in data:
+            raise ValueError("Invalid JSON structure - missing 'story' field")
+            
+        # Create metadata with defaults if missing
+        metadata_dict = data.get("metadata", {})
+        metadata = StoryMetadata(
+            character_name=metadata_dict.get("character_name"),
+            character_description=metadata_dict.get("character_description"),
+            location_name=metadata_dict.get("location_name"),
+            location_description=metadata_dict.get("location_description"),
+            design_options=metadata_dict.get("design_options", [])
+        )
+        
+        return StructuredStoryResponse(
+            story=data["story"],
+            metadata=metadata
+        )
+        
+    except (json.JSONDecodeError, ValueError, KeyError) as e:
+        # Fallback: treat as plain story text with empty metadata
+        logging.warning(f"Failed to parse structured story response: {e}")
+        logging.warning(f"Raw response: {llm_response[:200]}...")
+        
+        return StructuredStoryResponse(
+            story=llm_response,
+            metadata=StoryMetadata(design_options=[])  # No design options available
+        )
+
+def load_design_aspects(design_type: str) -> dict:
+    """
+    Load design aspects from JSON file
+    
+    Args:
+        design_type: "character" or "location"
+        
+    Returns:
+        Dictionary of design aspects with prompts and vocabulary
+    """
+    import json
+    import os
+    
+    filename = f"{design_type}_design_aspects.json"
+    file_path = os.path.join(os.path.dirname(__file__), filename)
+    
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logging.error(f"Design aspects file not found: {file_path}")
+        return {}
+    except json.JSONDecodeError as e:
+        logging.error(f"Invalid JSON in design aspects file {file_path}: {e}")
+        return {}
+
+def select_design_focus(character_name: Optional[str], location_name: Optional[str]) -> Optional[str]:
+    """
+    Randomly select character or location design (50/50 split)
+    
+    Args:
+        character_name: Name of character if introduced
+        location_name: Name of location if introduced
+        
+    Returns:
+        "character", "location", or None if neither available
+    """
+    import random
+    
+    available_options = []
+    if character_name:
+        available_options.append("character")
+    if location_name:
+        available_options.append("location")
+    
+    if not available_options:
+        return None
+    elif len(available_options) == 1:
+        return available_options[0]
+    else:
+        # 50/50 random choice when both are available
+        return random.choice(available_options)
+
+def get_next_design_aspect(design_type: str, used_aspects: List[str]) -> str:
+    """
+    Get next design aspect using rotation logic
+    
+    Args:
+        design_type: "character" or "location"
+        used_aspects: List of aspects already used
+        
+    Returns:
+        Next aspect to design
+    """
+    aspects = load_design_aspects(design_type)
+    if not aspects:
+        return "appearance"  # Fallback
+    
+    available_aspects = [aspect for aspect in aspects.keys() if aspect not in used_aspects]
+    
+    if not available_aspects:
+        # All aspects used, start over
+        available_aspects = list(aspects.keys())
+    
+    # Return first available aspect (maintains consistent order)
+    return available_aspects[0]
+
+def create_design_prompt(session_data: SessionData) -> ChatResponse:
+    """
+    Generate design prompt based on current design phase and aspect
+    
+    Args:
+        session_data: Current session state
+        
+    Returns:
+        ChatResponse with designPrompt field populated
+    """
+    if not session_data.designPhase or not session_data.storyMetadata:
+        logging.error("create_design_prompt called without active design phase")
+        return ChatResponse(
+            response="Let's continue with your story!",
+            sessionData=session_data
+        )
+    
+    # Determine the subject name and description
+    if session_data.designPhase == "character":
+        subject_name = session_data.storyMetadata.character_name or "our character"
+        subject_description = session_data.storyMetadata.character_description or ""
+    else:  # location
+        subject_name = session_data.storyMetadata.location_name or "this place"
+        subject_description = session_data.storyMetadata.location_description or ""
+    
+    # Get the next aspect to design
+    if not session_data.currentDesignAspect:
+        session_data.currentDesignAspect = get_next_design_aspect(
+            session_data.designPhase, 
+            session_data.designAspectHistory
+        )
+    
+    # Load design aspects for this type
+    aspects = load_design_aspects(session_data.designPhase)
+    aspect_data = aspects.get(session_data.currentDesignAspect, {})
+    
+    if not aspect_data:
+        # Fallback data
+        aspect_data = {
+            "prompt_template": f"Help us describe {subject_name}!",
+            "placeholder": "Write 1-2 sentences describing them",
+            "suggestions": ["wonderful", "amazing", "special", "unique", "interesting", "fantastic", "incredible", "magical"]
+        }
+    
+    # Generate the prompt text
+    prompt_text = aspect_data.get("prompt_template", "").format(name=subject_name)
+    
+    # Create the design prompt
+    design_prompt = DesignPrompt(
+        type=session_data.designPhase,
+        subject_name=subject_name,
+        aspect=session_data.currentDesignAspect,
+        prompt_text=prompt_text,
+        suggested_words=aspect_data.get("suggestions", []),
+        input_placeholder=aspect_data.get("placeholder", "Write 1-2 sentences")
+    )
+    
+    return ChatResponse(
+        response="", # No text response when sending design prompt
+        sessionData=session_data,
+        designPrompt=design_prompt
+    )
+
+def should_trigger_design_phase(structured_response: StructuredStoryResponse) -> bool:
+    """
+    Determine if design phase should be triggered based on story response
+    
+    Args:
+        structured_response: Parsed story response with metadata
+        
+    Returns:
+        True if design phase should be triggered
+    """
+    metadata = structured_response.metadata
+    
+    # Only trigger if we have at least one design option
+    return bool(metadata.design_options and len(metadata.design_options) > 0)
+
+def trigger_design_phase(session_data: SessionData, structured_response: StructuredStoryResponse) -> ChatResponse:
+    """
+    Initialize design phase based on story metadata
+    
+    Args:
+        session_data: Current session state
+        structured_response: Parsed story with character/location info
+        
+    Returns:
+        ChatResponse with design prompt
+    """
+    metadata = structured_response.metadata
+    
+    # Store the story metadata
+    session_data.storyMetadata = metadata
+    
+    # Select what to design (character or location)
+    session_data.designPhase = select_design_focus(
+        metadata.character_name, 
+        metadata.location_name
+    )
+    
+    if not session_data.designPhase:
+        # No design options available, continue with regular story
+        logging.info("No design options available, skipping design phase")
+        return ChatResponse(
+            response=structured_response.story,
+            sessionData=session_data
+        )
+    
+    # Reset design state
+    session_data.currentDesignAspect = None
+    session_data.designAspectHistory = []
+    session_data.designComplete = False
+    
+    logging.info(f"Triggering design phase for {session_data.designPhase}: {metadata.character_name or metadata.location_name}")
+    
+    # Generate the design prompt
+    design_response = create_design_prompt(session_data)
+    
+    # Include the story text in the response
+    design_response.response = structured_response.story
+    
+    return design_response
+
+async def handle_design_phase_interaction(user_message: str, session_data: SessionData) -> ChatResponse:
+    """
+    Handle user input during design phase
+    
+    Args:
+        user_message: User's design description
+        session_data: Current session state
+        
+    Returns:
+        ChatResponse with next design prompt or story continuation
+    """
+    if not session_data.designPhase or not session_data.currentDesignAspect:
+        logging.error("handle_design_phase_interaction called without active design phase")
+        return ChatResponse(
+            response="Let's continue with your story!",
+            sessionData=session_data
+        )
+    
+    # Process the user's design input
+    subject_name = (session_data.storyMetadata.character_name if session_data.designPhase == "character" 
+                   else session_data.storyMetadata.location_name)
+    
+    # Provide brief writing feedback (act as English tutor)
+    feedback_prompt = f"""As a friendly English tutor, provide very brief feedback on this child's descriptive writing about their {session_data.designPhase} {subject_name}:
+
+"{user_message}"
+
+Give 1-2 sentences of encouraging feedback. If there are grammar issues, gently suggest improvements. If the description is good, celebrate it! Keep it very brief and positive."""
+    
+    try:
+        feedback_response = llm_provider.generate_response(feedback_prompt)
+    except Exception as e:
+        logging.error(f"Error generating writing feedback: {e}")
+        feedback_response = "Great description! I love how creative you are with your writing."
+    
+    # Add the current aspect to history
+    session_data.designAspectHistory.append(session_data.currentDesignAspect)
+    
+    # Load design aspects to check if we should continue
+    aspects = load_design_aspects(session_data.designPhase)
+    remaining_aspects = [aspect for aspect in aspects.keys() 
+                        if aspect not in session_data.designAspectHistory]
+    
+    # Decide whether to continue with more aspects (limit to 2-3 aspects total)
+    should_continue_design = (
+        len(session_data.designAspectHistory) < 2 and  # Limit to 2 aspects max for engagement
+        len(remaining_aspects) > 0
+    )
+    
+    if should_continue_design:
+        # Continue with next aspect
+        session_data.currentDesignAspect = remaining_aspects[0]
+        
+        # Generate response with feedback + next design prompt
+        feedback_with_transition = f"{feedback_response}\n\nWonderful! Now let's add more details to make {subject_name} even more interesting!"
+        
+        design_response = create_design_prompt(session_data)
+        design_response.response = feedback_with_transition
+        
+        return design_response
+    
+    else:
+        # Design phase complete - continue with story
+        session_data.designComplete = True
+        session_data.currentDesignAspect = None
+        
+        # Create story continuation prompt that incorporates the user's designs
+        story_context = " | ".join(session_data.storyParts[-3:]) if session_data.storyParts else ""
+        design_summary = f"The child has helped design {subject_name} with these details from our design session."
+        
+        continuation_prompt = f"""Continue the story about {session_data.topic}. Previous context: {story_context}
+
+{design_summary} The child just described: "{user_message}"
+
+Write a paragraph that is 2-4 sentences long incorporating the child's creative input about {subject_name}. Use vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. Bold 2-3 vocabulary words using **word** format."""
+        
+        enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+            continuation_prompt, session_data.topic, 
+            session_data.askedVocabWords + session_data.contentVocabulary
+        )
+        
+        try:
+            story_continuation = llm_provider.generate_response(enhanced_prompt)
+            session_data.storyParts.append(story_continuation)
+            
+            # Track vocabulary from continuation
+            story_vocab = extract_vocabulary_from_content(story_continuation, session_data.contentVocabulary)
+            if story_vocab:
+                session_data.contentVocabulary.extend(story_vocab)
+                logger.info(f"📋 VOCABULARY TRACKING: Added {len(story_vocab)} words from design continuation. Total: {len(session_data.contentVocabulary)}")
+            
+            # Complete response with feedback + story continuation
+            complete_response = f"{feedback_response}\n\nPerfect! You've helped bring {subject_name} to life! Here's how the story continues:\n\n{story_continuation}"
+            
+            return ChatResponse(
+                response=complete_response,
+                sessionData=session_data
+            )
+            
+        except Exception as e:
+            logging.error(f"Error generating story continuation after design: {e}")
+            return ChatResponse(
+                response=f"{feedback_response}\n\nThanks for helping design {subject_name}! Let's continue our story. What happens next?",
+                sessionData=session_data
+            )
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -327,42 +788,7 @@ app.add_middleware(
 )
 
 
-# Request/Response models
-class VocabularyPhase(BaseModel):
-    isActive: bool = False
-    questionsAsked: int = 0
-    maxQuestions: int = 3
-    isComplete: bool = False
-
-class SessionData(BaseModel):
-    topic: Optional[str] = None
-    storyParts: List[str] = []
-    currentStep: int = 0
-    isComplete: bool = False
-    factsShown: int = 0
-    currentFact: Optional[str] = None
-    allFacts: List[str] = []
-    askedVocabWords: List[str] = []  # Track vocabulary words that have been asked
-    awaiting_story_confirmation: bool = False  # Track if waiting for user to confirm new story
-    vocabularyPhase: VocabularyPhase = VocabularyPhase()  # Track vocabulary phase state
-    contentVocabulary: List[str] = []  # Track vocabulary words used in generated content
-
-class ChatRequest(BaseModel):
-    message: str
-    mode: str = "storywriting"  # "storywriting" or "funfacts"
-    sessionData: Optional[SessionData] = None
-
-class VocabQuestion(BaseModel):
-    question: str
-    options: List[str]
-    correctIndex: int
-
-
-class ChatResponse(BaseModel):
-    response: str
-    vocabQuestion: Optional[VocabQuestion] = None
-    sessionData: Optional[SessionData] = None
-    suggestedTheme: Optional[str] = None
+# Request/Response models already defined at top of file
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(chat_request: ChatRequest):
@@ -395,6 +821,10 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
     elif user_message == "finish_vocabulary":
         return await handle_finish_vocabulary(session_data)
     
+    # Handle design phase interactions
+    if session_data.designPhase and not session_data.designComplete:
+        return await handle_design_phase_interaction(user_message, session_data)
+    
     # If no topic is set, user is choosing a topic (Step 1)
     if not session_data.topic:
         # Extract topic from user message
@@ -402,31 +832,41 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
         session_data.topic = topic
         session_data.currentStep = 2  # Moving to Step 2 after topic selection
         
-        # Generate story beginning with vocabulary integration
-        base_prompt = f"The child has chosen the topic: {topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."
+        # Generate story beginning with structured response (includes character/location metadata)
+        structured_prompt = generate_structured_story_prompt(topic)
         enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
-            base_prompt, topic, session_data.askedVocabWords
+            structured_prompt, topic, session_data.askedVocabWords
         )
-        story_response = llm_provider.generate_response(enhanced_prompt)
-        session_data.storyParts.append(story_response)
         
-        # Track vocabulary words that were intended to be used
-        if selected_vocab:
-            logger.info(f"Story generation included vocabulary: {selected_vocab}")
-            # Store them for later vocabulary question generation
-            session_data.contentVocabulary.extend(selected_vocab)
-            logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+        raw_response = llm_provider.generate_response(enhanced_prompt)
+        structured_response = parse_structured_story_response(raw_response)
         
-        # Log vocabulary debug info to server logs
+        # Add story to parts for tracking
+        session_data.storyParts.append(structured_response.story)
+        
+        # Track vocabulary words used in the story
+        story_vocab_words = extract_vocabulary_from_content(structured_response.story, session_data.contentVocabulary)
+        if story_vocab_words:
+            session_data.contentVocabulary.extend(story_vocab_words)
+            logger.info(f"📋 VOCABULARY TRACKING: Added {len(story_vocab_words)} words from story content. Total tracked: {len(session_data.contentVocabulary)}")
+        
+        # Log vocabulary debug info to server logs  
         log_vocabulary_debug_info(
-            topic, session_data.askedVocabWords, story_response, "Initial Story Generation", len(session_data.contentVocabulary)
+            topic, session_data.askedVocabWords, structured_response.story, "Initial Story Generation", len(session_data.contentVocabulary)
         )
         
-        # Get theme suggestion for this topic
+        # Check if design phase should be triggered
+        if should_trigger_design_phase(structured_response):
+            logger.info(f"Triggering design phase with options: {structured_response.metadata.design_options}")
+            design_response = trigger_design_phase(session_data, structured_response)
+            design_response.suggestedTheme = get_theme_suggestion(topic)
+            return design_response
+        
+        # No design phase needed, continue with regular story
         suggested_theme = get_theme_suggestion(topic)
         
         return ChatResponse(
-            response=story_response,
+            response=structured_response.story,
             sessionData=session_data,
             suggestedTheme=suggested_theme
         )

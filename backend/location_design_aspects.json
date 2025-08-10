@@ -1,0 +1,22 @@
+{
+  "appearance": {
+    "prompt_template": "Help us bring {name} to life! When you look around, you see...",
+    "placeholder": "Describe what this place looks like",
+    "suggestions": ["towering", "sparkling", "mysterious", "ancient", "colorful", "hidden", "magical", "peaceful"]
+  },
+  "sounds_smells": {
+    "prompt_template": "What can you hear and smell in {name}? You can hear...",
+    "placeholder": "Describe the sounds and smells",
+    "suggestions": ["chirping", "rushing", "sweet", "fresh", "echoing", "crackling", "whispering", "aromatic"]
+  },
+  "mood_weather": {
+    "prompt_template": "How does {name} feel? This place feels...",
+    "placeholder": "Describe the mood and atmosphere", 
+    "suggestions": ["cozy", "exciting", "peaceful", "welcoming", "breezy", "warm", "misty", "bright"]
+  },
+  "unique_feature": {
+    "prompt_template": "What makes {name} special? The most special thing here is...",
+    "placeholder": "Describe what makes this place unique",
+    "suggestions": ["glowing", "floating", "singing", "changing", "crystal", "golden", "invisible", "living"]
+  }
+}

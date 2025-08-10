@@ -37,6 +37,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     // App state
     let currentMode = 'funfacts'; // 'storywriting' or 'funfacts'
+    let isInDesignPhase = false; // Track if user is currently in character/location design phase
     let sessionData = {
         storywriting: {
             topic: null,
@@ -462,6 +463,69 @@ document.addEventListener("DOMContentLoaded", async function () {
         scrollToBottom();
     }
 
+    // Create design prompt UI for character/location design phase
+    function appendDesignPrompt(designData) {
+        const designContainer = document.createElement("div");
+        designContainer.className = "design-prompt-container";
+
+        // Design prompt bubble (bot avatar + prompt text)
+        const promptWrapper = document.createElement("div");
+        promptWrapper.className = "chat-message bot";
+
+        const avatar = document.createElement("div");
+        avatar.className = "chat-avatar";
+        setupCharacterAvatar(avatar, "bear", currentTheme);
+
+        const bubble = document.createElement("div");
+        bubble.className = "chat-bubble";
+        
+        // Process the prompt text for vocabulary highlighting
+        const processedPrompt = designData.prompt_text.replace(/\*\*(.*?)\*\*/g, '<span class="vocab-word">$1</span>');
+        bubble.innerHTML = processedPrompt;
+
+        promptWrapper.appendChild(avatar);
+        promptWrapper.appendChild(bubble);
+
+        // Suggestions container (pills with vocabulary words)
+        const suggestionsWrapper = document.createElement("div");
+        suggestionsWrapper.className = "design-suggestions-wrapper";
+
+        // Add "Suggested words" label
+        const suggestionsLabel = document.createElement("div");
+        suggestionsLabel.className = "suggestions-label";
+        suggestionsLabel.textContent = "Suggested words:";
+
+        const suggestionsContainer = document.createElement("div");
+        suggestionsContainer.className = "design-suggestions-container";
+
+        // Create pills for suggested words
+        designData.suggested_words.forEach(word => {
+            const pill = document.createElement("span");
+            pill.className = "design-suggestion-pill";
+            pill.textContent = word;
+            suggestionsContainer.appendChild(pill);
+        });
+
+        suggestionsWrapper.appendChild(suggestionsLabel);
+        suggestionsWrapper.appendChild(suggestionsContainer);
+
+        // Assemble the design prompt
+        designContainer.appendChild(promptWrapper);
+        designContainer.appendChild(suggestionsWrapper);
+        
+        chatLog.appendChild(designContainer);
+        
+        // Update input placeholder to be more specific and track design phase
+        chatInput.placeholder = designData.input_placeholder;
+        isInDesignPhase = true; // Set flag to track design phase
+        
+        // Focus on input to encourage interaction
+        chatInput.focus();
+        
+        // Scroll to bottom after everything is set up
+        scrollToBottom();
+    }
+
     // Handle vocabulary answer
     function handleVocabAnswer(selectedIndex, correctIndex, selectedOption, buttonsContainer, vocabContainer) {
         // Disable all buttons
@@ -731,6 +795,16 @@ document.addEventListener("DOMContentLoaded", async function () {
                     console.log("Vocab question suppressed - story not complete yet");
                 }
             }
+            
+            // Handle design prompts for character/location design phase
+            if (data.designPrompt) {
+                console.log("Design prompt received:", data.designPrompt);
+                
+                // Add a small delay to let the story text render first
+                setTimeout(() => {
+                    appendDesignPrompt(data.designPrompt);
+                }, 1000);
+            }
 
         } catch (err) {
             // Remove thinking message if it exists
@@ -749,6 +823,12 @@ document.addEventListener("DOMContentLoaded", async function () {
 
         appendMessage("user", userMessage);
         chatInput.value = "";
+        
+        // Reset placeholder if we were in design phase
+        if (isInDesignPhase) {
+            chatInput.placeholder = "Type your message...";
+            isInDesignPhase = false; // Clear the design phase flag
+        }
 
         // Show thinking message
         appendMessage("bot", "Thinking...");
@@ -846,6 +926,16 @@ document.addEventListener("DOMContentLoaded", async function () {
                 } else {
                     console.log("Vocab question suppressed - story not complete yet");
                 }
+            }
+            
+            // Handle design prompts for character/location design phase
+            if (data.designPrompt) {
+                console.log("Design prompt received:", data.designPrompt);
+                
+                // Add a small delay to let the story text render first
+                setTimeout(() => {
+                    appendDesignPrompt(data.designPrompt);
+                }, 1000);
             }
 
         } catch (err) {

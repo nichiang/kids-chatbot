@@ -1,0 +1,27 @@
+{
+  "appearance": {
+    "prompt_template": "Help us bring {name} to life! How do they look? They have...",
+    "placeholder": "Write 1-2 sentences about what they look like",
+    "suggestions": ["tall", "curly", "bright", "gentle", "strong", "tiny", "colorful", "shiny"]
+  },
+  "personality": {
+    "prompt_template": "Let's describe {name}'s personality! They are very...",
+    "placeholder": "Write 1-2 sentences about their personality", 
+    "suggestions": ["brave", "curious", "kind", "funny", "creative", "patient", "helpful", "clever"]
+  },
+  "dreams": {
+    "prompt_template": "What does {name} dream of becoming? They are dreaming to become...",
+    "placeholder": "Write about their hopes and dreams",
+    "suggestions": ["explorer", "inventor", "teacher", "artist", "scientist", "chef", "musician", "hero"]
+  },
+  "skills": {
+    "prompt_template": "What is {name} amazing at? They are amazing at...", 
+    "placeholder": "Describe their special talents",
+    "suggestions": ["climbing", "singing", "drawing", "cooking", "building", "dancing", "solving puzzles", "making friends"]
+  },
+  "flaws": {
+    "prompt_template": "Even heroes have small flaws! Sometimes {name} is...",
+    "placeholder": "Describe a small, relatable flaw",
+    "suggestions": ["forgetful", "impatient", "too trusting", "afraid of heights", "talks too much", "loses things", "shy", "easily distracted"]
+  }
+}

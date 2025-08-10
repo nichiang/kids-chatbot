@@ -15,7 +15,44 @@ app.get("/health", ...)
 app.mount("/", StaticFiles(directory="../frontend", html=True), name="static")
 ```
 
-### Vocabulary System Architecture (MAJOR ENHANCEMENT)
+### Character/Location Design System Architecture (NEWEST MAJOR FEATURE)
+
+**Pattern**: Structured LLM Response with Interactive Design Phase
+- **Revolutionary Detection**: JSON-based character/location metadata eliminates fragile regex extraction
+- **Educational Flow**: Topic → Story Generation → **Design Phase** → Story Continuation  
+- **Aspect Rotation**: Character (appearance → personality → skills) / Location (appearance → sounds → mood)
+- **UI Integration**: Themed design prompts with vocabulary suggestion pills for all 10+ themes
+
+**Critical Implementation - Structured Response**:
+```python
+# LLM returns structured JSON instead of plain text
+{
+  "story": "Meet Luna, a brave young explorer! She stepped into the Crystal Caves...",
+  "metadata": {
+    "character_name": "Luna",
+    "location_name": "Crystal Caves", 
+    "design_options": ["character", "location"]
+  }
+}
+
+# Design phase triggered by metadata
+if structured_response.metadata.design_options:
+    design_phase = select_design_focus(character_name, location_name)  # 50/50 random
+    return trigger_design_phase(session_data, structured_response)
+```
+
+**Design Phase State Management**:
+```python
+class SessionData(BaseModel):
+    # ... existing fields ...
+    designPhase: Optional[str] = None  # "character" or "location"  
+    currentDesignAspect: Optional[str] = None  # "appearance", "personality", etc.
+    designAspectHistory: List[str] = []  # Track used aspects for rotation
+    storyMetadata: Optional[StoryMetadata] = None  # Store LLM metadata
+    designComplete: bool = False
+```
+
+### Vocabulary System Architecture (PREVIOUS MAJOR ENHANCEMENT)
 
 **Pattern**: Solution 3 - Massive Vocabulary Pool with LLM as Intelligent Curator
 - **Structure**: 
