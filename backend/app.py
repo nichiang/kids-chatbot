@@ -18,6 +18,8 @@ class StoryMetadata(BaseModel):
     location_name: Optional[str] = None
     location_description: Optional[str] = None
     design_options: List[str] = []  # ["character", "location"] or subset
+    needs_naming: bool = False  # True if entities are unnamed
+    entity_descriptor: Optional[str] = None  # e.g., "the little boy", "the mysterious village"
 
 class StructuredStoryResponse(BaseModel):
     """Response format for story generation with metadata"""
@@ -58,6 +60,7 @@ class SessionData(BaseModel):
     designAspectHistory: List[str] = []  # Track used aspects to ensure rotation
     storyMetadata: Optional[StoryMetadata] = None  # Store LLM metadata about story elements
     designComplete: bool = False  # Track if design phase is finished
+    namingComplete: bool = False  # Track if naming phase is finished for unnamed entities
 
 class ChatRequest(BaseModel):
     message: str
@@ -385,6 +388,7 @@ def select_best_vocabulary_word(available_words: List[str]) -> str:
 def generate_structured_story_prompt(topic: str) -> str:
     """
     Generate a prompt that requests JSON format with story and metadata
+    Uses 40/60 probability split between unnamed/named entities
     
     Args:
         topic: The story topic chosen by the child
@@ -392,7 +396,31 @@ def generate_structured_story_prompt(topic: str) -> str:
     Returns:
         Structured prompt requesting JSON response with story and character/location metadata
     """
-    return f"""Create a story opening for the topic: {topic}
+    import random
+    import json
+    from pathlib import Path
+    
+    try:
+        # Load story generation templates
+        story_templates_path = Path("prompts/story/04_story_generation.json")
+        with open(story_templates_path, 'r') as f:
+            templates = json.load(f)
+        
+        # Select template based on probability (40% unnamed, 60% named)
+        if random.random() < 0.4:  # 40% probability for unnamed entities
+            template_key = "unnamed_entities"
+            logger.info("🎲 Story Generation: Selected UNNAMED entity template (40% probability)")
+        else:  # 60% probability for named entities  
+            template_key = "named_entities"
+            logger.info("🎲 Story Generation: Selected NAMED entity template (60% probability)")
+        
+        selected_template = templates[template_key]["prompt_template"]
+        return selected_template.format(topic=topic)
+        
+    except Exception as e:
+        logger.error(f"Error loading story generation templates: {e}")
+        # Fallback to named entity template (current behavior)
+        return f"""Create a story opening for the topic: {topic}
 
 REQUIREMENTS:
 - Write 2-4 sentences suitable for strong 2nd graders or 3rd graders
@@ -408,23 +436,9 @@ RETURN AS VALID JSON in this exact format:
     "character_description": "brief description if character introduced, otherwise null",
     "location_name": "location name if introduced, otherwise null", 
     "location_description": "brief description if location introduced, otherwise null",
-    "design_options": ["character", "location"]
+    "design_options": ["character" and/or "location" based on what was introduced]
   }}
-}}
-
-IMPORTANT NOTES:
-- design_options should only include elements you actually introduced
-- If only character introduced: design_options: ["character"]
-- If only location introduced: design_options: ["location"]  
-- If both introduced: design_options: ["character", "location"]
-- Character and location names should be clearly identifiable, not vague
-- Make the story exciting and engaging for young children
-
-Example topics and approaches:
-- Space: Introduce astronaut character or space station location
-- Fantasy: Introduce magical character or enchanted place
-- Ocean: Introduce sea creature character or underwater location
-- Animals: Introduce animal character or habitat location"""
+}}"""
 
 def parse_structured_story_response(llm_response: str) -> StructuredStoryResponse:
     """
@@ -484,7 +498,7 @@ def load_design_aspects(design_type: str) -> dict:
     import os
     
     filename = f"{design_type}_design_aspects.json"
-    file_path = os.path.join(os.path.dirname(__file__), filename)
+    file_path = os.path.join(os.path.dirname(__file__), "prompts", "design", filename)
     
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -568,9 +582,19 @@ def create_design_prompt(session_data: SessionData) -> ChatResponse:
     if session_data.designPhase == "character":
         subject_name = session_data.storyMetadata.character_name or "our character"
         subject_description = session_data.storyMetadata.character_description or ""
+        # For naming phase, use the entity descriptor
+        if session_data.currentDesignAspect == "naming" and session_data.storyMetadata.entity_descriptor:
+            subject_descriptor = session_data.storyMetadata.entity_descriptor
+        else:
+            subject_descriptor = subject_description
     else:  # location
         subject_name = session_data.storyMetadata.location_name or "this place"
         subject_description = session_data.storyMetadata.location_description or ""
+        # For naming phase, use the entity descriptor
+        if session_data.currentDesignAspect == "naming" and session_data.storyMetadata.entity_descriptor:
+            subject_descriptor = session_data.storyMetadata.entity_descriptor
+        else:
+            subject_descriptor = subject_description
     
     # Get the next aspect to design
     if not session_data.currentDesignAspect:
@@ -591,8 +615,13 @@ def create_design_prompt(session_data: SessionData) -> ChatResponse:
             "suggestions": ["wonderful", "amazing", "special", "unique", "interesting", "fantastic", "incredible", "magical"]
         }
     
-    # Generate the prompt text
-    prompt_text = aspect_data.get("prompt_template", "").format(name=subject_name)
+    # Generate the prompt text (use descriptor for naming, name for other aspects)
+    if session_data.currentDesignAspect == "naming":
+        prompt_text = aspect_data.get("prompt_template", "").format(descriptor=subject_descriptor)
+        placeholder_text = aspect_data.get("placeholder", "").format(descriptor=subject_descriptor)
+    else:
+        prompt_text = aspect_data.get("prompt_template", "").format(name=subject_name)
+        placeholder_text = aspect_data.get("placeholder", "Write 1-2 sentences")
     
     # Create the design prompt
     design_prompt = DesignPrompt(
@@ -601,7 +630,7 @@ def create_design_prompt(session_data: SessionData) -> ChatResponse:
         aspect=session_data.currentDesignAspect,
         prompt_text=prompt_text,
         suggested_words=aspect_data.get("suggestions", []),
-        input_placeholder=aspect_data.get("placeholder", "Write 1-2 sentences")
+        input_placeholder=placeholder_text
     )
     
     return ChatResponse(
@@ -628,13 +657,14 @@ def should_trigger_design_phase(structured_response: StructuredStoryResponse) ->
 def trigger_design_phase(session_data: SessionData, structured_response: StructuredStoryResponse) -> ChatResponse:
     """
     Initialize design phase based on story metadata
+    Handles naming phase first for unnamed entities, then regular design
     
     Args:
         session_data: Current session state
         structured_response: Parsed story with character/location info
         
     Returns:
-        ChatResponse with design prompt
+        ChatResponse with design prompt (naming first if needed)
     """
     metadata = structured_response.metadata
     
@@ -659,10 +689,21 @@ def trigger_design_phase(session_data: SessionData, structured_response: Structu
     session_data.currentDesignAspect = None
     session_data.designAspectHistory = []
     session_data.designComplete = False
+    session_data.namingComplete = False  # Reset naming completion
+    
+    # Check if entity needs naming first
+    if metadata.needs_naming and not session_data.namingComplete:
+        logging.info(f"🏷️ Entity needs naming first: {metadata.entity_descriptor}")
+        session_data.currentDesignAspect = "naming"
+        
+        # Generate naming prompt
+        design_response = create_design_prompt(session_data)
+        design_response.response = structured_response.story
+        return design_response
     
     logging.info(f"Triggering design phase for {session_data.designPhase}: {metadata.character_name or metadata.location_name}")
     
-    # Generate the design prompt
+    # Generate the design prompt (regular aspects)
     design_response = create_design_prompt(session_data)
     
     # Include the story text in the response
@@ -688,7 +729,48 @@ async def handle_design_phase_interaction(user_message: str, session_data: Sessi
             sessionData=session_data
         )
     
-    # Process the user's design input
+    # Handle naming aspect specially
+    if session_data.currentDesignAspect == "naming":
+        # User provided a name - update the metadata
+        provided_name = user_message.strip()
+        if session_data.designPhase == "character":
+            session_data.storyMetadata.character_name = provided_name
+        else:  # location
+            session_data.storyMetadata.location_name = provided_name
+        
+        # Mark naming as complete
+        session_data.namingComplete = True
+        session_data.designAspectHistory.append("naming")
+        
+        # Provide positive feedback about the name choice
+        feedback_response = f"What a perfect name! {provided_name} is such a wonderful choice for this {session_data.designPhase}! 🌟"
+        
+        # Continue to next design aspect
+        aspects = load_design_aspects(session_data.designPhase)
+        remaining_aspects = [aspect for aspect in aspects.keys() 
+                            if aspect not in session_data.designAspectHistory and aspect != "naming"]
+        
+        if remaining_aspects and len(session_data.designAspectHistory) < 2:  # Limit to 2 aspects total
+            session_data.currentDesignAspect = remaining_aspects[0]
+            
+            feedback_with_transition = f"{feedback_response}\n\nNow let's bring {provided_name} to life with more details!"
+            design_response = create_design_prompt(session_data)
+            design_response.response = feedback_with_transition
+            return design_response
+        else:
+            # Design phase complete after naming
+            session_data.designComplete = True
+            session_data.designPhase = None
+            session_data.currentDesignAspect = None
+            
+            completion_message = f"{feedback_response}\n\nPerfect! Now let's continue our story with {provided_name}. What happens next in the adventure?"
+            
+            return ChatResponse(
+                response=completion_message,
+                sessionData=session_data
+            )
+    
+    # Regular design aspect handling
     subject_name = (session_data.storyMetadata.character_name if session_data.designPhase == "character" 
                    else session_data.storyMetadata.location_name)
     

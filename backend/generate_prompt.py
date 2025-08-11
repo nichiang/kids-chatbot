@@ -11,11 +11,11 @@ def load_vocabulary(csv_path):
             return row
             
 def generate_prompt():
-    intro_system_role_text = load_file("intro_prompt.txt")
-    vocab_list = load_vocabulary("vocab.csv")
+    intro_system_role_text = load_file("prompts/story/01_system_role.txt")
+    vocab_list = load_vocabulary("prompts/story/02_vocabulary_context.csv")
     vocab_text =",".join(vocab_list)
     vocab_section = f"Here is an example list of vocabulary words for a 2nd or 3rd grader: {vocab_text} "
-    story_steps_text = load_file("story_steps_prompt.txt")
+    story_steps_text = load_file("prompts/story/03_process_instructions.txt")
     full_prompt = "\n".join([intro_system_role_text,vocab_section,story_steps_text])
     return(full_prompt)
 
@@ -33,10 +33,10 @@ def generate_fun_facts_prompt(scenario, topic=None, fact_number=None, previous_f
         Complete prompt ready for LLM
     """
     # Load engaging content instructions
-    instructions = load_file("fun_facts_instructions.txt")
+    instructions = load_file("prompts/fun_facts/02_content_instructions.txt")
     
     # Load base prompt templates
-    base_prompts_text = load_file("fun_facts_base_prompts.txt")
+    base_prompts_text = load_file("prompts/fun_facts/03_scenario_templates.txt")
     
     # Parse the base prompts file to extract templates
     base_prompts = {}

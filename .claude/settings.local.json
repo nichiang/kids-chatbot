@@ -13,7 +13,10 @@
       "Bash(gh issue:*)",
       "Bash(find:*)",
       "Bash(pytest:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(timeout:*)"
     ],
     "deny": []
   }

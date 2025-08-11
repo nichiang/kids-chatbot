@@ -575,7 +575,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         // Add "Suggested words" label
         const suggestionsLabel = document.createElement("div");
         suggestionsLabel.className = "suggestions-label";
-        suggestionsLabel.textContent = "Suggested words:";
+        suggestionsLabel.textContent = "Suggestions:";
 
         const suggestionsContainer = document.createElement("div");
         suggestionsContainer.className = "design-suggestions-container";

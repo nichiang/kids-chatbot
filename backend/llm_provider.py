@@ -41,7 +41,7 @@ class LLMProvider:
         """Load the fun facts system prompt from file"""
         try:
             from pathlib import Path
-            return Path("fun_facts_system_prompt.txt").read_text().strip()
+            return Path("prompts/fun_facts/01_system_role.txt").read_text().strip()
         except Exception as e:
             logger.error(f"Error loading fun facts system prompt: {e}")
             # Fallback to a basic fun facts system prompt
