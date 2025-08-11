@@ -38,7 +38,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     // App state
     let currentMode = 'funfacts'; // 'storywriting' or 'funfacts'
     let isInDesignPhase = false; // Track if user is currently in character/location design phase
-    let currentVocabWord = null; // Track current vocabulary word being asked
     
     // Message Queue System - Sequential processing to prevent timing conflicts
     let messageQueue = [];
@@ -370,11 +369,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         return result.filter(chunk => chunk.trim().length > 0);
     }
 
-    // Extract vocabulary word from question text (used for session state synchronization)
-    function extractVocabWordFromQuestion(questionText) {
-        const match = questionText.match(/\*\*(.*?)\*\*/);
-        return match ? match[1] : null;
-    }
 
     // Message handling with smart splitting for long messages - now returns Promise
     function appendMessage(sender, text) {
@@ -497,10 +491,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     // Create vocabulary question UI
     function appendVocabQuestion(question, options, correctIndex) {
-        // Extract and store current vocabulary word for session state synchronization
-        currentVocabWord = extractVocabWordFromQuestion(question);
-        console.log("Current vocabulary word:", currentVocabWord);
-        
         const vocabContainer = document.createElement("div");
         vocabContainer.className = "vocab-question-container";
 
@@ -662,21 +652,10 @@ document.addEventListener("DOMContentLoaded", async function () {
         // Continue flow automatically after vocabulary answer
         setTimeout(() => {
             if (currentMode === 'funfacts') {
-                // CRITICAL FIX: Add current vocabulary word to askedVocabWords for session state sync
-                if (currentVocabWord && !sessionData.funfacts.askedVocabWords.includes(currentVocabWord)) {
-                    sessionData.funfacts.askedVocabWords.push(currentVocabWord);
-                    console.log("Added to funfacts askedVocabWords:", currentVocabWord, "Full list:", sessionData.funfacts.askedVocabWords);
-                }
                 continueAfterVocab();
             } else if (currentMode === 'storywriting') {
                 // Update vocabulary phase tracking
                 sessionData.storywriting.vocabularyPhase.questionsAsked++;
-                
-                // CRITICAL FIX: Add current vocabulary word to askedVocabWords for session state sync
-                if (currentVocabWord && !sessionData.storywriting.askedVocabWords.includes(currentVocabWord)) {
-                    sessionData.storywriting.askedVocabWords.push(currentVocabWord);
-                    console.log("Added to askedVocabWords:", currentVocabWord, "Full list:", sessionData.storywriting.askedVocabWords);
-                }
                 
                 // Check if we've reached max vocabulary questions
                 if (sessionData.storywriting.vocabularyPhase.questionsAsked >= sessionData.storywriting.vocabularyPhase.maxQuestions) {
@@ -704,6 +683,12 @@ document.addEventListener("DOMContentLoaded", async function () {
                 isComplete: false
             };
             
+            // DEBUG: Log session data being sent for first vocabulary question
+            console.log("🔍 VOCAB DEBUG - Starting vocabulary phase, sending session data:");
+            console.log("  Initial askedVocabWords:", sessionData[currentMode].askedVocabWords);
+            console.log("  Story parts count:", sessionData[currentMode].storyParts?.length || 0);
+            console.log("  Full sessionData:", JSON.stringify(sessionData[currentMode], null, 2));
+            
             const response = await fetch("/chat", {
                 method: "POST",
                 headers: {
@@ -718,9 +703,17 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             const data = await response.json();
             
+            // DEBUG: Log what backend returned for first vocabulary
+            console.log("🔍 VOCAB DEBUG - First vocabulary response from backend:");
+            console.log("  Vocabulary question:", data.vocabQuestion?.question);
+            console.log("  Updated askedVocabWords:", data.sessionData?.askedVocabWords);
+            console.log("  Full response sessionData:", JSON.stringify(data.sessionData, null, 2));
+            
             // Update session data
             if (data.sessionData) {
                 sessionData[currentMode] = data.sessionData;
+                console.log("🔍 VOCAB DEBUG - Frontend session updated after first vocab:");
+                console.log("  New askedVocabWords:", sessionData[currentMode].askedVocabWords);
             }
             
             // Queue-based response handling
@@ -743,6 +736,11 @@ document.addEventListener("DOMContentLoaded", async function () {
         try {
             console.log(`Requesting vocabulary question ${sessionData.storywriting.vocabularyPhase.questionsAsked + 1} of ${sessionData.storywriting.vocabularyPhase.maxQuestions}`);
             
+            // DEBUG: Log session data being sent to backend
+            console.log("🔍 VOCAB DEBUG - Sending session data to backend:");
+            console.log("  askedVocabWords:", sessionData[currentMode].askedVocabWords);
+            console.log("  Full sessionData:", JSON.stringify(sessionData[currentMode], null, 2));
+            
             const response = await fetch("/chat", {
                 method: "POST",
                 headers: {
@@ -757,9 +755,17 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             const data = await response.json();
             
+            // DEBUG: Log what backend returned
+            console.log("🔍 VOCAB DEBUG - Received from backend:");
+            console.log("  Vocabulary question:", data.vocabQuestion?.question);
+            console.log("  Updated askedVocabWords:", data.sessionData?.askedVocabWords);
+            console.log("  Full response sessionData:", JSON.stringify(data.sessionData, null, 2));
+            
             // Update session data
             if (data.sessionData) {
                 sessionData[currentMode] = data.sessionData;
+                console.log("🔍 VOCAB DEBUG - Frontend session data updated:");
+                console.log("  New askedVocabWords:", sessionData[currentMode].askedVocabWords);
             }
             
             // Queue-based response handling

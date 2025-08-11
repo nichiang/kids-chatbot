@@ -392,7 +392,6 @@ def generate_structured_story_prompt(topic: str) -> str:
 REQUIREMENTS:
 - Write 2-4 sentences suitable for strong 2nd graders or 3rd graders
 - Introduce a named character AND/OR a specific location with clear names
-- End by inviting the child to continue (no multiple choice options)
 - Bold 2-3 vocabulary words using **word** format
 - Use engaging, age-appropriate language that sparks imagination
 
@@ -1092,17 +1091,28 @@ async def handle_start_vocabulary(session_data: SessionData) -> ChatResponse:
     all_story_text = "\n".join(session_data.storyParts)
     content_vocab_words = extract_vocabulary_from_content(all_story_text, session_data.contentVocabulary)
     
+    # DEBUG: Log vocabulary processing for first question
+    logger.info("🔍 VOCAB DEBUG - First vocabulary question processing:")
+    logger.info(f"  Received askedVocabWords: {session_data.askedVocabWords}")
+    logger.info(f"  Content vocabulary words found: {content_vocab_words}")
+    
     # Find a vocabulary word that hasn't been asked yet
     available_words = [word for word in content_vocab_words if word not in session_data.askedVocabWords]
+    logger.info(f"  Available words (not asked yet): {available_words}")
     
     if available_words:
         # Use a word from the story content, prioritizing lowercase words over proper nouns
         selected_word = select_best_vocabulary_word(available_words)
+        logger.info(f"  Selected word: '{selected_word}'")
+        
         session_data.askedVocabWords.append(selected_word)
         session_data.vocabularyPhase.questionsAsked = 1
         
+        logger.info(f"  Updated askedVocabWords: {session_data.askedVocabWords}")
+        
         # Use the actual story content as context for the vocabulary question
         vocab_question = llm_provider.generate_vocabulary_question(selected_word, context=all_story_text)
+        logger.info(f"  Generated question: '{vocab_question.get('question', 'N/A')}'")
         
         return ChatResponse(
             response="Great story! Now let's test your vocabulary:",
@@ -1146,17 +1156,29 @@ async def handle_next_vocabulary(session_data: SessionData) -> ChatResponse:
     all_story_text = "\n".join(session_data.storyParts)
     content_vocab_words = extract_vocabulary_from_content(all_story_text, session_data.contentVocabulary)
     
+    # DEBUG: Log vocabulary processing for next question
+    logger.info("🔍 VOCAB DEBUG - Next vocabulary question processing:")
+    logger.info(f"  Received askedVocabWords: {session_data.askedVocabWords}")
+    logger.info(f"  Content vocabulary words found: {content_vocab_words}")
+    
     # Find a vocabulary word that hasn't been asked yet
     available_words = [word for word in content_vocab_words if word not in session_data.askedVocabWords]
+    logger.info(f"  Available words (not asked yet): {available_words}")
     
     if available_words:
         # Use a word from the story content, prioritizing lowercase words over proper nouns
         selected_word = select_best_vocabulary_word(available_words)
+        logger.info(f"  Selected word: '{selected_word}'")
+        
         session_data.askedVocabWords.append(selected_word)
         session_data.vocabularyPhase.questionsAsked += 1
         
+        logger.info(f"  Updated askedVocabWords: {session_data.askedVocabWords}")
+        logger.info(f"  Updated questionsAsked: {session_data.vocabularyPhase.questionsAsked}")
+        
         # Use the actual story content as context for the vocabulary question
         vocab_question = llm_provider.generate_vocabulary_question(selected_word, context=all_story_text)
+        logger.info(f"  Generated question: '{vocab_question.get('question', 'N/A')}'")
         
         return ChatResponse(
             response="Let's try another vocabulary question:",

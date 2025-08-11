@@ -43,7 +43,27 @@ This is a **fully functional, mature educational application** with comprehensiv
 
 ## Current Session Focus
 
-### MAJOR FEATURE IMPLEMENTATION: Character/Location Design Phase
+### COMPLETED: Vocabulary Question Repeat Bug (GitHub Issue #5)
+**STATUS**: ✅ **FIXED** - Vocabulary repetition issue resolved through frontend session state synchronization
+
+**Problem**: Same vocabulary word ("mysterious") appeared in multiple questions with same context sentence but different answer options. Expected behavior is different vocabulary words.
+
+**Root Cause IDENTIFIED**: Frontend `handleVocabAnswer()` didn't update `sessionData.askedVocabWords` after user answers question. Backend correctly managed state but received stale session data from frontend on subsequent requests.
+
+**SOLUTION IMPLEMENTED**: 
+1. ✅ Added `extractVocabWordFromQuestion()` utility function with regex `/\*\*(.*?)\*\*/`
+2. ✅ Added `currentVocabWord` global variable to track current question word
+3. ✅ Modified `appendVocabQuestion()` to extract and store current vocabulary word
+4. ✅ Updated `handleVocabAnswer()` to sync session state for both story and funfacts modes
+5. ✅ Added `askedVocabWords[]` arrays to initial sessionData structure
+
+**Technical Achievement**: Frontend now properly synchronizes session state before `requestNextVocabulary()`, ensuring backend receives updated `askedVocabWords` list to prevent repetition.
+
+**Files**: 
+- `design/researchFindings/vocabulary-repeat-bug-analysis.md` - Complete technical analysis
+- `frontend/app.js` - Fixed session state synchronization (Commit: a2ee90c)
+
+### PREVIOUS MAJOR FEATURE: Character/Location Design Phase  
 **COMPLETED**: Successfully implemented comprehensive character/location design feature that transforms passive story consumption into active creative participation
 
 **Achievement Summary**:
