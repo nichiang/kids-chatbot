@@ -43,25 +43,34 @@ This is a **fully functional, mature educational application** with comprehensiv
 
 ## Current Session Focus
 
-### COMPLETED: Vocabulary Question Repeat Bug (GitHub Issue #5)
-**STATUS**: ✅ **FIXED** - Vocabulary repetition issue resolved through frontend session state synchronization
+### COMPLETED: Vocabulary Question Repeat Bug (GitHub Issue #5) 
+**STATUS**: ✅ **FULLY RESOLVED** - Vocabulary repetition bug fixed by eliminating double word selection
 
-**Problem**: Same vocabulary word ("mysterious") appeared in multiple questions with same context sentence but different answer options. Expected behavior is different vocabulary words.
+**Problem**: Same vocabulary word ("universe") appeared twice in multiple questions. User reported getting "What does the word universe mean?" twice instead of different words like "extraordinary".
 
-**Root Cause IDENTIFIED**: Frontend `handleVocabAnswer()` didn't update `sessionData.askedVocabWords` after user answers question. Backend correctly managed state but received stale session data from frontend on subsequent requests.
+**Root Cause DISCOVERED**: `select_best_vocabulary_word()` was being called **TWICE** per vocabulary question:
+1. **First call** in `app.py`: Used correctly filtered `available_words` → selected "extraordinary" ✅
+2. **Second call** in `llm_provider.py`: Used unfiltered `actual_words` from content → selected "universe" again ❌
 
-**SOLUTION IMPLEMENTED**: 
-1. ✅ Added `extractVocabWordFromQuestion()` utility function with regex `/\*\*(.*?)\*\*/`
-2. ✅ Added `currentVocabWord` global variable to track current question word
-3. ✅ Modified `appendVocabQuestion()` to extract and store current vocabulary word
-4. ✅ Updated `handleVocabAnswer()` to sync session state for both story and funfacts modes
-5. ✅ Added `askedVocabWords[]` arrays to initial sessionData structure
+**Evidence from Debug Logs**:
+- Backend correctly received `askedVocabWords: ['universe']`
+- Backend correctly filtered: `Available words: ['extraordinary', 'galaxy', ...]` (universe removed)
+- But `llm_provider.py` ignored this filtering and re-selected from full content vocabulary
+- Question generation used the wrong second selection result
 
-**Technical Achievement**: Frontend now properly synchronizes session state before `requestNextVocabulary()`, ensuring backend receives updated `askedVocabWords` list to prevent repetition.
+**SOLUTION IMPLEMENTED**:
+1. ✅ **Removed double word selection** from `llm_provider.py` 
+2. ✅ **Fixed** `generate_vocabulary_question()` method to use passed word parameter
+3. ✅ **Fixed** `_get_fallback_vocab_question()` method to use passed word parameter  
+4. ✅ **Added documentation** warning against future double calls
+5. ✅ **Single selection point** now in `app.py` with proper filtering
+
+**Technical Achievement**: Eliminated the architectural flaw where vocabulary words were selected twice with different filtering rules. Now uses single, properly filtered selection.
 
 **Files**: 
-- `design/researchFindings/vocabulary-repeat-bug-analysis.md` - Complete technical analysis
-- `frontend/app.js` - Fixed session state synchronization (Commit: a2ee90c)
+- `design/researchFindings/vocabulary-repeat-bug-analysis.md` - Complete analysis with debug logs
+- `backend/llm_provider.py` - Removed double word selection (Commit: 9555ef1)
+- `backend/app.py` - Added validation documentation (Commit: 9555ef1)
 
 ### PREVIOUS MAJOR FEATURE: Character/Location Design Phase  
 **COMPLETED**: Successfully implemented comprehensive character/location design feature that transforms passive story consumption into active creative participation
