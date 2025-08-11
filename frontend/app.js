@@ -38,12 +38,19 @@ document.addEventListener("DOMContentLoaded", async function () {
     // App state
     let currentMode = 'funfacts'; // 'storywriting' or 'funfacts'
     let isInDesignPhase = false; // Track if user is currently in character/location design phase
+    let currentVocabWord = null; // Track current vocabulary word being asked
+    
+    // Message Queue System - Sequential processing to prevent timing conflicts
+    let messageQueue = [];
+    let isProcessingQueue = false;
+    
     let sessionData = {
         storywriting: {
             topic: null,
             storyParts: [],
             currentStep: 0,
             isComplete: false,
+            askedVocabWords: [], // Track vocabulary words that have been asked
             vocabularyPhase: {
                 isActive: false,
                 questionsAsked: 0,
@@ -55,7 +62,8 @@ document.addEventListener("DOMContentLoaded", async function () {
             topic: null,
             factsShown: 0,
             currentFact: null,
-            isComplete: false
+            isComplete: false,
+            askedVocabWords: [] // Track vocabulary words that have been asked
         }
     };
 
@@ -362,20 +370,37 @@ document.addEventListener("DOMContentLoaded", async function () {
         return result.filter(chunk => chunk.trim().length > 0);
     }
 
-    // Message handling with smart splitting for long messages
+    // Extract vocabulary word from question text (used for session state synchronization)
+    function extractVocabWordFromQuestion(questionText) {
+        const match = questionText.match(/\*\*(.*?)\*\*/);
+        return match ? match[1] : null;
+    }
+
+    // Message handling with smart splitting for long messages - now returns Promise
     function appendMessage(sender, text) {
-        if (sender === "bot" && text.length > 200) {
-            // Split long bot messages into multiple bubbles
-            const messageParts = splitLongMessage(text);
-            messageParts.forEach((part, index) => {
-                setTimeout(() => {
-                    appendSingleMessage(sender, part);
-                }, index * 800); // 800ms delay between message parts
-            });
-        } else {
-            // Send short messages normally
-            appendSingleMessage(sender, text);
-        }
+        return new Promise((resolve) => {
+            if (sender === "bot" && text.length > 200) {
+                // Split long bot messages into multiple bubbles
+                const messageParts = splitLongMessage(text);
+                let completedParts = 0;
+                
+                messageParts.forEach((part, index) => {
+                    setTimeout(() => {
+                        appendSingleMessage(sender, part);
+                        completedParts++;
+                        
+                        // Resolve when all parts are complete
+                        if (completedParts === messageParts.length) {
+                            resolve();
+                        }
+                    }, index * 800); // 800ms delay between message parts
+                });
+            } else {
+                // Send short messages normally
+                appendSingleMessage(sender, text);
+                resolve(); // Resolve immediately for short messages
+            }
+        });
     }
 
     // Single message handling
@@ -407,8 +432,75 @@ document.addEventListener("DOMContentLoaded", async function () {
         scrollToBottom();
     }
 
+    // Message Queue System - Sequential processing to eliminate timing conflicts
+    
+    function addToQueue(type, content, data = null) {
+        messageQueue.push({ type, content, data });
+        
+        // Start processing if not already running
+        if (!isProcessingQueue) {
+            processQueue();
+        }
+    }
+    
+    async function processQueue() {
+        if (isProcessingQueue || messageQueue.length === 0) {
+            return;
+        }
+        
+        isProcessingQueue = true;
+        
+        while (messageQueue.length > 0) {
+            const queueItem = messageQueue.shift();
+            
+            try {
+                await processQueueItem(queueItem);
+            } catch (error) {
+                console.error('Error processing queue item:', error, queueItem);
+                // Continue processing despite errors
+            }
+        }
+        
+        isProcessingQueue = false;
+    }
+    
+    async function processQueueItem(item) {
+        switch (item.type) {
+            case 'story':
+                // Process story content (may be split into parts)
+                await appendMessage("bot", item.content);
+                break;
+                
+            case 'design':
+                // Process design prompt
+                appendDesignPrompt(item.content);
+                break;
+                
+            case 'vocab':
+                // Process vocabulary question
+                appendVocabQuestion(
+                    item.content.question,
+                    item.content.options,
+                    item.content.correctIndex
+                );
+                break;
+                
+            case 'system':
+                // Process system messages (like "Thinking...")
+                await appendMessage("bot", item.content);
+                break;
+                
+            default:
+                console.warn('Unknown queue item type:', item.type);
+        }
+    }
+
     // Create vocabulary question UI
     function appendVocabQuestion(question, options, correctIndex) {
+        // Extract and store current vocabulary word for session state synchronization
+        currentVocabWord = extractVocabWordFromQuestion(question);
+        console.log("Current vocabulary word:", currentVocabWord);
+        
         const vocabContainer = document.createElement("div");
         vocabContainer.className = "vocab-question-container";
 
@@ -570,10 +662,21 @@ document.addEventListener("DOMContentLoaded", async function () {
         // Continue flow automatically after vocabulary answer
         setTimeout(() => {
             if (currentMode === 'funfacts') {
+                // CRITICAL FIX: Add current vocabulary word to askedVocabWords for session state sync
+                if (currentVocabWord && !sessionData.funfacts.askedVocabWords.includes(currentVocabWord)) {
+                    sessionData.funfacts.askedVocabWords.push(currentVocabWord);
+                    console.log("Added to funfacts askedVocabWords:", currentVocabWord, "Full list:", sessionData.funfacts.askedVocabWords);
+                }
                 continueAfterVocab();
             } else if (currentMode === 'storywriting') {
                 // Update vocabulary phase tracking
                 sessionData.storywriting.vocabularyPhase.questionsAsked++;
+                
+                // CRITICAL FIX: Add current vocabulary word to askedVocabWords for session state sync
+                if (currentVocabWord && !sessionData.storywriting.askedVocabWords.includes(currentVocabWord)) {
+                    sessionData.storywriting.askedVocabWords.push(currentVocabWord);
+                    console.log("Added to askedVocabWords:", currentVocabWord, "Full list:", sessionData.storywriting.askedVocabWords);
+                }
                 
                 // Check if we've reached max vocabulary questions
                 if (sessionData.storywriting.vocabularyPhase.questionsAsked >= sessionData.storywriting.vocabularyPhase.maxQuestions) {
@@ -615,25 +718,18 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             const data = await response.json();
             
-            // Handle response
-            if (data.response) {
-                appendMessage("bot", data.response);
-            }
-            
             // Update session data
             if (data.sessionData) {
                 sessionData[currentMode] = data.sessionData;
             }
             
-            // Handle vocabulary questions
+            // Queue-based response handling
+            if (data.response) {
+                addToQueue('story', data.response);
+            }
+            
             if (data.vocabQuestion) {
-                setTimeout(() => {
-                    appendVocabQuestion(
-                        data.vocabQuestion.question,
-                        data.vocabQuestion.options,
-                        data.vocabQuestion.correctIndex
-                    );
-                }, 1000);
+                addToQueue('vocab', data.vocabQuestion);
             }
 
         } catch (err) {
@@ -661,25 +757,18 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             const data = await response.json();
             
-            // Handle response
-            if (data.response) {
-                appendMessage("bot", data.response);
-            }
-            
             // Update session data
             if (data.sessionData) {
                 sessionData[currentMode] = data.sessionData;
             }
             
-            // Handle vocabulary questions
+            // Queue-based response handling
+            if (data.response) {
+                addToQueue('story', data.response);
+            }
+            
             if (data.vocabQuestion) {
-                setTimeout(() => {
-                    appendVocabQuestion(
-                        data.vocabQuestion.question,
-                        data.vocabQuestion.options,
-                        data.vocabQuestion.correctIndex
-                    );
-                }, 1000);
+                addToQueue('vocab', data.vocabQuestion);
             }
 
         } catch (err) {
@@ -711,14 +800,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             const data = await response.json();
             
-            // Handle response (should ask if child wants to write another story)
-            if (data.response) {
-                appendMessage("bot", data.response);
-            }
-            
             // Update session data
             if (data.sessionData) {
                 sessionData[currentMode] = data.sessionData;
+            }
+            
+            // Queue-based response handling
+            if (data.response) {
+                addToQueue('story', data.response);
             }
 
         } catch (err) {
@@ -751,11 +840,6 @@ document.addEventListener("DOMContentLoaded", async function () {
             // Remove thinking message
             chatLog.removeChild(chatLog.lastChild);
             
-            // Handle response
-            if (data.response) {
-                appendMessage("bot", data.response);
-            }
-            
             // Update session data
             if (data.sessionData) {
                 sessionData[currentMode] = data.sessionData;
@@ -764,7 +848,12 @@ document.addEventListener("DOMContentLoaded", async function () {
             // Theme switching now happens during "Thinking..." phase to prevent jarring UX
             // No longer handling backend theme suggestions here
             
-            // Handle vocabulary questions
+            // Queue-based response handling - eliminates timing conflicts
+            if (data.response) {
+                addToQueue('story', data.response);
+            }
+            
+            // Handle vocabulary questions via queue
             if (data.vocabQuestion) {
                 // Only show vocabulary questions when appropriate:
                 // - In fun facts mode: always show them
@@ -776,34 +865,16 @@ document.addEventListener("DOMContentLoaded", async function () {
                 console.log(`Vocab question received. Mode: ${currentMode}, Story complete: ${data.sessionData?.isComplete}, Should show: ${shouldShowVocabQuestion}`);
                 
                 if (shouldShowVocabQuestion) {
-                    // Calculate dynamic delay based on content length to ensure content finishes rendering
-                    const contentLength = data.response ? data.response.length : 0;
-                    const baseDelay = 1000; // Base delay in milliseconds
-                    const lengthMultiplier = 5; // Additional delay per character
-                    const dynamicDelay = Math.min(baseDelay + (contentLength * lengthMultiplier), 8000); // Cap at 8 seconds
-                    
-                    console.log(`Scheduling vocabulary question with dynamic delay: ${dynamicDelay}ms (content length: ${contentLength})`);
-                    
-                    setTimeout(() => {
-                        appendVocabQuestion(
-                            data.vocabQuestion.question,
-                            data.vocabQuestion.options,
-                            data.vocabQuestion.correctIndex
-                        );
-                    }, dynamicDelay);
+                    addToQueue('vocab', data.vocabQuestion);
                 } else {
                     console.log("Vocab question suppressed - story not complete yet");
                 }
             }
             
-            // Handle design prompts for character/location design phase
+            // Handle design prompts via queue - perfect sequential processing!
             if (data.designPrompt) {
                 console.log("Design prompt received:", data.designPrompt);
-                
-                // Add a small delay to let the story text render first
-                setTimeout(() => {
-                    appendDesignPrompt(data.designPrompt);
-                }, 1000);
+                addToQueue('design', data.designPrompt);
             }
 
         } catch (err) {
@@ -874,29 +945,20 @@ document.addEventListener("DOMContentLoaded", async function () {
             // Remove thinking message
             chatLog.removeChild(chatLog.lastChild);
             
-            // Handle response based on mode
-            if (data.response) {
-                appendMessage("bot", data.response);
-            }
-            
-            // Update session data with backend response
+            // Update session data with backend response first
             if (data.sessionData) {
                 sessionData[currentMode] = data.sessionData;
-                
-                // Auto-trigger vocabulary phase when story is complete
-                if (currentMode === 'storywriting' && data.sessionData.isComplete && !data.vocabQuestion) {
-                    console.log("Story completed! Auto-starting vocabulary phase...");
-                    // Wait a bit for user to read "The end!" then start vocab phase
-                    setTimeout(() => {
-                        startVocabularyPhase();
-                    }, 2000);
-                }
             }
             
             // Theme switching now happens during "Thinking..." phase to prevent jarring UX
             // No longer handling backend theme suggestions here
             
-            // Handle vocabulary questions
+            // Queue-based response handling - eliminates timing conflicts
+            if (data.response) {
+                addToQueue('story', data.response);
+            }
+            
+            // Handle vocabulary questions via queue
             if (data.vocabQuestion) {
                 // Only show vocabulary questions when appropriate:
                 // - In fun facts mode: always show them
@@ -908,34 +970,27 @@ document.addEventListener("DOMContentLoaded", async function () {
                 console.log(`Vocab question received. Mode: ${currentMode}, Story complete: ${data.sessionData?.isComplete}, Should show: ${shouldShowVocabQuestion}`);
                 
                 if (shouldShowVocabQuestion) {
-                    // Calculate dynamic delay based on content length to ensure content finishes rendering
-                    const contentLength = data.response ? data.response.length : 0;
-                    const baseDelay = 1500; // Base delay in milliseconds
-                    const lengthMultiplier = 1; // Additional delay per character
-                    const dynamicDelay = Math.min(baseDelay + (contentLength * lengthMultiplier), 8000); // Cap at 8 seconds
-                    
-                    console.log(`Scheduling vocabulary question with dynamic delay: ${dynamicDelay}ms (content length: ${contentLength})`);
-                    
-                    setTimeout(() => {
-                        appendVocabQuestion(
-                            data.vocabQuestion.question,
-                            data.vocabQuestion.options,
-                            data.vocabQuestion.correctIndex
-                        );
-                    }, dynamicDelay);
+                    addToQueue('vocab', data.vocabQuestion);
                 } else {
                     console.log("Vocab question suppressed - story not complete yet");
                 }
             }
             
-            // Handle design prompts for character/location design phase
+            // Handle design prompts via queue - perfect sequential processing!
             if (data.designPrompt) {
                 console.log("Design prompt received:", data.designPrompt);
-                
-                // Add a small delay to let the story text render first
-                setTimeout(() => {
-                    appendDesignPrompt(data.designPrompt);
-                }, 1000);
+                addToQueue('design', data.designPrompt);
+            }
+            
+            // Auto-trigger vocabulary phase when story is complete (after queue processing)
+            if (data.sessionData) {
+                if (currentMode === 'storywriting' && data.sessionData.isComplete && !data.vocabQuestion) {
+                    console.log("Story completed! Auto-starting vocabulary phase...");
+                    // Use setTimeout for this since it's a separate flow, not part of current response
+                    setTimeout(() => {
+                        startVocabularyPhase();
+                    }, 2000);
+                }
             }
 
         } catch (err) {
