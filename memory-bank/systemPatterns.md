@@ -15,6 +15,28 @@ app.get("/health", ...)
 app.mount("/", StaticFiles(directory="../frontend", html=True), name="static")
 ```
 
+### Vocabulary Question Generation Architecture (CRITICAL FIX)
+
+**Pattern**: Single-Point Vocabulary Selection with Proper Filtering
+- **Problem Solved**: Eliminated double vocabulary selection causing repetition bugs  
+- **Architecture**: One filtered selection in `app.py`, passed to `llm_provider.py` unchanged
+- **Critical Rule**: `select_best_vocabulary_word()` called only once per vocabulary question
+
+**FIXED Implementation Flow**:
+```python
+# 1. app.py: Single filtered selection point
+available_words = [word for word in content_vocab_words if word not in session_data.askedVocabWords]
+selected_word = select_best_vocabulary_word(available_words)  # ONLY CALL
+session_data.askedVocabWords.append(selected_word)
+
+# 2. llm_provider.py: Use passed word (NO RE-SELECTION)
+def generate_vocabulary_question(self, word: str, context: str):
+    # FIXED: Use word parameter directly, don't re-select from content
+    actual_word = word  # Was: select_best_vocabulary_word(actual_words) 
+```
+
+**Architectural Rule**: Never re-select vocabulary in LLM provider - trust the filtered selection from app.py
+
 ### Character/Location Design System Architecture (NEWEST MAJOR FEATURE)
 
 **Pattern**: Structured LLM Response with Interactive Design Phase
