@@ -120,19 +120,10 @@ What happens next in our story? Tell me how our hero begins their adventure!"""
         """Generate vocabulary questions following Step 8 format"""
         if self.client and self.api_key:
             try:
-                # Use actual bolded words from generated content, but apply proper noun filtering
-                actual_words = self.extract_vocabulary_words(context)
-                if actual_words:
-                    # Apply the same filtering logic as select_best_vocabulary_word
-                    from app import select_best_vocabulary_word
-                    filtered_word = select_best_vocabulary_word(actual_words)
-                    # If filtering returns nothing (all words filtered out), fallback to passed word
-                    actual_word = filtered_word if filtered_word else word
-                    sentence_with_word = self._extract_sentence_with_word(actual_word, context)
-                else:
-                    # Fallback to original logic if no bolded words found
-                    actual_word = word
-                    sentence_with_word = self._extract_sentence_with_word(word, context)
+                # FIXED: Use the already-selected vocabulary word from app.py (don't re-select)
+                # The word parameter was already carefully selected using filtered available_words
+                actual_word = word
+                sentence_with_word = self._extract_sentence_with_word(actual_word, context)
                 
                 if not sentence_with_word:
                     sentence_with_word = context  # Fallback to full context
@@ -177,19 +168,10 @@ Return ONLY valid JSON with: question, options (array of 4 strings), correctInde
 
     def _get_fallback_vocab_question(self, word: str, context: str) -> Dict:
         """Fallback vocabulary questions with proper sentence extraction"""
-        # Use actual bolded words from generated content, but apply proper noun filtering
-        actual_words = self.extract_vocabulary_words(context)
-        if actual_words:
-            # Apply the same filtering logic as select_best_vocabulary_word
-            from app import select_best_vocabulary_word
-            filtered_word = select_best_vocabulary_word(actual_words)
-            # If filtering returns nothing (all words filtered out), fallback to passed word
-            actual_word = filtered_word if filtered_word else word
-            sentence_with_word = self._extract_sentence_with_word(actual_word, context)
-        else:
-            # Fallback to original logic if no bolded words found
-            actual_word = word
-            sentence_with_word = self._extract_sentence_with_word(word, context)
+        # FIXED: Use the already-selected vocabulary word from app.py (don't re-select)  
+        # The word parameter was already carefully selected using filtered available_words
+        actual_word = word
+        sentence_with_word = self._extract_sentence_with_word(actual_word, context)
         
         if not sentence_with_word:
             sentence_with_word = context  # Fallback to full context

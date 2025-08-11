@@ -343,8 +343,13 @@ def select_best_vocabulary_word(available_words: List[str]) -> str:
     Select the best vocabulary word, filtering out multi-word proper nouns (like names)
     while preserving single words that could be legitimate vocabulary.
     
+    IMPORTANT: This function should only be called ONCE per vocabulary question generation.
+    The selected word should be passed to llm_provider.generate_vocabulary_question() 
+    and used as-is without re-selection to prevent vocabulary repetition bugs.
+    
     Args:
-        available_words: List of available vocabulary words to choose from
+        available_words: List of available vocabulary words to choose from (already filtered 
+                        to exclude words in session_data.askedVocabWords)
     
     Returns:
         The best vocabulary word (multi-word proper nouns filtered out)
