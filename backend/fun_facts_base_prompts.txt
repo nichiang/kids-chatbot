@@ -1,8 +1,0 @@
-FIRST_FACT_PROMPT:
-Generate an engaging fun fact about: {topic}. Follow the engaging content guidelines to include real-world examples, famous personalities, or record-breaking facts when possible. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. End with relevant emojis that match the topic.
-
-CONTINUING_FACT_PROMPT:
-Generate a completely different and NEW fun fact about: {topic}. This is fact #{fact_number}. DO NOT repeat any of these previous facts: {previous_facts}. Make sure this is a totally different aspect or detail about {topic}. Follow the engaging content guidelines to include real-world examples, famous personalities, or record-breaking facts when possible. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. End with relevant emojis that match the topic.
-
-NEW_TOPIC_PROMPT:
-Generate an engaging fun fact about: {topic}. Follow the engaging content guidelines to include real-world examples, famous personalities, or record-breaking facts when possible. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. End with relevant emojis that match the topic.

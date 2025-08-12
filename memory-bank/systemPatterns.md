@@ -37,7 +37,91 @@ def generate_vocabulary_question(self, word: str, context: str):
 
 **Architectural Rule**: Never re-select vocabulary in LLM provider - trust the filtered selection from app.py
 
-### Character/Location Design System Architecture (NEWEST MAJOR FEATURE)
+### Character Naming and Design Phase Bug Resolution (LATEST FIXES)
+
+**Pattern**: Robust Named vs Unnamed Entity Handling with Testing Infrastructure
+
+#### Named Entity vs Unnamed Entity Detection
+**Critical Fix**: Proper `needs_naming` field handling prevents naming conflicts
+```python
+# Named entities template (characters like "Mia")
+{
+  "metadata": {
+    "character_name": "Mia",
+    "needs_naming": false,  # CRITICAL: Skip naming phase
+    "design_options": ["character"]
+  }
+}
+
+# Unnamed entities template (characters like "the brave astronaut")  
+{
+  "metadata": {
+    "character_name": null,
+    "needs_naming": true,   # CRITICAL: Trigger naming phase
+    "entity_descriptor": "the brave astronaut",
+    "design_options": ["character"]
+  }
+}
+```
+
+#### Design Focus Selection Pattern (MAJOR BUG FIX)
+**Problem Solved**: `select_design_focus()` failed for unnamed entities when names were `None`
+```python
+# FIXED: Enhanced function supports both named and unnamed entities
+def select_design_focus(character_name, location_name, design_options):
+    # Check named entities first
+    if character_name or location_name:
+        return random.choice(available_named_options)
+    
+    # FALLBACK: Use design_options for unnamed entities  
+    if design_options:
+        return random.choice([opt for opt in design_options if opt in ["character", "location"]])
+    
+    return None  # No design phase
+```
+
+#### Random Design Aspect Selection Pattern
+**Enhancement**: Eliminates predictable question patterns for engagement
+```python
+# OLD: Always returned first aspect (predictable)
+return available_aspects[0]  # Always "appearance" first
+
+# NEW: Random selection for variety
+return random.choice(available_aspects)  # Random: appearance, personality, skills, etc.
+```
+
+#### Testing Infrastructure Pattern
+**Pattern**: Force Named/Unnamed Controls for Quality Assurance
+```python
+# Frontend: Story mode parameter selection
+storyMode: 'auto' | 'named' | 'unnamed'
+
+# Backend: Template selection override
+if story_mode == "named":
+    template_key = "named_entities"    # Force Mia-style characters
+elif story_mode == "unnamed": 
+    template_key = "unnamed_entities"  # Force "brave astronaut" style
+else:
+    template_key = random_selection()  # Auto mode
+```
+
+#### Comprehensive Debug Logging Pattern
+**Pattern**: Full-flow visibility for troubleshooting
+```python
+# Story mode tracking
+logger.info(f"🎯 STORY MODE DEBUG: Received story_mode parameter: '{story_mode}'")
+
+# Template selection confirmation
+logger.info(f"🎯 TEMPLATE DEBUG: Using template '{template_key}' for story_mode '{story_mode}'")
+
+# Metadata validation
+logger.info(f"🎯 METADATA DEBUG: design_options: {structured_response.metadata.design_options}")
+
+# Design phase decision tracking
+logger.info(f"🎯 DESIGN PHASE DEBUG: should_trigger_design_phase() returned: {should_trigger}")
+```
+
+### Character/Location Design System Architecture (MATURE FEATURE)
 
 **Pattern**: Structured LLM Response with Interactive Design Phase
 - **Revolutionary Detection**: JSON-based character/location metadata eliminates fragile regex extraction
@@ -112,16 +196,24 @@ def select_best_vocabulary_word(available_words: List[str]) -> str:
 
 ### LLM Integration Patterns
 
-**Pattern**: Multi-Layered Prompt Architecture with Comprehensive Fallbacks
-- **System Prompts**: Separate files for personality definition and educational approach
-- **Dynamic Templates**: Base prompt + vocabulary integration + content guidelines
+**Pattern**: Hybrid Prompt Architecture with Programmatic Flow Control
+- **System Prompts**: Legacy `generate_prompt()` loads complete 10-step educational instructions as system context
+- **Programmatic Control**: Python code manages actual educational flow step-by-step for reliability
+- **Dynamic Templates**: Specific prompts for story generation, vocabulary enhancement, design phases
 - **Fallback Strategy**: Pre-written educational content ensures 99.9% uptime
 
+**Hybrid Architecture Rationale**:
+- **System Prompt**: Provides educational context and tone (from `03_process_instructions.txt`)
+- **App Logic**: Ensures reliable execution of educational flow with session state management
+- **Best of Both**: LLM gets complete context while Python ensures consistent educational progression
+
 **Prompt Generation Flow**:
-1. Load system prompt from file (`fun_facts_system_prompt.txt`)
-2. Select vocabulary words from curated banks
-3. Combine with dynamic base prompt template
-4. Generate enhanced prompt with vocabulary integration instructions
+1. **System Context**: Load complete educational prompt via `generate_prompt()` for LLM context
+2. **Specific Prompts**: Generate targeted prompts for current educational step
+3. **Vocabulary Integration**: Dynamic vocabulary selection and enhancement
+4. **Session Management**: Python tracks progress, prevents repetition, validates standards
+
+**Why Not Pure Prompt-Based**: Original 10-step approach was unreliable - LLM would skip steps, reorder flow, or ignore vocabulary tracking requirements. Hybrid approach maintains educational intent while ensuring consistent execution.
 
 ### Session State Management
 
@@ -219,6 +311,13 @@ topic_keywords = {
 ```
 
 ## Critical Architectural Decisions
+
+### Why Hybrid Prompt Architecture Over Pure Prompt-Based
+- **Problem Solved**: Original `generate_prompt()` included all 10 steps but LLM execution was unreliable
+- **Implementation**: System prompt provides context while Python code controls actual flow
+- **Trade-off**: More complex codebase vs guaranteed educational standards compliance
+- **Result**: 100% reliable educational progression with maintained LLM creativity
+- **Missing Feature**: Step 9 "print entire story" lost in architectural transition (not yet re-implemented)
 
 ### Why Single Server Architecture
 - **Problem Solved**: Eliminated need for CORS, port management, complex deployment

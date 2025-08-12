@@ -20,7 +20,10 @@ class LLMProvider:
         self.model = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
         self.base_url = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
         
-        # Generate the full prompt from spec files (default for story mode)
+        # HYBRID ARCHITECTURE: Load legacy system prompt for LLM educational context
+        # NOTE: generate_prompt() loads complete 10-step instructions from prompts/story/03_process_instructions.txt
+        # This provides LLM with full educational framework, but actual flow is controlled by app.py
+        # This hybrid approach ensures reliable vocabulary tracking + educational standards while maintaining LLM creativity
         self.system_prompt = generate_prompt()
         
         # Load fun facts system prompt

@@ -43,6 +43,82 @@ This is a **fully functional, mature educational application** with comprehensiv
 
 ## Current Session Focus
 
+### COMPLETED: Character Naming and Design Phase Bug Resolution (Latest Session)
+**STATUS**: ✅ **FULLY RESOLVED** - Major character design system overhaul with comprehensive bug fixes
+
+#### Bug 1: Named Characters Still Asked for Naming
+**Problem**: Stories with named characters (e.g., "young astronaut Mia") still prompted "Can you name the young astronaut eager to explore space?" despite character already being named.
+
+**Root Cause**: Named entities template was missing `needs_naming: false` field, causing naming phase to trigger incorrectly.
+
+**Solution Implemented**:
+- Added `needs_naming: false` to named entities JSON template
+- Enhanced validation logic in `trigger_design_phase()` to check for existing names
+- Added comprehensive logging to track naming phase decisions
+
+**Educational Impact**: Named characters now proceed directly to personality/skills questions, avoiding confusion and maintaining story flow.
+
+#### Bug 2: Unnamed Characters Not Triggering Design Phase
+**Problem**: Stories with unnamed characters (e.g., "A brave astronaut floated through space") completely failed to trigger any design questions.
+
+**Root Cause**: `select_design_focus()` function only checked `character_name`/`location_name` fields, which are `None` for unnamed entities, causing design phase to be skipped entirely.
+
+**Solution Implemented**:
+- Enhanced `select_design_focus()` function to accept `design_options` parameter as fallback
+- Modified function to use `metadata.design_options` when names are not available
+- Added logging to show when unnamed entity logic is used
+
+**Educational Impact**: Unnamed characters now properly trigger naming questions ("Can you name the brave astronaut?") followed by design aspects.
+
+#### Bug 3: Verbose and Unwieldy Naming Questions
+**Problem**: Naming prompts used verbose format "What is a young astronaut eager to explore space's name?" instead of child-friendly language.
+
+**Solution Implemented**:
+- Updated character naming template from "What is {descriptor}'s name?" to "Can you name {descriptor}?"
+- Enhanced unnamed entity template with explicit "2-3 words maximum" descriptor requirements
+- Added negative examples ("AVOID: a young astronaut eager to explore space")
+
+**Educational Impact**: Questions now use natural, child-friendly language that's easier to read and understand.
+
+#### Enhancement 1: Random Design Aspect Selection
+**Problem**: Design questions were always predictable (always "appearance" first), making experience repetitive.
+
+**Solution Implemented**:
+- Modified `get_next_design_aspect()` to use `random.choice()` instead of first available
+- Added "naming" to aspect history when skipped for named characters
+- Created variety in design questions (appearance, personality, skills, dreams, flaws)
+
+**Educational Impact**: Children now get diverse, unpredictable design questions that maintain engagement and explore different aspects of character development.
+
+#### Enhancement 2: Comprehensive Debug Logging System
+**Implementation**: Added extensive logging throughout story generation and design phase flow:
+- Story mode parameter tracking
+- Template selection confirmation
+- Raw LLM response analysis
+- Metadata parsing validation
+- Design phase triggering decisions
+
+**Development Impact**: Future bugs can be diagnosed quickly through detailed log analysis, significantly reducing troubleshooting time.
+
+#### Enhancement 3: Testing Infrastructure
+**New Feature**: Story Mode Testing Controls in settings dialog
+- **Auto (Random)**: Original 60/40 named/unnamed split
+- **Force Named**: Always creates named characters for testing named character flow
+- **Force Unnamed**: Always creates unnamed characters for testing naming questions
+
+**Development Impact**: Manual testing of both scenarios now takes seconds instead of multiple attempts with random generation.
+
+#### Enhancement 4: Grammar Feedback with Specific Examples
+**Problem**: Grammar feedback lacked concrete examples, giving generic suggestions like "You could add more details" without showing how.
+
+**Solution Implemented**:
+- Enhanced LLM prompts to explicitly request specific example sentences
+- Added the exact user-reported case: "sara has curly hair" → "Sara has curly hair and beautiful green eyes"
+- Updated fallback responses to include descriptive writing examples
+- Added encouraging tone with concrete demonstrations
+
+**Educational Impact**: Children now receive specific examples of how to improve their writing, making feedback actionable and easier to understand.
+
 ### COMPLETED: Vocabulary Question Repeat Bug (GitHub Issue #5) 
 **STATUS**: ✅ **FULLY RESOLVED** - Vocabulary repetition bug fixed by eliminating double word selection
 
@@ -312,7 +388,20 @@ When resuming work on this application, always:
 3. Maintain age-appropriate content standards (2nd-3rd grade)
 4. Honor existing architectural patterns and educational methodologies
 
+### Recent Architectural Discovery: Hybrid Prompt Architecture
+**Current Session Insight**: The application uses a sophisticated hybrid architecture that combines the best of both prompt-based and programmatic approaches:
+
+**System Context**: Legacy `generate_prompt()` function still loads complete 10-step educational instructions as system prompt, providing LLM with full educational context and tone.
+
+**Programmatic Control**: Python code in `app.py` manages actual educational flow step-by-step, ensuring reliable vocabulary tracking, session management, and educational standards compliance.
+
+**Architectural Evolution**: This hybrid approach evolved to solve reliability issues with pure prompt-based flow while maintaining LLM creativity and educational context.
+
+**Missing Implementation**: Step 9 "print entire story from start to finish" exists in prompt instructions but wasn't re-implemented during architectural transition. This represents a future enhancement opportunity.
+
+**File Cleanup Completed**: Removed 7 legacy files (5 prompt duplicates + 2 JSON duplicates) that were no longer used in the current hybrid architecture.
+
 ### Documentation Maintenance
 This memory bank system represents the primary method for maintaining context across development sessions. Any significant changes to architecture, educational approach, or user experience should be documented in the appropriate memory bank files.
 
-The application is currently in an excellent state - mature, functional, and educationally effective. Focus should be on maintaining this quality while making incremental improvements based on user feedback and educational outcomes.
+The application is currently in an excellent state - mature, functional, and educationally effective. The hybrid architecture discovery clarifies why certain original features (like Step 9) aren't implemented while maintaining the sophisticated educational flow the app is known for.

@@ -10,6 +10,23 @@ from llm_provider import llm_provider
 from generate_prompt import generate_prompt, load_file, generate_fun_facts_prompt
 from vocabulary_manager import vocabulary_manager
 
+# HYBRID ARCHITECTURE OVERVIEW:
+# This app uses a sophisticated hybrid approach combining system prompts with programmatic flow control:
+# 
+# SYSTEM CONTEXT (llm_provider.py): 
+# - Legacy generate_prompt() loads complete 10-step educational instructions as system prompt
+# - Provides LLM with full educational framework, tone, and context
+#
+# PROGRAMMATIC CONTROL (this file):
+# - Python code manages actual educational flow step-by-step for reliability
+# - Session state management ensures vocabulary tracking, anti-repetition, progress tracking
+# - Educational standards validation guarantees age-appropriate content and learning objectives
+#
+# ARCHITECTURAL EVOLUTION:
+# - Original pure prompt-based approach was unreliable (LLM would skip steps, ignore requirements)
+# - Current hybrid maintains LLM creativity while ensuring consistent educational progression
+# - Known gap: Step 9 "print entire story" from original 10-step flow not yet re-implemented
+
 # Design Phase Models - Must be defined before functions that use them
 class StoryMetadata(BaseModel):
     """Metadata about characters and locations introduced in the story"""

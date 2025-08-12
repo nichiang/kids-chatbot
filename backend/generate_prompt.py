@@ -11,6 +11,21 @@ def load_vocabulary(csv_path):
             return row
             
 def generate_prompt():
+    """
+    LEGACY FUNCTION - STILL USED FOR SYSTEM PROMPT CONTEXT
+    
+    This function loads the complete 10-step educational framework and is used as the system prompt
+    in llm_provider.py to provide LLM with full educational context and tone.
+    
+    IMPORTANT: While this loads all 10 steps (including Step 9 "print entire story"), the actual 
+    educational flow is controlled programmatically by app.py for reliability. This hybrid approach
+    maintains LLM educational context while ensuring consistent vocabulary tracking and progression.
+    
+    Returns complete system prompt combining:
+    - System role definition (friendly English tutor persona)
+    - Example vocabulary context
+    - Complete 10-step educational process instructions
+    """
     intro_system_role_text = load_file("prompts/story/01_system_role.txt")
     vocab_list = load_vocabulary("prompts/story/02_vocabulary_context.csv")
     vocab_text =",".join(vocab_list)

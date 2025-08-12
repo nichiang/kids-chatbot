@@ -82,16 +82,22 @@ uvicorn app:app --reload
 ### Backend Structure
 ```
 backend/
-├── app.py                      # Main FastAPI application
-├── llm_provider.py            # OpenAI integration
+├── app.py                      # Main FastAPI application with hybrid educational flow
+├── llm_provider.py            # OpenAI integration + legacy system prompt loading
 ├── vocabulary_manager.py       # Vocabulary system management
-├── generate_prompt.py         # Prompt engineering utilities
+├── generate_prompt.py         # Legacy prompt utilities (still used for system context)
 ├── requirements.txt           # Python dependencies
 ├── .env.example              # Environment template
 ├── vocabulary/               # Vocabulary data banks
-│   ├── general.json          # Core 35 words
-│   └── topics/               # Topic-specific vocabulary
-└── prompt templates (*.txt)   # Educational prompt files
+│   ├── general.json          # Core 100 words (expanded from 35)
+│   └── topics/               # Topic-specific vocabulary (6 topics × 20 words)
+└── prompts/                  # Organized prompt structure
+    ├── story/                # Story mode prompts
+    │   ├── 01_system_role.txt
+    │   ├── 03_process_instructions.txt  # Complete 10-step educational flow
+    │   └── 04_story_generation.json    # Named/unnamed entity templates
+    ├── fun_facts/            # Fun facts mode prompts
+    └── design/               # Character/location design aspects
 ```
 
 ### Frontend Structure
@@ -198,6 +204,103 @@ class SessionData:
 - **No User Data Storage**: Session data not persisted beyond conversation
 - **Safe Content Generation**: Comprehensive fallbacks prevent inappropriate content
 
+## Development Process & Quality Assurance
+
+### Bug Resolution Methodology (Latest Improvements)
+
+#### Comprehensive Debug Logging Pattern
+**Implementation**: Full-flow visibility throughout educational interactions
+- **Story Mode Tracking**: Parameter validation from frontend to backend
+- **Template Selection Logging**: Confirmation of named vs unnamed entity template usage
+- **LLM Response Analysis**: Raw response inspection and metadata parsing validation
+- **Design Phase Decision Tracking**: Step-by-step visibility into triggering logic
+- **Vocabulary Selection Audit**: Complete vocabulary word selection and filtering process
+
+**Technical Implementation**:
+```python
+# Structured logging with emojis for visual scanning
+logger.info(f"🎯 STORY MODE DEBUG: Received story_mode parameter: '{story_mode}'")
+logger.info(f"🎯 TEMPLATE DEBUG: Using template '{template_key}' for story_mode '{story_mode}'")
+logger.info(f"🎯 METADATA DEBUG: design_options: {structured_response.metadata.design_options}")
+logger.info(f"🔧 UNNAMED ENTITY: Using design_options {design_options} -> available: {available_options}")
+```
+
+#### Testing Infrastructure Enhancement
+**Story Mode Testing Controls**: Manual testing capability for quality assurance
+- **Force Named Mode**: Consistently generates named characters (e.g., "Mia") for testing named character flow
+- **Force Unnamed Mode**: Consistently generates unnamed characters (e.g., "brave astronaut") for testing naming questions
+- **Auto Mode**: Original random 60/40 split for production use
+
+**Frontend Integration**:
+```javascript
+// Settings dialog with testing controls
+storyMode: 'auto' | 'named' | 'unnamed'
+currentStoryMode = modeName; // Passed to backend via storyMode parameter
+```
+
+**Backend Integration**:
+```python
+# Template selection override based on testing mode
+if story_mode == "named":
+    template_key = "named_entities"
+elif story_mode == "unnamed": 
+    template_key = "unnamed_entities"
+else:
+    template_key = random_selection()  # Auto mode
+```
+
+#### Validation and Auto-Repair Patterns
+**Enhanced Response Processing**: Robust handling of malformed LLM responses
+- **Design Options Validation**: Automatic detection of missing design_options arrays
+- **Auto-Repair Logic**: Inference of design options from story content when metadata is incomplete
+- **Fallback Mechanisms**: Graceful degradation with maintained educational value
+
+**Implementation**:
+```python
+# Auto-fix for missing design_options
+if not design_options:
+    logger.warning(f"⚠️ VALIDATION: design_options is empty or missing")
+    if metadata_dict.get("character_name") or metadata_dict.get("character_description"):
+        design_options = ["character"]
+        logger.info(f"🔧 AUTO-FIX: Inferred design_options as ['character']")
+```
+
+### Code Quality Patterns
+
+#### Random Selection for Engagement
+**Pattern**: Eliminate predictable user experiences through strategic randomization
+- **Design Aspect Selection**: Random choice from available aspects (appearance, personality, skills, dreams, flaws)
+- **Character/Location Focus**: 50/50 random selection when both options available
+- **Template Selection**: Maintains educational balance while providing variety
+
+#### Single-Responsibility Architecture
+**Pattern**: Clear separation of concerns across system components
+- **app.py**: Session management, educational flow control, and business logic
+- **llm_provider.py**: LLM integration, response processing, and educational content generation
+- **vocabulary_manager.py**: Vocabulary selection, filtering, and educational word management
+- **generate_prompt.py**: Prompt engineering and template management
+
+#### Error Handling Philosophy
+**Approach**: Never compromise educational experience due to technical failures
+- **Comprehensive Fallbacks**: Pre-written educational content for all major scenarios
+- **Graceful Degradation**: Maintained educational value even with partial system failures
+- **Child-First Design**: Technical issues invisible to young learners
+
+### Development Workflow Improvements
+
+#### Issue Resolution Process
+1. **Detailed Logging Analysis**: Use comprehensive debug output to identify exact failure points
+2. **Isolated Component Testing**: Test individual functions and components separately
+3. **Testing Infrastructure Utilization**: Use Force Named/Unnamed modes for consistent reproduction
+4. **Validation Enhancement**: Add auto-repair logic for robustness
+5. **Educational Impact Assessment**: Ensure fixes maintain or improve learning outcomes
+
+#### Quality Assurance Standards
+- **Manual Testing**: Both named and unnamed character scenarios tested before deployment
+- **Log Analysis**: Debug output reviewed for unexpected behaviors or edge cases
+- **Educational Review**: All changes evaluated for age-appropriateness and learning effectiveness
+- **Performance Impact**: Response time and user experience maintained during improvements
+
 ## Testing & Quality Assurance
 
 ### Development Testing
@@ -222,6 +325,31 @@ class SessionData:
 - **Static File Serving**: FastAPI serves frontend files efficiently
 - **Environment Variables**: Production secrets management
 - **Process Management**: Single uvicorn process handles all requests
+
+## Hybrid Architecture Implementation
+
+### Prompt Architecture Evolution
+**Current Implementation**: Hybrid approach combining system prompts with programmatic flow control
+
+**System Prompt Loading** (`llm_provider.py`):
+```python
+# Legacy generate_prompt() still used for LLM context
+self.system_prompt = generate_prompt()  # Loads complete 10-step instructions
+```
+
+**Programmatic Flow Control** (`app.py`):
+```python
+# Python manages actual educational progression
+enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(base_prompt, topic)
+response = llm_provider.generate_response(enhanced_prompt)
+# Session state tracking, vocabulary management, design phases
+```
+
+**Why Hybrid Architecture**:
+- **System Context**: LLM receives complete educational framework for consistent tone/approach
+- **Reliable Execution**: Python ensures vocabulary tracking, session management, educational standards
+- **Best of Both**: Maintains LLM creativity while guaranteeing educational progression
+- **Known Gap**: Step 9 "print entire story" from original 10-step flow not yet re-implemented
 
 ## Tool Usage Patterns
 

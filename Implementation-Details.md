@@ -36,7 +36,7 @@ We maintain structured JSON vocabulary files that are loaded once when the app s
 ```
 
 **File Organization**:
-- `backend/vocabulary/general.json` - Core vocabulary (35 words) for any topic
+- `backend/vocabulary/general.json` - Core vocabulary (100 words: 50 tier 2 + 50 tier 3) expanded from original 35
 - `backend/vocabulary/topics/*.json` - Specialized words for popular topics:
   - `sports.json` (20 words): athlete, teamwork, coordination, endurance
   - `animals.json` (20 words): habitat, predator, camouflage, migration  
@@ -44,7 +44,11 @@ We maintain structured JSON vocabulary files that are loaded once when the app s
 
 ### How We Select the Perfect Words
 
-**The Selection Algorithm**: Our system uses a balanced difficulty approach - 50% Level 2 (2nd grade) and 50% Level 3 (3rd grade) words. This creates the optimal challenge level for elementary learners.
+**Revolutionary Selection Algorithm**: Solution 3 - "Massive Vocabulary Pool with LLM as Intelligent Curator"
+- **Vocabulary Pool**: System provides LLM with 40 example words (20 general + 20 topic-specific)
+- **AI Curation**: LLM intelligently selects 2-4 most natural words vs forced/random selection
+- **Variety Breakthrough**: 1,233% increase in selection options (from 3 → 40 words) eliminates repetition
+- **Difficulty Balance**: Maintains 50% Level 2 (2nd grade) and 50% Level 3 (3rd grade) educational standards
 
 **Selection Process**:
 1. **Topic Matching**: If child chooses "sports", we pull from both `sports.json` + `general.json`
@@ -281,7 +285,12 @@ We detect both explicit confirmations ("yes", "sure") and topic suggestions ("sp
 
 ### Our Content Generation Philosophy
 
-**The Strategy**: We combine AI creativity with educational structure. Every piece of content serves dual purposes - engaging the child's curiosity while systematically building vocabulary skills. We never sacrifice educational value for entertainment, but we make learning feel like play.
+**The Strategy**: We use a sophisticated hybrid architecture that combines AI creativity with programmatic educational control. Every piece of content serves dual purposes - engaging the child's curiosity while systematically building vocabulary skills through reliable session management.
+
+**Hybrid Architecture**: Our system evolved from pure prompt-based to a hybrid approach:
+- **System Context**: Legacy prompt system provides LLM with complete educational framework and tone
+- **Programmatic Control**: Python code ensures reliable vocabulary tracking, session state, and educational progression
+- **Best of Both**: Maintains AI creativity while guaranteeing consistent educational standards
 
 **Quality Assurance**: Multiple fallback layers ensure children always receive appropriate content, even if AI systems fail.
 
@@ -291,12 +300,12 @@ We detect both explicit confirmations ("yes", "sure") and topic suggestions ("sp
 
 Our storywriting mode uses a sophisticated prompt architecture built from multiple files:
 
-**System Prompt Foundation** (`intro_prompt.txt`):
+**System Prompt Foundation** (`prompts/story/01_system_role.txt`):
 ```
 You are a friendly and playful English tutor for an elementary school student. You will co-write a story with the child. Some of his favorite book series include Hilo by Judd Winick, and Amulet by Kazu Kibuishi. The child enjoys topics like inventions, animals, soccer, cooking, superheroes, space, or sea creatures. The child likes mysteries, adventures, and comedies.
 ```
 
-**Educational Process** (`story_steps_prompt.txt`):
+**Educational Process** (`prompts/story/03_process_instructions.txt`):
 Our 10-step educational framework ensures systematic learning:
 1. Topic selection with guided choices
 2. Vocabulary generation for chosen topic
@@ -306,7 +315,7 @@ Our 10-step educational framework ensures systematic learning:
 6. Story progression (repeat steps 2-5)
 7. Story conclusion before 300 words
 8. Vocabulary questions (2-3 words, one at a time)
-9. Complete story recap
+9. Complete story recap *(Note: Not yet implemented in current hybrid architecture)*
 10. New story invitation
 
 **Complete Prompt Example for Sports Story**:
