@@ -66,6 +66,7 @@ class ChatRequest(BaseModel):
     message: str
     mode: str = "storywriting"  # "storywriting" or "funfacts"
     sessionData: Optional[SessionData] = None
+    storyMode: Optional[str] = "auto"  # "auto", "named", or "unnamed" for testing
 
 class VocabQuestion(BaseModel):
     question: str
@@ -385,13 +386,14 @@ def select_best_vocabulary_word(available_words: List[str]) -> str:
         logger.warning(f"select_best_vocabulary_word: Using last resort word: '{selected}'")
         return selected
 
-def generate_structured_story_prompt(topic: str) -> str:
+def generate_structured_story_prompt(topic: str, story_mode: str = "auto") -> str:
     """
     Generate a prompt that requests JSON format with story and metadata
-    Uses 40/60 probability split between unnamed/named entities
+    Uses 40/60 probability split between unnamed/named entities, or forced mode for testing
     
     Args:
         topic: The story topic chosen by the child
+        story_mode: "auto" (random), "named" (force named), or "unnamed" (force unnamed)
         
     Returns:
         Structured prompt requesting JSON response with story and character/location metadata
@@ -406,16 +408,26 @@ def generate_structured_story_prompt(topic: str) -> str:
         with open(story_templates_path, 'r') as f:
             templates = json.load(f)
         
-        # Select template based on probability (40% unnamed, 60% named)
-        if random.random() < 0.4:  # 40% probability for unnamed entities
-            template_key = "unnamed_entities"
-            logger.info("🎲 Story Generation: Selected UNNAMED entity template (40% probability)")
-        else:  # 60% probability for named entities  
+        # Select template based on story mode
+        if story_mode == "named":
             template_key = "named_entities"
-            logger.info("🎲 Story Generation: Selected NAMED entity template (60% probability)")
+            logger.info("🎯 Story Generation: FORCED NAMED entity template (testing mode)")
+        elif story_mode == "unnamed":
+            template_key = "unnamed_entities"
+            logger.info("🎯 Story Generation: FORCED UNNAMED entity template (testing mode)")
+        else:  # auto mode - use random selection
+            if random.random() < 0.4:  # 40% probability for unnamed entities
+                template_key = "unnamed_entities"
+                logger.info("🎲 Story Generation: Selected UNNAMED entity template (40% probability)")
+            else:  # 60% probability for named entities  
+                template_key = "named_entities"
+                logger.info("🎲 Story Generation: Selected NAMED entity template (60% probability)")
         
         selected_template = templates[template_key]["prompt_template"]
-        return selected_template.format(topic=topic)
+        logger.info(f"🎯 TEMPLATE DEBUG: Using template '{template_key}' for story_mode '{story_mode}'")
+        formatted_prompt = selected_template.format(topic=topic)
+        logger.info(f"🎯 PROMPT DEBUG: Formatted prompt length: {len(formatted_prompt)} characters")
+        return formatted_prompt
         
     except Exception as e:
         logger.error(f"Error loading story generation templates: {e}")
@@ -461,12 +473,24 @@ def parse_structured_story_response(llm_response: str) -> StructuredStoryRespons
             
         # Create metadata with defaults if missing
         metadata_dict = data.get("metadata", {})
+        
+        # Validate design_options
+        design_options = metadata_dict.get("design_options", [])
+        if not design_options:
+            logger.warning(f"⚠️ VALIDATION: design_options is empty or missing in LLM response")
+            # Try to infer design options from the story content
+            if metadata_dict.get("character_name") or metadata_dict.get("character_description"):
+                design_options = ["character"]
+                logger.info(f"🔧 AUTO-FIX: Inferred design_options as ['character'] from metadata")
+        
         metadata = StoryMetadata(
             character_name=metadata_dict.get("character_name"),
             character_description=metadata_dict.get("character_description"),
             location_name=metadata_dict.get("location_name"),
             location_description=metadata_dict.get("location_description"),
-            design_options=metadata_dict.get("design_options", [])
+            design_options=design_options,
+            needs_naming=metadata_dict.get("needs_naming", False),
+            entity_descriptor=metadata_dict.get("entity_descriptor")
         )
         
         return StructuredStoryResponse(
@@ -510,13 +534,15 @@ def load_design_aspects(design_type: str) -> dict:
         logging.error(f"Invalid JSON in design aspects file {file_path}: {e}")
         return {}
 
-def select_design_focus(character_name: Optional[str], location_name: Optional[str]) -> Optional[str]:
+def select_design_focus(character_name: Optional[str], location_name: Optional[str], design_options: List[str] = None) -> Optional[str]:
     """
     Randomly select character or location design (50/50 split)
+    Supports both named and unnamed entities using design_options fallback
     
     Args:
         character_name: Name of character if introduced
-        location_name: Name of location if introduced
+        location_name: Name of location if introduced  
+        design_options: Available design options from metadata (fallback for unnamed entities)
         
     Returns:
         "character", "location", or None if neither available
@@ -524,10 +550,17 @@ def select_design_focus(character_name: Optional[str], location_name: Optional[s
     import random
     
     available_options = []
+    
+    # Check named entities first
     if character_name:
         available_options.append("character")
     if location_name:
         available_options.append("location")
+    
+    # If no named entities but design_options available, use those (for unnamed entities)
+    if not available_options and design_options:
+        available_options = [option for option in design_options if option in ["character", "location"]]
+        logger.info(f"🔧 UNNAMED ENTITY: Using design_options {design_options} -> available: {available_options}")
     
     if not available_options:
         return None
@@ -558,8 +591,11 @@ def get_next_design_aspect(design_type: str, used_aspects: List[str]) -> str:
         # All aspects used, start over
         available_aspects = list(aspects.keys())
     
-    # Return first available aspect (maintains consistent order)
-    return available_aspects[0]
+    # Return random available aspect for variety and engagement
+    import random
+    selected_aspect = random.choice(available_aspects)
+    logger.info(f"🎲 ASPECT SELECTION: Randomly selected '{selected_aspect}' from {available_aspects}")
+    return selected_aspect
 
 def create_design_prompt(session_data: SessionData) -> ChatResponse:
     """
@@ -674,7 +710,8 @@ def trigger_design_phase(session_data: SessionData, structured_response: Structu
     # Select what to design (character or location)
     session_data.designPhase = select_design_focus(
         metadata.character_name, 
-        metadata.location_name
+        metadata.location_name,
+        metadata.design_options
     )
     
     if not session_data.designPhase:
@@ -692,7 +729,12 @@ def trigger_design_phase(session_data: SessionData, structured_response: Structu
     session_data.namingComplete = False  # Reset naming completion
     
     # Check if entity needs naming first
-    if metadata.needs_naming and not session_data.namingComplete:
+    # Only ask for naming if: needs_naming is True AND no existing name AND naming not completed
+    character_has_name = metadata.character_name and metadata.character_name.strip()
+    location_has_name = metadata.location_name and metadata.location_name.strip()
+    entity_already_named = character_has_name or location_has_name
+    
+    if metadata.needs_naming and not session_data.namingComplete and not entity_already_named:
         logging.info(f"🏷️ Entity needs naming first: {metadata.entity_descriptor}")
         session_data.currentDesignAspect = "naming"
         
@@ -700,6 +742,9 @@ def trigger_design_phase(session_data: SessionData, structured_response: Structu
         design_response = create_design_prompt(session_data)
         design_response.response = structured_response.story
         return design_response
+    elif entity_already_named:
+        logging.info(f"🏷️ Entity already named ({metadata.character_name or metadata.location_name}), skipping naming phase")
+        session_data.designAspectHistory.append("naming")  # Mark naming as used so it won't be selected
     
     logging.info(f"Triggering design phase for {session_data.designPhase}: {metadata.character_name or metadata.location_name}")
     
@@ -886,7 +931,9 @@ async def chat_endpoint(chat_request: ChatRequest):
         logger.info(f"Processing {mode} message: {user_message}")
         
         if mode == "storywriting":
-            return await handle_storywriting(user_message, session_data)
+            story_mode = chat_request.storyMode or "auto"
+            logger.info(f"🎯 STORY MODE DEBUG: Received story_mode parameter: '{story_mode}'")
+            return await handle_storywriting(user_message, session_data, story_mode)
         elif mode == "funfacts":
             return await handle_funfacts(user_message, session_data)
         else:
@@ -896,7 +943,7 @@ async def chat_endpoint(chat_request: ChatRequest):
         logger.error(f"Error processing chat request: {e}")
         return ChatResponse(response="Sorry, I'm having trouble right now. Please try again!")
 
-async def handle_storywriting(user_message: str, session_data: SessionData) -> ChatResponse:
+async def handle_storywriting(user_message: str, session_data: SessionData, story_mode: str = "auto") -> ChatResponse:
     """Handle storywriting mode interactions following the 10-step process"""
     
     # Handle distinct vocabulary phase messages
@@ -919,13 +966,19 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
         session_data.currentStep = 2  # Moving to Step 2 after topic selection
         
         # Generate story beginning with structured response (includes character/location metadata)
-        structured_prompt = generate_structured_story_prompt(topic)
+        structured_prompt = generate_structured_story_prompt(topic, story_mode)
         enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
             structured_prompt, topic, session_data.askedVocabWords
         )
         
         raw_response = llm_provider.generate_response(enhanced_prompt)
+        logger.info(f"🎯 LLM RESPONSE DEBUG: Raw response length: {len(raw_response)} characters")
+        logger.info(f"🎯 LLM RESPONSE DEBUG: First 200 chars: {raw_response[:200]}...")
+        
         structured_response = parse_structured_story_response(raw_response)
+        logger.info(f"🎯 METADATA DEBUG: Parsed metadata: {structured_response.metadata}")
+        logger.info(f"🎯 METADATA DEBUG: design_options: {structured_response.metadata.design_options}")
+        logger.info(f"🎯 METADATA DEBUG: needs_naming: {getattr(structured_response.metadata, 'needs_naming', 'NOT_SET')}")
         
         # Add story to parts for tracking
         session_data.storyParts.append(structured_response.story)
@@ -942,13 +995,18 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
         )
         
         # Check if design phase should be triggered
-        if should_trigger_design_phase(structured_response):
-            logger.info(f"Triggering design phase with options: {structured_response.metadata.design_options}")
+        should_trigger = should_trigger_design_phase(structured_response)
+        logger.info(f"🎯 DESIGN PHASE DEBUG: should_trigger_design_phase() returned: {should_trigger}")
+        logger.info(f"🎯 DESIGN PHASE DEBUG: design_options length: {len(structured_response.metadata.design_options) if structured_response.metadata.design_options else 0}")
+        
+        if should_trigger:
+            logger.info(f"✅ DESIGN PHASE: Triggering design phase with options: {structured_response.metadata.design_options}")
             design_response = trigger_design_phase(session_data, structured_response)
             design_response.suggestedTheme = get_theme_suggestion(topic)
             return design_response
         
         # No design phase needed, continue with regular story
+        logger.info(f"❌ DESIGN PHASE: Skipping design phase - no design options or empty array")
         suggested_theme = get_theme_suggestion(topic)
         
         return ChatResponse(
@@ -1014,7 +1072,7 @@ async def handle_storywriting(user_message: str, session_data: SessionData) -> C
                 suggested_theme = get_theme_suggestion(potential_new_topic)
                 
                 return ChatResponse(
-                    response=f"Great choice! Let's write a {potential_new_topic} story! 🌟\\n\\n{story_response}",
+                    response=f"Great choice! Let's write a {potential_new_topic} story! 🌟\n\n{story_response}",
                     sessionData=session_data,
                     suggestedTheme=suggested_theme
                 )

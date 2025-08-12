@@ -159,6 +159,51 @@ body::before {
     display: none;
 }
 
+/* Story Mode Options - Same styles as theme options */
+.story-mode-options {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 5px;
+}
+
+.story-mode-option {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    gap: 12px;
+    position: relative;
+}
+
+.story-mode-option:hover {
+    background: rgba(0, 0, 0, 0.05);
+    transform: translateX(2px);
+}
+
+.story-mode-option.active {
+    background: rgba(74, 144, 226, 0.15);
+    border: 1px solid rgba(74, 144, 226, 0.3);
+}
+
+.story-mode-emoji {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+.story-mode-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+.story-mode-check {
+    display: none;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
     .settings-container {
@@ -1954,61 +1999,61 @@ body.theme-creative::before {
 /* Themed design suggestion pills */
 .theme-space .design-suggestion-pill {
     background: rgba(138, 43, 226, 0.3);
-    color: #ffffff;
+    color: rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(138, 43, 226, 0.6);
 }
 
 .theme-fantasy .design-suggestion-pill {
     background: rgba(255, 215, 0, 0.3);
-    color: #4a0e4e;
+    color: rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(255, 215, 0, 0.6);
 }
 
 .theme-sports .design-suggestion-pill {
     background: rgba(255, 193, 7, 0.3);
-    color: #2e7d32;
+    color: rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(255, 193, 7, 0.6);
 }
 
 .theme-ocean .design-suggestion-pill {
     background: rgba(0, 188, 212, 0.3);
-    color: #ffffff;
+    color: rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(0, 188, 212, 0.6);
 }
 
 .theme-whimsical .design-suggestion-pill {
     background: rgba(240, 98, 146, 0.3);
-    color: #ffffff;
+    color: rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(240, 98, 146, 0.6);
 }
 
 .theme-fun .design-suggestion-pill {
     background: rgba(255, 217, 61, 0.3);
-    color: #4a148c;
+    color: rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(255, 217, 61, 0.6);
 }
 
 .theme-food .design-suggestion-pill {
     background: rgba(255, 215, 0, 0.3);
-    color: #8b4513;
+    color: rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(255, 215, 0, 0.6);
 }
 
 .theme-animals .design-suggestion-pill {
     background: rgba(139, 69, 19, 0.3);
-    color: #ffffff;
+    color: rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(139, 69, 19, 0.6);
 }
 
 .theme-elegant .design-suggestion-pill {
     background: rgba(255, 215, 0, 0.2);
-    color: #ffffff;
+    color: rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(255, 215, 0, 0.4);
 }
 
 .theme-creative .design-suggestion-pill {
     background: rgba(255, 193, 7, 0.3);
-    color: #8e24aa;
+    color: rgba(255, 255, 255, 0.8);
     border: 1px solid rgba(255, 193, 7, 0.6);
 }
 

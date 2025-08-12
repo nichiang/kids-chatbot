@@ -324,16 +324,19 @@ Return ONLY valid JSON with: question, options (array of 4 strings), correctInde
             try:
                 prompt = f"""As a friendly English tutor for elementary students, analyze this text: "{user_text}"
 
-Following Step 5 of the story process, if there are any grammatical errors or if this is an incomplete sentence, explain what a better written sentence would be. If there is better vocabulary to use, suggest it. Be as brief as possible.
+Following Step 5 of the story process, if there are any grammatical errors or if this is an incomplete sentence, explain what a better written sentence would be. If there is better vocabulary to use, suggest it. 
+
+IMPORTANT: Always include a specific example of a better sentence, especially for incomplete sentences.
 
 If the grammar is correct and complete, return "CORRECT".
 If there's a suggestion, provide it in this format: "You could make that sentence even better by saying '[improved version]'. [Brief explanation]."
 
 Examples:
 - For "practiced." → "You could make that sentence even better by saying 'They practiced hard for the next game.' This gives us more detail about what happened!"
+- For "sara has curly hair" → "Great job, that's a nice start! You could add more details like 'Sara has curly hair and beautiful green eyes.' This makes the description more vivid!"
 - For "He go to the store." → "You could make that sentence even better by saying 'He went to the store.' We use 'went' for past actions!"
 
-Keep it encouraging and simple for 2nd-3rd graders."""
+Always provide encouraging feedback and specific examples to help young learners improve their writing."""
 
                 response = self.client.chat.completions.create(
                     model=self.model,
@@ -367,6 +370,10 @@ Keep it encouraging and simple for 2nd-3rd graders."""
             elif len(user_text.split()) == 1:
                 return f"You could make that sentence even better by adding more details! Try something like 'They {user_text.replace('.', '')} hard to get better.'"
         
+        # Check for descriptive writing opportunities
+        if "has curly hair" in user_lower:
+            return "Great job, that's a nice start! You could add more details like 'Sara has curly hair and beautiful green eyes.' This makes the description more vivid!"
+            
         # Check for common grammar errors
         if user_lower.startswith("she find"):
             return "You could make that sentence even better by saying 'She discovers' or 'She finds'. The word 'discovers' sounds more exciting for an adventure story!"

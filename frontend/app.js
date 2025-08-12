@@ -942,7 +942,8 @@ document.addEventListener("DOMContentLoaded", async function () {
                 body: JSON.stringify({ 
                     message: userMessage,
                     mode: currentMode,
-                    sessionData: sessionData[currentMode]
+                    sessionData: sessionData[currentMode],
+                    storyMode: currentStoryMode // Add story mode for testing
                 })
             });
 
@@ -1272,6 +1273,44 @@ document.addEventListener("DOMContentLoaded", async function () {
             
             // Close dropdown
             settingsDropdown.classList.remove('open');
+        });
+    });
+
+    // Story Mode option selection for testing
+    const storyModeOptions = document.querySelectorAll('.story-mode-option');
+    let currentStoryMode = 'auto'; // Default to auto (random)
+
+    // Update active story mode option
+    function updateActiveStoryModeOption(activeMode) {
+        storyModeOptions.forEach(option => {
+            option.classList.remove('active');
+        });
+        
+        const activeOption = document.querySelector(`.story-mode-option[data-mode="${activeMode}"]`);
+        if (activeOption) {
+            activeOption.classList.add('active');
+        }
+    }
+
+    // Initialize with auto mode active
+    updateActiveStoryModeOption('auto');
+
+    // Story mode option selection
+    storyModeOptions.forEach(option => {
+        option.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const modeName = option.getAttribute('data-mode');
+            
+            // Update current story mode
+            currentStoryMode = modeName;
+            
+            // Update active state
+            updateActiveStoryModeOption(modeName);
+            
+            // Close dropdown
+            settingsDropdown.classList.remove('open');
+            
+            console.log(`Story mode changed to: ${modeName}`);
         });
     });
 
