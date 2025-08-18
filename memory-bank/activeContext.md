@@ -41,9 +41,86 @@ This is a **fully functional, mature educational application** with comprehensiv
 
 **Development Impact**: New contributors can get the full application running with a single `uvicorn app:app --reload` command.
 
+### 4. PromptManager Architecture Analysis & Documentation (Latest Architectural Discovery)
+**Status**: ✅ **COMPREHENSIVE ANALYSIS COMPLETE** - Complete documentation of centralized prompt system architecture
+
+#### Hybrid Prompt Architecture Confirmed
+**Discovery**: The application uses a sophisticated **"Hybrid Prompt Architecture"** that successfully combines:
+- **System-Level Context**: `get_story_system_prompt()` provides complete 10-step educational framework to LLM
+- **Programmatic Flow Control**: Individual action prompts (`get_story_opening_prompt()`, `get_story_continuation_prompt()`, etc.) control specific educational steps
+- **Educational Reliability**: Python code ensures consistent progression while maintaining LLM creativity
+
+**Code Evidence**:
+- `llm_provider.py:27` loads story system prompt: `self.system_prompt = prompt_manager.get_story_system_prompt()`
+- System prompt IS actively passed to OpenAI API calls via `generate_response()` method
+- 609-line PromptManager provides centralized, maintainable prompt generation
+
+#### Universal Vocabulary Enhancement System Confirmed
+**Discovery**: Massive vocabulary pool (Solution 3) is used by **BOTH story and fun facts modes**, not just fun facts
+- **Story Mode**: 5+ calls to `enhance_with_vocabulary()` (lines 809, 903, 987, 1047, 1097 in app.py)
+- **Fun Facts Mode**: 5+ calls to `enhance_with_vocabulary()` (lines 1320, 1386, 1462, 1525 in app.py)
+- **Consistent Implementation**: Both modes receive identical 40-word vocabulary pools for LLM intelligent selection
+
+#### Educational Design Rationale Documented
+**Discovery**: The 2-4 word vocabulary constraint is **intentional educational design**, not technical limitation
+- **Purpose**: Optimal cognitive load for 2nd-3rd graders, focused vocabulary learning objectives
+- **Implementation**: "Solution 3" - LLM intelligently selects 2-4 most natural words from 40-word pools
+- **Creative Balance**: Maintains educational effectiveness while providing extensive creative options
+
+#### Production Architecture Status
+**Confirmed Features**: Comprehensive error handling, template loading system, self-documentation, educational compliance, performance optimization, logging integration, testing support
+
+**Documentation Created**: Complete research findings document at `design/researchFindings/prompt-manager-analysis.md` with code references, line numbers, and architectural insights.
+
+**Development Impact**: Full understanding of prompt system enables confident maintenance and future enhancements without architectural surprises.
+
 ## Current Session Focus
 
-### COMPLETED: Character Naming and Design Phase Bug Resolution (Latest Session)
+### COMPLETED: Character vs Location Template Bug Fix (Latest Session)
+**STATUS**: ✅ **FULLY RESOLVED** - Fixed character/location template mix-up in design phase
+
+#### Bug 23: Character Using Location Template
+**Problem**: System correctly identified "the young astronaut" as a character needing naming, but used location design template ("What should we call this place?") instead of character template.
+
+**Root Cause**: `select_design_focus()` function made random choice between character/location when both were available in `design_options`, even when the entity needing naming was clearly identified.
+
+**Solution Implemented**:
+- Enhanced `select_design_focus()` function with intelligent entity type determination
+- Added `determine_entity_type_from_descriptor()` function to match entity descriptor with character/location descriptions
+- Modified function call to pass full metadata for intelligent matching
+- Added comprehensive logging for debugging future issues
+
+**Code Changes**:
+- `app.py:476-521` - Enhanced design focus selection logic with intelligent entity matching
+- `app.py:695-700` - Updated function call to include metadata parameter
+- Added string matching to identify entity type from descriptor
+
+**Educational Impact**: Character naming now correctly uses character templates, location naming uses location templates, eliminating confusing UI mismatches.
+
+**Testing Results**: Verified fix works correctly - "the young astronaut" now triggers character naming template instead of location template.
+
+### NEXT: Enhanced Story Structure Implementation
+**STATUS**: 🎯 **PLANNING APPROVED** - Ready to implement intelligent narrative completion system
+
+#### Story Flow Enhancement Project Goals
+**Objective**: Implement aspects of Solution 1 from story-structure-and-flow.md research with improved narrative structure.
+
+**Key Requirements from User**:
+- Minimum 3 exchanges, maximum 6 exchanges for attention span
+- Intelligent story completion based on conflict resolution and lesson learned
+- Diverse conflict types: emotional, social, environmental, epic to day-to-day variety
+- Quick testing capability without running full app (story flow simulator)
+- Sample story logs to demonstrate improvements
+
+**Implementation Phases Planned**:
+1. **Story Flow Simulator** - Standalone testing tool for quick iteration without full app
+2. **Conflict Variety System** - Comprehensive conflict taxonomy for age-appropriate scenarios  
+3. **Intelligent Arc Assessment** - LLM-based story completeness analysis (conflict resolution, lesson learned)
+4. **Enhanced Story Logic** - Replace rigid character count (400 chars) with narrative intelligence
+
+**Expected Impact**: Stories will have proper narrative structure, character growth, lesson learning, and natural completion based on content quality rather than arbitrary limits.
+
+### PREVIOUS: Character Naming and Design Phase Bug Resolution
 **STATUS**: ✅ **FULLY RESOLVED** - Major character design system overhaul with comprehensive bug fixes
 
 #### Bug 1: Named Characters Still Asked for Naming

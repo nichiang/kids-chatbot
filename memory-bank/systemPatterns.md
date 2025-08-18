@@ -15,6 +15,74 @@ app.get("/health", ...)
 app.mount("/", StaticFiles(directory="../frontend", html=True), name="static")
 ```
 
+### Hybrid Prompt Architecture Pattern (LATEST DISCOVERY)
+
+**Pattern**: Dual-Layer Prompt System - System Context + Programmatic Flow Control
+- **Why**: Balances LLM educational context with reliable educational progression
+- **Discovery**: System prompts ARE actively used (contrary to assumptions) alongside specific action prompts
+- **Implementation**: PromptManager centralized system with 609 lines of comprehensive prompt generation
+
+**Architecture Layers**:
+```python
+# Layer 1: Educational Context (System Prompts)
+# Provides complete 10-step educational framework to LLM
+story_system_prompt = prompt_manager.get_story_system_prompt()  # Lines 74-92
+facts_system_prompt = prompt_manager.get_facts_system_prompt()  # Lines 252-263
+
+# Layer 2: Specific Action Control (Individual Prompts)  
+opening_prompt = prompt_manager.get_story_opening_prompt(topic, mode)  # Lines 94-133
+continuation_prompt = prompt_manager.get_story_continuation_prompt()   # Lines 134-144
+ending_prompt = prompt_manager.get_story_ending_prompt(topic, context) # Lines 146-161
+```
+
+**Code Integration Pattern**:
+```python
+# llm_provider.py: System prompts loaded on initialization
+self.system_prompt = prompt_manager.get_story_system_prompt()           # Line 27
+self.fun_facts_system_prompt = prompt_manager.get_facts_system_prompt() # Line 28
+
+# API calls use system prompt as context
+effective_system_prompt = system_prompt if system_prompt else self.system_prompt  # Line 48
+```
+
+**Educational Benefits**:
+- **LLM Context**: Complete educational framework and personality provided via system prompt
+- **Flow Reliability**: Python code ensures consistent educational progression
+- **Vocabulary Integration**: Universal enhancement system across both modes
+- **Assessment Generation**: Structured questions from actual content
+
+### Universal Vocabulary Enhancement Pattern (CONFIRMED USAGE)
+
+**Pattern**: Massive Vocabulary Pool with LLM Intelligent Curation (Solution 3)
+- **Scope**: Used by BOTH story mode AND fun facts mode (not just fun facts as assumed)
+- **Implementation**: 40-word pools (20 general + 20 topic) with LLM selection of 2-4 most natural words
+- **Educational Design**: 2-4 word constraint is intentional for optimal cognitive load, not technical limitation
+
+**Story Mode Usage Pattern**:
+```python
+# Multiple vocabulary enhancement calls throughout story flow
+enhanced_prompt, vocab = prompt_manager.enhance_with_vocabulary(base_prompt, topic, used_words)
+# Found at app.py lines: 809, 903, 987, 1047, 1097
+```
+
+**Fun Facts Mode Usage Pattern**:
+```python  
+# Identical vocabulary enhancement for facts mode
+enhanced_prompt, vocab = prompt_manager.enhance_with_vocabulary(base_prompt, topic, used_words)
+# Found at app.py lines: 1320, 1386, 1462, 1525
+```
+
+**Vocabulary Pool Generation**:
+```python
+def generate_massive_vocabulary_pool(topic, used_words):
+    # 20 general vocabulary (tier 2+3) + 20 topic-specific vocabulary
+    # LLM intelligently selects 2-4 most natural words vs forced insertion
+    # 1,233% increase in variety over previous 3-word approach
+    return {'general_pool': general_words, 'topic_pool': topic_words}
+```
+
+**Architectural Rule**: Both educational modes maintain identical vocabulary learning standards and anti-repetition mechanisms.
+
 ### Vocabulary Question Generation Architecture (CRITICAL FIX)
 
 **Pattern**: Single-Point Vocabulary Selection with Proper Filtering

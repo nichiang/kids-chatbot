@@ -7,25 +7,29 @@ import logging
 import json
 import os
 from llm_provider import llm_provider
-from generate_prompt import generate_prompt, load_file, generate_fun_facts_prompt
+# REMOVED: generate_prompt import no longer needed (PromptManager handles all prompt logic)
 from vocabulary_manager import vocabulary_manager
+from prompt_manager import prompt_manager
 
-# HYBRID ARCHITECTURE OVERVIEW:
-# This app uses a sophisticated hybrid approach combining system prompts with programmatic flow control:
+# PROMPT MANAGER ARCHITECTURE:
+# Centralized prompt generation with self-documenting methods for maintainability:
 # 
-# SYSTEM CONTEXT (llm_provider.py): 
-# - Legacy generate_prompt() loads complete 10-step educational instructions as system prompt
-# - Provides LLM with full educational framework, tone, and context
+# PROMPT MANAGER (prompt_manager.py):
+# - Single source of truth for all prompt generation
+# - Clear method names show complete user experience flow
+# - Self-documenting: get_story_opening_prompt(), get_grammar_feedback_prompt(), etc.
+# - No documentation drift: code IS the documentation
 #
-# PROGRAMMATIC CONTROL (this file):
-# - Python code manages actual educational flow step-by-step for reliability
-# - Session state management ensures vocabulary tracking, anti-repetition, progress tracking
-# - Educational standards validation guarantees age-appropriate content and learning objectives
+# BUSINESS LOGIC (this file):
+# - Session state management and educational flow control
+# - Clean PromptManager usage with readable method calls
+# - Vocabulary tracking, anti-repetition, progress tracking
+# - Educational standards validation and fallback handling
 #
-# ARCHITECTURAL EVOLUTION:
-# - Original pure prompt-based approach was unreliable (LLM would skip steps, ignore requirements)
-# - Current hybrid maintains LLM creativity while ensuring consistent educational progression
-# - Known gap: Step 9 "print entire story" from original 10-step flow not yet re-implemented
+# BENEFITS:
+# - Complete user experience visible through method names
+# - Easy to find, modify, and test individual prompts
+# - Inherently maintainable without separate documentation
 
 # Design Phase Models - Must be defined before functions that use them
 class StoryMetadata(BaseModel):
@@ -131,95 +135,12 @@ def load_theme_config():
 THEME_CONFIG = load_theme_config()
 
 
-def generate_vocabulary_enhanced_prompt(base_prompt: str, topic: str, used_words: List[str] = None, word_count: int = 3) -> tuple[str, List[str]]:
-    """
-    Generate a prompt enhanced with massive vocabulary pool for LLM intelligent selection
-    
-    SOLUTION 3: Massive Vocabulary Pool with LLM as Intelligent Curator
-    - Provides 40 example words (20 general tier 2+3 + 20 topic words) 
-    - LLM intelligently selects 2-4 most natural words for content
-    - Eliminates repetition through massive selection pool
-    - Maintains optimal learning targets for 2nd-3rd graders
-    
-    Args:
-        base_prompt: The base prompt template
-        topic: Topic for vocabulary selection
-        used_words: Previously used words to avoid
-        word_count: Ignored - now controlled by LLM intelligent selection
-    
-    Returns:
-        Tuple of (enhanced_prompt, expected_vocabulary_range)
-    """
-    if used_words is None:
-        used_words = []
-    
-    # SOLUTION 3: Generate massive vocabulary pools for LLM selection
-    vocab_pools = generate_massive_vocabulary_pool(topic, used_words)
-    
-    if vocab_pools['general_pool'] or vocab_pools['topic_pool']:
-        # Create enhanced prompt with massive vocabulary selection
-        vocab_instruction = f"""
-
-You have access to these educational vocabulary words for natural integration:
-
-GENERAL WORDS (Tier 2+3): {', '.join(vocab_pools['general_pool'])}
-
-TOPIC-SPECIFIC WORDS: {', '.join(vocab_pools['topic_pool'])}
-
-CRITICAL INSTRUCTIONS:
-- Select ONLY 2-4 words total that fit most naturally in your content
-- Choose words that enhance meaning rather than feel forced
-- Bold selected words using **word** format  
-- Prioritize natural, engaging flow over vocabulary count
-- Mix general and topic words for variety
-- Content must feel captivating, not educational-sounding
-
-EXAMPLE POOLS PROVIDED: {vocab_pools['total_examples']} words
-TARGET USAGE: Select 2-4 most natural words only"""
-
-        enhanced_prompt = base_prompt + vocab_instruction
-        # Return expected vocabulary range instead of pre-selected words
-        expected_vocab = ['LLM_SELECTED_2_TO_4_WORDS']
-        
-    else:
-        # Fallback if no vocabulary available
-        enhanced_prompt = base_prompt + " Bold 2-4 challenging or important words using **word** format. DO NOT include vocabulary questions or definitions in the content."
-        expected_vocab = []
-        vocab_pools = {'general_pool': [], 'topic_pool': [], 'excluded_words': used_words, 'total_examples': 0}
-    
-    return enhanced_prompt, expected_vocab
-
-
-def generate_massive_vocabulary_pool(topic: str, used_words: List[str] = None) -> Dict[str, any]:
-    """
-    SOLUTION 3: Generate massive vocabulary pools for LLM intelligent selection
-    
-    Returns 40 total example words (20 general + 20 topic) for LLM to choose from,
-    while maintaining optimal 2-4 word learning targets for children.
-    
-    Args:
-        topic: Topic for vocabulary selection
-        used_words: Previously used words to prefer fresh options
-    
-    Returns:
-        Dictionary with general_pool, topic_pool, total_examples, and target_usage
-    """
-    if used_words is None:
-        used_words = []
-    
-    # Get 20 tier 2+3 words from general pool (skip tier 1 - too easy for advanced learners)
-    general_pool = select_advanced_general_words(count=20, exclude=used_words)
-    
-    # Get all available topic-specific words (typically 20 words per topic)
-    topic_pool = get_all_topic_vocabulary(topic)
-    
-    return {
-        'general_pool': general_pool,     # 20 tier 2+3 words
-        'topic_pool': topic_pool,         # 20 topic words  
-        'total_examples': len(general_pool) + len(topic_pool),  # ~40 words total
-        'target_usage': '2-4 words only',  # Still optimal for learning
-        'excluded_words': used_words  # For debug info
-    }
+# REMOVED: Old prompt generation functions moved to PromptManager for better organization
+# - generate_vocabulary_enhanced_prompt() -> prompt_manager.enhance_with_vocabulary()
+# - generate_massive_vocabulary_pool() -> prompt_manager.generate_massive_vocabulary_pool()  
+# - generate_structured_story_prompt() -> prompt_manager.get_story_opening_prompt()
+#
+# All prompt logic now centralized in prompt_manager.py with self-documenting method names
 
 
 def select_advanced_general_words(count: int = 20, exclude: List[str] = None) -> List[str]:
@@ -343,7 +264,7 @@ def log_vocabulary_debug_info(topic: str, used_words: List[str], content: str, c
     import re
     
     # Generate vocabulary pools for debug info
-    vocab_pools = generate_massive_vocabulary_pool(topic, used_words)
+    vocab_pools = prompt_manager.generate_massive_vocabulary_pool(topic, used_words)
     bolded_words = re.findall(r'\*\*(.*?)\*\*', content)
     
     debug_info = {
@@ -403,7 +324,8 @@ def select_best_vocabulary_word(available_words: List[str]) -> str:
         logger.warning(f"select_best_vocabulary_word: Using last resort word: '{selected}'")
         return selected
 
-def generate_structured_story_prompt(topic: str, story_mode: str = "auto") -> str:
+# DEPRECATED: Use prompt_manager.get_story_opening_prompt() instead
+def generate_structured_story_prompt_DEPRECATED(topic: str, story_mode: str = "auto") -> str:
     """
     Generate a prompt that requests JSON format with story and metadata
     Uses 40/60 probability split between unnamed/named entities, or forced mode for testing
@@ -551,15 +473,50 @@ def load_design_aspects(design_type: str) -> dict:
         logging.error(f"Invalid JSON in design aspects file {file_path}: {e}")
         return {}
 
-def select_design_focus(character_name: Optional[str], location_name: Optional[str], design_options: List[str] = None) -> Optional[str]:
+def determine_entity_type_from_descriptor(metadata: StoryMetadata) -> Optional[str]:
     """
-    Randomly select character or location design (50/50 split)
-    Supports both named and unnamed entities using design_options fallback
+    Determine whether entity_descriptor refers to character or location
+    by matching it with character_description or location_description
+    
+    Args:
+        metadata: Story metadata with entity_descriptor and descriptions
+        
+    Returns:
+        "character", "location", or None if no clear match
+    """
+    if not metadata.entity_descriptor:
+        return None
+    
+    descriptor = metadata.entity_descriptor.strip().lower()
+    
+    # Check if entity_descriptor matches character_description
+    if metadata.character_description:
+        char_desc = metadata.character_description.strip().lower()
+        if descriptor == char_desc or descriptor in char_desc or char_desc in descriptor:
+            logger.info(f"🔍 ENTITY TYPE: '{metadata.entity_descriptor}' matches character_description '{metadata.character_description}'")
+            return "character"
+    
+    # Check if entity_descriptor matches location_description  
+    if metadata.location_description:
+        loc_desc = metadata.location_description.strip().lower()
+        if descriptor == loc_desc or descriptor in loc_desc or loc_desc in descriptor:
+            logger.info(f"🔍 ENTITY TYPE: '{metadata.entity_descriptor}' matches location_description '{metadata.location_description}'")
+            return "location"
+    
+    # If no clear match, log for debugging and return None (will fall back to random)
+    logger.warning(f"🔍 ENTITY TYPE: Could not determine type for '{metadata.entity_descriptor}' - char: '{metadata.character_description}', loc: '{metadata.location_description}'")
+    return None
+
+def select_design_focus(character_name: Optional[str], location_name: Optional[str], design_options: List[str] = None, metadata: Optional[StoryMetadata] = None) -> Optional[str]:
+    """
+    Select character or location design with intelligent entity type determination
+    For unnamed entities that need naming, determines type based on entity_descriptor match
     
     Args:
         character_name: Name of character if introduced
         location_name: Name of location if introduced  
         design_options: Available design options from metadata (fallback for unnamed entities)
+        metadata: Full story metadata for intelligent entity type determination
         
     Returns:
         "character", "location", or None if neither available
@@ -578,14 +535,24 @@ def select_design_focus(character_name: Optional[str], location_name: Optional[s
     if not available_options and design_options:
         available_options = [option for option in design_options if option in ["character", "location"]]
         logger.info(f"🔧 UNNAMED ENTITY: Using design_options {design_options} -> available: {available_options}")
+        
+        # BUG FIX: For unnamed entities that need naming, determine entity type intelligently
+        # Instead of random choice, match entity_descriptor with character/location descriptions
+        if metadata and metadata.needs_naming and metadata.entity_descriptor:
+            entity_type = determine_entity_type_from_descriptor(metadata)
+            if entity_type and entity_type in available_options:
+                logger.info(f"🎯 NAMING BUG FIX: entity_descriptor '{metadata.entity_descriptor}' -> entity_type '{entity_type}'")
+                return entity_type
     
     if not available_options:
         return None
     elif len(available_options) == 1:
         return available_options[0]
     else:
-        # 50/50 random choice when both are available
-        return random.choice(available_options)
+        # 50/50 random choice when both are available and no specific naming requirement
+        choice = random.choice(available_options)
+        logger.info(f"🎲 RANDOM DESIGN CHOICE: Selected '{choice}' from {available_options}")
+        return choice
 
 def get_next_design_aspect(design_type: str, used_aspects: List[str]) -> str:
     """
@@ -728,7 +695,8 @@ def trigger_design_phase(session_data: SessionData, structured_response: Structu
     session_data.designPhase = select_design_focus(
         metadata.character_name, 
         metadata.location_name,
-        metadata.design_options
+        metadata.design_options,
+        metadata  # Pass full metadata for intelligent entity type determination
     )
     
     if not session_data.designPhase:
@@ -837,11 +805,7 @@ async def handle_design_phase_interaction(user_message: str, session_data: Sessi
                    else session_data.storyMetadata.location_name)
     
     # Provide brief writing feedback (act as English tutor)
-    feedback_prompt = f"""As a friendly English tutor, provide very brief feedback on this child's descriptive writing about their {session_data.designPhase} {subject_name}:
-
-"{user_message}"
-
-Give 1-2 sentences of encouraging feedback. If there are grammar issues, gently suggest improvements. If the description is good, celebrate it! Keep it very brief and positive."""
+    feedback_prompt = prompt_manager.get_grammar_feedback_prompt(user_message, subject_name, session_data.designPhase)
     
     try:
         feedback_response = llm_provider.generate_response(feedback_prompt)
@@ -884,13 +848,11 @@ Give 1-2 sentences of encouraging feedback. If there are grammar issues, gently 
         story_context = " | ".join(session_data.storyParts[-3:]) if session_data.storyParts else ""
         design_summary = f"The child has helped design {subject_name} with these details from our design session."
         
-        continuation_prompt = f"""Continue the story about {session_data.topic}. Previous context: {story_context}
-
-{design_summary} The child just described: "{user_message}"
-
-Write a paragraph that is 2-4 sentences long incorporating the child's creative input about {subject_name}. Use vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. Bold 2-3 vocabulary words using **word** format."""
+        continuation_prompt = prompt_manager.get_design_continuation_prompt(
+            session_data.topic, story_context, design_summary, user_message, subject_name
+        )
         
-        enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+        enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
             continuation_prompt, session_data.topic, 
             session_data.askedVocabWords + session_data.contentVocabulary
         )
@@ -983,8 +945,8 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
         session_data.currentStep = 2  # Moving to Step 2 after topic selection
         
         # Generate story beginning with structured response (includes character/location metadata)
-        structured_prompt = generate_structured_story_prompt(topic, story_mode)
-        enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+        structured_prompt = prompt_manager.get_story_opening_prompt(topic, story_mode)
+        enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
             structured_prompt, topic, session_data.askedVocabWords
         )
         
@@ -1067,8 +1029,8 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
                 session_data.contentVocabulary = []  # Reset content vocabulary for new story
                 
                 # Generate story beginning with vocabulary integration
-                base_prompt = f"The child has chosen the topic: {potential_new_topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."
-                enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+                base_prompt = prompt_manager.get_topic_selection_story_prompt(potential_new_topic)
+                enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
                     base_prompt, potential_new_topic, session_data.askedVocabWords
                 )
                 story_response = llm_provider.generate_response(enhanced_prompt)
@@ -1127,8 +1089,8 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
                     session_data.contentVocabulary = []  # Reset content vocabulary for new story
                     
                     # Generate story beginning with vocabulary integration
-                    base_prompt = f"The child has chosen the topic: {potential_new_topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."
-                    enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+                    base_prompt = prompt_manager.get_topic_selection_story_prompt(potential_new_topic)
+                    enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
                         base_prompt, potential_new_topic, session_data.askedVocabWords
                     )
                     story_response = llm_provider.generate_response(enhanced_prompt)
@@ -1177,8 +1139,8 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
         should_end_story = (session_data.currentStep >= 3 and total_story_length > 400) or session_data.currentStep >= 6
         if should_end_story:
             # End the story with vocabulary integration
-            base_prompt = f"End the story about {session_data.topic}. Previous context: {story_context}. Write a final paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. End the story with a satisfying conclusion and add 'The end!' at the very end. DO NOT ask the child to continue. DO NOT include vocabulary questions - those will be handled separately."
-            enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+            base_prompt = prompt_manager.get_story_ending_prompt(session_data.topic, story_context)
+            enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
                 base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
             )
             story_response = llm_provider.generate_response(enhanced_prompt)
@@ -1211,8 +1173,8 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
             )
         else:
             # Continue story with vocabulary integration
-            base_prompt = f"Continue the story about {session_data.topic}. Previous context: {story_context}. Write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. Keep this a short story - try to end it before it goes over 300 words total. DO NOT include vocabulary questions - those will be handled separately."
-            enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+            base_prompt = prompt_manager.get_continue_story_prompt(session_data.topic, story_context)
+            enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
                 base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
             )
             story_response = llm_provider.generate_response(enhanced_prompt)
@@ -1381,7 +1343,7 @@ async def handle_finish_vocabulary(session_data: SessionData) -> ChatResponse:
     session_data.vocabularyPhase.isActive = False
     session_data.awaiting_story_confirmation = True
     
-    story_completion_prompt = "Wonderful job with the vocabulary! You've done great! Would you like to write another story? Here are some fun ideas:\n\n🚀 Space adventures\n🏰 Fantasy quests\n⚽ Sports excitement\n🦄 Magical creatures\n🕵️ Mystery solving\n🍕 Food adventures\n🐾 Animal stories\n🌊 Ocean explorations\n\nWhat sounds interesting to you?"
+    story_completion_prompt = prompt_manager.get_story_completion_prompt()
     
     return ChatResponse(
         response=story_completion_prompt,
@@ -1400,8 +1362,8 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
         session_data.contentVocabulary = []  # Reset content vocabulary for new topic
         
         # Generate first fact with vocabulary integration using external prompt system
-        base_prompt = generate_fun_facts_prompt('first_fact', topic=topic)
-        enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+        base_prompt = prompt_manager.get_first_fact_prompt(topic)
+        enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
             base_prompt, topic, session_data.askedVocabWords
         )
         fact_response = llm_provider.generate_response(enhanced_prompt, system_prompt=llm_provider.fun_facts_system_prompt)
@@ -1462,13 +1424,12 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
         if session_data.factsShown < 3:  # Show 3 facts per topic
             # Generate another fact with vocabulary integration using external prompt system
             previous_facts = " | ".join(session_data.allFacts) if session_data.allFacts else "None"
-            base_prompt = generate_fun_facts_prompt(
-                'continuing_fact', 
-                topic=session_data.topic, 
-                fact_number=session_data.factsShown + 1,
-                previous_facts=previous_facts
+            base_prompt = prompt_manager.get_continuing_fact_prompt(
+                session_data.topic, 
+                session_data.factsShown + 1,
+                previous_facts
             )
-            enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+            enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
                 base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
             )
             fact_response = llm_provider.generate_response(enhanced_prompt, system_prompt=llm_provider.fun_facts_system_prompt)
@@ -1543,8 +1504,8 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 session_data.contentVocabulary = []  # Reset content vocabulary for fresh start
                 
                 # Generate first fact for continuing topic using external prompt system
-                base_prompt = generate_fun_facts_prompt('new_topic', topic=session_data.topic)
-                enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+                base_prompt = prompt_manager.get_new_topic_fact_prompt(session_data.topic)
+                enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
                     base_prompt, session_data.topic, session_data.askedVocabWords
                 )
                 logger.info(f"Continuing same topic '{session_data.topic}' - generated prompt: {enhanced_prompt[:200]}...")
@@ -1606,8 +1567,8 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 session_data.contentVocabulary = []  # Reset content vocabulary for new topic
                 
                 # Generate first fact for new topic with vocabulary integration using external prompt system
-                base_prompt = generate_fun_facts_prompt('new_topic', topic=new_topic)
-                enhanced_prompt, selected_vocab = generate_vocabulary_enhanced_prompt(
+                base_prompt = prompt_manager.get_new_topic_fact_prompt(new_topic)
+                enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
                     base_prompt, new_topic, session_data.askedVocabWords
                 )
                 fact_response = llm_provider.generate_response(enhanced_prompt, system_prompt=llm_provider.fun_facts_system_prompt)

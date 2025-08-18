@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 from dotenv import load_dotenv
 import openai
-from generate_prompt import generate_prompt
+from prompt_manager import prompt_manager
 
 # Load environment variables from .env file
 load_dotenv()
@@ -20,14 +20,12 @@ class LLMProvider:
         self.model = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
         self.base_url = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
         
-        # HYBRID ARCHITECTURE: Load legacy system prompt for LLM educational context
-        # NOTE: generate_prompt() loads complete 10-step instructions from prompts/story/03_process_instructions.txt
-        # This provides LLM with full educational framework, but actual flow is controlled by app.py
-        # This hybrid approach ensures reliable vocabulary tracking + educational standards while maintaining LLM creativity
-        self.system_prompt = generate_prompt()
-        
-        # Load fun facts system prompt
-        self.fun_facts_system_prompt = self._load_fun_facts_system_prompt()
+        # PROMPT MANAGER ARCHITECTURE: Load system prompts via centralized PromptManager
+        # Provides LLM with complete educational framework while maintaining clean separation
+        # Story mode: Complete 10-step educational process with tutor personality
+        # Facts mode: Engaging content creation guidelines for elementary students
+        self.system_prompt = prompt_manager.get_story_system_prompt()
+        self.fun_facts_system_prompt = prompt_manager.get_facts_system_prompt()
         
         # Initialize OpenAI client
         if self.api_key:
@@ -40,15 +38,7 @@ class LLMProvider:
             logger.warning("OpenAI API key not found. Using fallback responses.")
             self.client = None
         
-    def _load_fun_facts_system_prompt(self) -> str:
-        """Load the fun facts system prompt from file"""
-        try:
-            from pathlib import Path
-            return Path("prompts/fun_facts/01_system_role.txt").read_text().strip()
-        except Exception as e:
-            logger.error(f"Error loading fun facts system prompt: {e}")
-            # Fallback to a basic fun facts system prompt
-            return "You are a friendly educational content creator for elementary school students. Generate engaging fun facts without including vocabulary questions in the content."
+    # REMOVED: _load_fun_facts_system_prompt() -> now handled by prompt_manager.get_facts_system_prompt()
     
     def generate_response(self, prompt: str, max_tokens: int = 300, system_prompt: str = None) -> str:
         """
