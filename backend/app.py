@@ -82,6 +82,14 @@ class SessionData(BaseModel):
     storyMetadata: Optional[StoryMetadata] = None  # Store LLM metadata about story elements
     designComplete: bool = False  # Track if design phase is finished
     namingComplete: bool = False  # Track if naming phase is finished for unnamed entities
+    
+    # Enhanced Story Structure Fields
+    storyPhase: Optional[str] = None  # "setup", "development", "climax", "resolution"
+    conflictType: Optional[str] = None  # "emotional", "social", "problem_solving", "environmental", "adventure"
+    conflictScale: Optional[str] = None  # "epic_scale", "daily_scale"
+    narrativeAssessment: Optional[dict] = None  # Last LLM assessment results
+    characterGrowthScore: int = 0  # 0-100 scale tracking character development
+    completenessScore: int = 0  # 0-100 scale tracking story completeness
 
 class ChatRequest(BaseModel):
     message: str
@@ -1134,9 +1142,39 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
         # Generate next part of story (Steps 2-4 repeated)
         story_context = "\n".join(session_data.storyParts[-3:])  # Last 3 parts for context
         
-        # Check if story should end (minimum 2 exchanges, maximum 5, or if story is getting long)
-        total_story_length = len(' '.join(session_data.storyParts))
-        should_end_story = (session_data.currentStep >= 3 and total_story_length > 400) or session_data.currentStep >= 6
+        # ENHANCED STORY STRUCTURE: Intelligent story assessment
+        # Replace rigid character count + step rules with narrative intelligence
+        
+        # Step 1: Assess current story narrative structure
+        if session_data.currentStep >= 2:  # Only assess after some story development
+            try:
+                # Get story arc assessment from LLM
+                assessment_prompt = prompt_manager.get_story_arc_assessment_prompt(
+                    session_data.storyParts, session_data.topic
+                )
+                assessment_response = llm_provider.generate_response(assessment_prompt)
+                
+                # Parse assessment JSON
+                import json
+                assessment = json.loads(assessment_response)
+                
+                # Update session data with assessment
+                session_data.narrativeAssessment = assessment
+                session_data.storyPhase = assessment.get('current_phase', 'development')
+                session_data.characterGrowthScore = assessment.get('character_growth', 0)
+                session_data.completenessScore = assessment.get('completeness_score', 0)
+                session_data.conflictType = assessment.get('conflict_type', 'none')
+                
+                logger.info(f"📖 STORY ARC ASSESSMENT: Phase={session_data.storyPhase}, Growth={session_data.characterGrowthScore}%, Complete={session_data.completenessScore}%, Conflict={session_data.conflictType}")
+                
+            except Exception as e:
+                logger.error(f"❌ Story assessment failed: {e}, falling back to quality gates")
+                session_data.narrativeAssessment = None
+        
+        # Step 2: Intelligent story ending decision  
+        should_end_story, ending_reason = prompt_manager.should_end_story_intelligently(session_data)
+        logger.info(f"📖 STORY ENDING DECISION: {should_end_story}, reason: {ending_reason}")
+        
         if should_end_story:
             # End the story with vocabulary integration
             base_prompt = prompt_manager.get_story_ending_prompt(session_data.topic, story_context)
@@ -1172,8 +1210,30 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
                 sessionData=session_data
             )
         else:
-            # Continue story with vocabulary integration
-            base_prompt = prompt_manager.get_continue_story_prompt(session_data.topic, story_context)
+            # Continue story with narrative-aware prompts based on assessment
+            if session_data.narrativeAssessment:
+                # Use intelligent narrative continuation based on story arc assessment
+                base_prompt = prompt_manager.get_narrative_continuation_prompt(
+                    session_data.narrativeAssessment, session_data.topic, story_context
+                )
+                logger.info(f"📖 NARRATIVE CONTINUATION: Using phase-aware prompt for {session_data.storyPhase} phase")
+            else:
+                # Fallback to standard continuation prompt
+                base_prompt = prompt_manager.get_continue_story_prompt(session_data.topic, story_context)
+                logger.info(f"📖 NARRATIVE CONTINUATION: Using standard continuation prompt")
+            
+            # Add conflict integration if story lacks clear conflict
+            if (session_data.narrativeAssessment and 
+                not session_data.narrativeAssessment.get('has_clear_conflict', False) and 
+                session_data.currentStep <= 3):
+                
+                # Add age-appropriate conflict to enhance story
+                conflict_prompt = prompt_manager.get_conflict_integration_prompt(
+                    session_data.topic, session_data.conflictType, session_data.conflictScale
+                )
+                base_prompt += f"\n\nADDITIONAL GUIDANCE: {conflict_prompt}"
+                logger.info(f"📖 CONFLICT INTEGRATION: Added conflict guidance for {session_data.topic} story")
+            
             enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
                 base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
             )

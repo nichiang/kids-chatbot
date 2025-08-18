@@ -1,0 +1,169 @@
+{
+  "emotional_conflicts": {
+    "description": "Character faces internal struggles, self-doubt, or emotional growth challenges",
+    "epic_scale": {
+      "description": "Life-changing emotional challenges with world-level stakes",
+      "scenarios": [
+        "Character discovers they're the chosen one but feels completely inadequate for the task",
+        "Hero must overcome deep-rooted fear of magic to save their enchanted homeland", 
+        "Young person doubts their special abilities when the entire kingdom depends on them",
+        "Character feels overwhelming burden of responsibility for protecting their world",
+        "Reluctant hero must find courage they never knew they had to face ancient evil",
+        "Character struggles with destiny vs personal desires when world needs saving"
+      ]
+    },
+    "daily_scale": {
+      "description": "Relatable emotional challenges from everyday childhood experiences",
+      "scenarios": [
+        "Child nervous about first day at new school where they know nobody",
+        "Feeling left out when best friends play games without including them",
+        "Scared to perform solo in school talent show with everyone watching",
+        "Worried about disappointing parents with bad report card grades",
+        "Anxious about trying out for sports team and possibly not making it",
+        "Embarrassed after making mistake in front of entire class"
+      ]
+    }
+  },
+  "social_conflicts": {
+    "description": "Character navigates relationships, friendships, teamwork, or community challenges",
+    "epic_scale": {
+      "description": "Large-scale social conflicts affecting entire communities or species",
+      "scenarios": [
+        "Unite two warring kingdoms through the power of friendship and understanding",
+        "Bring together different magical species who have been enemies for centuries",
+        "Help former enemy become trusted ally to face an even greater threat together",
+        "Bridge the gap between humans and mythical creatures through diplomacy",
+        "Convince rival factions to work together to save their shared homeland",
+        "Transform bitter conflict into cooperation to overcome natural disaster"
+      ]
+    },
+    "daily_scale": {
+      "description": "Common social situations and relationship challenges for children",
+      "scenarios": [
+        "Make friends with shy new classmate who sits alone at lunch",
+        "Resolve argument with best friend over borrowed toy that got broken",
+        "Include lonely student in group activity when others want to exclude them",
+        "Help two siblings stop fighting over sharing favorite video game",
+        "Convince team members to work together instead of arguing during game",
+        "Stand up for friend being teased by other kids on playground"
+      ]
+    }
+  },
+  "problem_solving": {
+    "description": "Character faces puzzles, mysteries, or challenges requiring creative thinking",
+    "epic_scale": {
+      "description": "World-important puzzles and mysteries with dramatic consequences", 
+      "scenarios": [
+        "Solve ancient magical puzzle to break curse threatening entire kingdom",
+        "Discover cure for mysterious plague affecting all magical creatures",
+        "Find three missing artifacts before evil villain uses them for destruction",
+        "Decode cryptic prophecy to prevent foretold disaster from occurring",
+        "Uncover secret to defeating invincible monster terrorizing the land",
+        "Figure out how to restore magic to world where it's mysteriously vanishing"
+      ]
+    },
+    "daily_scale": {
+      "description": "Everyday problems and mysteries children can relate to",
+      "scenarios": [
+        "Find beloved pet who escaped from backyard before dinnertime",
+        "Figure out how to fix favorite toy that broke during playtime",
+        "Help grandma locate missing recipe book needed for special dinner",
+        "Solve mystery of who keeps taking lunch money from school lockers",
+        "Discover why plants in garden keep dying despite careful watering",
+        "Find way to return lost wallet to rightful owner in busy city"
+      ]
+    }
+  },
+  "environmental": {
+    "description": "Character faces challenges from nature, weather, or physical obstacles",
+    "epic_scale": {
+      "description": "Dangerous natural environments with high stakes survival elements",
+      "scenarios": [
+        "Survive treacherous journey through dangerous enchanted forest full of magical creatures",
+        "Navigate through violent magical storm to deliver urgent message to distant kingdom",
+        "Cross treacherous mountain range during winter to reach safe haven",
+        "Escape from ancient temple that's crumbling and filling with sand",
+        "Find way through maze-like underground caverns before torch burns out",
+        "Survive on mysterious island while searching for way back home"
+      ]
+    },
+    "daily_scale": {
+      "description": "Common environmental challenges children might face",
+      "scenarios": [
+        "Get home safely during unexpected thunderstorm while walking from school",
+        "Help injured baby bird find its way back to nest in tall tree",
+        "Navigate through crowded amusement park to find parents after getting separated",
+        "Find shelter during camping trip when tent breaks in sudden rainstorm",
+        "Safely cross busy street when traffic light isn't working properly",
+        "Get home from friend's house when bike tire goes flat far from home"
+      ]
+    }
+  },
+  "adventure_conflicts": {
+    "description": "Character embarks on quests, expeditions, or exciting journeys",
+    "epic_scale": {
+      "description": "Grand adventures with exploration of new worlds or realms",
+      "scenarios": [
+        "Explore newly discovered magical realm to map its wonders and dangers",
+        "Journey to the edge of known world to find legendary treasure",
+        "Venture into space to make first contact with alien civilization",
+        "Dive deep into ocean to discover underwater kingdom thought to be myth",
+        "Travel through time to prevent historical disaster from occurring",
+        "Quest through multiple dimensions to collect scattered magical crystals"
+      ]
+    },
+    "daily_scale": {
+      "description": "Smaller adventures and explorations appropriate for children",
+      "scenarios": [
+        "Explore mysterious old house in neighborhood that everyone thinks is haunted",
+        "Go on treasure hunt through local park using cryptic map found in attic",
+        "Journey to new part of city to find special ingredients for science project",
+        "Adventure through hiking trail to reach beautiful waterfall at the end",
+        "Explore abandoned building safely to retrieve ball that went over fence",
+        "Go on camping adventure in backyard and survive entire night outdoors"
+      ]
+    }
+  },
+  "educational_themes": {
+    "cooperation": "Working together achieves more than working alone",
+    "perseverance": "Keep trying even when things get difficult",
+    "kindness": "Small acts of kindness can make big differences",
+    "courage": "Being brave doesn't mean not being scared",
+    "creativity": "Thinking differently can solve impossible problems",
+    "friendship": "True friends support each other through challenges",
+    "responsibility": "Taking care of others makes you grow stronger",
+    "curiosity": "Asking questions leads to amazing discoveries",
+    "empathy": "Understanding others' feelings helps solve conflicts",
+    "self_confidence": "Believing in yourself helps you achieve goals"
+  },
+  "age_appropriate_guidelines": {
+    "vocabulary_level": "2nd-3rd grade reading level with challenging but understandable words",
+    "conflict_intensity": "Challenging but not frightening - children should feel empowered not scared",
+    "resolution_patterns": "Characters should solve problems through their own actions and growth",
+    "emotional_safety": "Conflicts should build confidence rather than create anxiety",
+    "learning_integration": "Each conflict should naturally teach valuable life lesson",
+    "cultural_sensitivity": "Scenarios should be inclusive and respectful of diverse backgrounds"
+  },
+  "narrative_patterns": {
+    "setup_phase": {
+      "purpose": "Introduce character and establish normal world before conflict",
+      "duration": "1-2 exchanges",
+      "key_elements": ["relatable character", "clear setting", "hint of coming challenge"]
+    },
+    "development_phase": {
+      "purpose": "Character faces obstacles and tries different approaches", 
+      "duration": "2-3 exchanges",
+      "key_elements": ["escalating challenge", "character attempts", "learning moments"]
+    },
+    "climax_phase": {
+      "purpose": "Most important moment where character faces biggest challenge",
+      "duration": "1 exchange", 
+      "key_elements": ["peak tension", "character choice", "use of lesson learned"]
+    },
+    "resolution_phase": {
+      "purpose": "Show how character has grown and what they learned",
+      "duration": "1 exchange",
+      "key_elements": ["problem solved", "character growth", "lesson reinforced"]
+    }
+  }
+}

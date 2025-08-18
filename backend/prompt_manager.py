@@ -45,6 +45,11 @@ class PromptManager:
             loc_aspects_path = Path("prompts/design/location_design_aspects.json")
             with open(loc_aspects_path, 'r') as f:
                 self.location_aspects = json.load(f)
+            
+            # Load conflict types for enhanced story structure
+            conflict_types_path = Path("prompts/story/05_conflict_types.json")
+            with open(conflict_types_path, 'r') as f:
+                self.conflict_types = json.load(f)
                 
             logger.info("✅ PromptManager templates loaded successfully")
             
@@ -54,6 +59,7 @@ class PromptManager:
             self.story_templates = {}
             self.character_aspects = {}
             self.location_aspects = {}
+            self.conflict_types = {}
     
     def _load_file(self, file_path: str) -> str:
         """Load text content from file"""
@@ -244,6 +250,241 @@ What sounds interesting to you?"""
         return f"""Continue the story about {topic}. Previous context: {context}. 
 
 Write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. Keep this a short story - try to end it before it goes over 300 words total. DO NOT include vocabulary questions - those will be handled separately."""
+    
+    # ================================
+    # ENHANCED STORY STRUCTURE METHODS
+    # ================================
+    
+    def get_story_arc_assessment_prompt(self, story_parts: List[str], topic: str) -> str:
+        """
+        Analyze story for narrative structure, conflict, and character development.
+        
+        Creates prompt for LLM to assess current story phase and readiness for completion.
+        Follows PromptManager pattern of self-documenting method names.
+        
+        Args:
+            story_parts: List of story exchanges so far
+            topic: Story topic for context
+            
+        Returns:
+            Assessment prompt for LLM to analyze narrative structure
+        """
+        story_text = "\n".join(story_parts)
+        
+        return f"""Analyze this collaborative story for 2nd-3rd graders:
+
+STORY TOPIC: {topic}
+STORY SO FAR:
+{story_text}
+
+Assess the narrative structure and return JSON in this exact format:
+{{
+    "current_phase": "setup|development|climax|resolution",
+    "completeness_score": 0-100,
+    "character_growth": 0-100,
+    "has_clear_conflict": true|false,
+    "conflict_type": "emotional|social|problem_solving|environmental|adventure|none",
+    "lesson_learned": true|false,
+    "ready_to_resolve": true|false,
+    "next_guidance": "Brief guidance for what should happen next"
+}}
+
+ASSESSMENT CRITERIA:
+- Setup: Character and setting introduced, conflict hinted
+- Development: Character faces challenges, tries solutions
+- Climax: Most important moment, biggest challenge
+- Resolution: Problem solved, character growth shown
+
+- Character Growth: How much has the character learned/changed?
+- Completeness: Does story feel ready to end naturally?
+- Conflict: Is there a clear challenge being addressed?
+- Lesson: Has character learned something valuable?
+
+Focus on age-appropriate narrative elements for elementary students."""
+    
+    def get_narrative_continuation_prompt(self, assessment: dict, topic: str, story_context: str) -> str:
+        """
+        Generate phase-aware story continuation prompt based on narrative assessment.
+        
+        Uses assessment results to create intelligent guidance for next story beat.
+        Integrates seamlessly with existing enhance_with_vocabulary() method.
+        
+        Args:
+            assessment: Dictionary from story arc assessment
+            topic: Story topic
+            story_context: Previous story context
+            
+        Returns:
+            Intelligent prompt for narrative-aware story continuation
+        """
+        current_phase = assessment.get('current_phase', 'development')
+        character_growth = assessment.get('character_growth', 0)
+        has_conflict = assessment.get('has_clear_conflict', False)
+        
+        # Phase-specific guidance
+        phase_prompts = {
+            'setup': f"Continue setting up the {topic} story. Introduce the main character's problem or adventure. Make the character relatable to children and hint at the challenge ahead.",
+            
+            'development': f"Develop the {topic} story by having the character face challenges. Escalate the problem or adventure. Show the character trying different solutions and learning from attempts.",
+            
+            'climax': f"Bring the {topic} story to its most exciting or important moment. This is where the character faces their biggest challenge and must use what they've learned.",
+            
+            'resolution': f"Resolve the {topic} story in a satisfying way. Show how the character has grown and what they learned. End with 'The end!' Make it feel complete and rewarding."
+        }
+        
+        base_guidance = phase_prompts.get(current_phase, phase_prompts['development'])
+        
+        # Add specific guidance based on assessment
+        additional_guidance = []
+        
+        if character_growth < 50:
+            additional_guidance.append("Focus on how this experience is changing or teaching the character")
+            
+        if not has_conflict:
+            additional_guidance.append("Introduce a clear, age-appropriate problem or challenge for the character to overcome")
+            
+        if assessment.get('ready_to_resolve', False) and current_phase != 'resolution':
+            additional_guidance.append("Begin working toward a satisfying resolution that shows character growth")
+        
+        if additional_guidance:
+            base_guidance += " " + ". ".join(additional_guidance) + "."
+        
+        return f"""{base_guidance}
+
+Previous story context: {story_context}
+
+Write 2-4 engaging sentences using vocabulary suitable for 2nd-3rd graders. 
+Then invite the child to continue the story without giving them any options.
+Bold 2-3 vocabulary words using **word** format."""
+    
+    def get_conflict_integration_prompt(self, topic: str, conflict_type: str = None, scale: str = None) -> str:
+        """
+        Add age-appropriate conflict to story based on type and scale.
+        
+        Selects from conflict_types.json and integrates into narrative naturally.
+        Provides variety from epic adventures to everyday challenges.
+        
+        Args:
+            topic: Story topic for context
+            conflict_type: Type of conflict (emotional, social, etc.) or None for random
+            scale: Scale of conflict (epic_scale, daily_scale) or None for random
+            
+        Returns:
+            Prompt for introducing appropriate conflict into story
+        """
+        try:
+            # Select conflict type and scale if not specified
+            if conflict_type is None:
+                available_types = [k for k in self.conflict_types.keys() if k != 'educational_themes' and k != 'age_appropriate_guidelines' and k != 'narrative_patterns']
+                conflict_type = random.choice(available_types)
+            
+            if scale is None:
+                scale = random.choice(['epic_scale', 'daily_scale'])
+            
+            # Get scenarios for the selected type and scale
+            if conflict_type in self.conflict_types and scale in self.conflict_types[conflict_type]:
+                scenarios = self.conflict_types[conflict_type][scale].get('scenarios', [])
+                if scenarios:
+                    selected_scenario = random.choice(scenarios)
+                    
+                    return f"""Introduce this type of conflict into the {topic} story: {selected_scenario}
+
+Make the conflict age-appropriate for 2nd-3rd graders. The challenge should be:
+- Engaging but not frightening
+- Something the character can realistically overcome
+- Connected to the {topic} theme
+- An opportunity for character growth and learning
+
+Write 2-4 sentences that naturally introduce this challenge into the story.
+Bold 2-3 vocabulary words using **word** format."""
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to generate conflict integration prompt: {e}")
+        
+        # Fallback prompt if conflict selection fails
+        return f"""Introduce an age-appropriate challenge or problem into the {topic} story.
+
+The challenge should be:
+- Suitable for 2nd-3rd graders (engaging but not scary)
+- Something the character can overcome through their own efforts
+- Connected to the {topic} theme
+- An opportunity for learning and growth
+
+Write 2-4 sentences that naturally introduce this challenge.
+Bold 2-3 vocabulary words using **word** format."""
+    
+    def should_end_story_intelligently(self, session_data) -> Tuple[bool, str]:
+        """
+        Determine if story should end based on narrative completeness rather than rigid rules.
+        
+        Replaces arbitrary character count and step limits with intelligent assessment.
+        Maintains 3-6 exchange range while prioritizing narrative satisfaction.
+        
+        Args:
+            session_data: Current session data with story progress
+            
+        Returns:
+            Tuple of (should_end: bool, reason: str)
+        """
+        # Import here to avoid circular imports
+        from typing import TYPE_CHECKING
+        if TYPE_CHECKING:
+            from app import SessionData
+        
+        # Hard limits for attention span and minimum structure
+        if session_data.currentStep < 3:
+            return False, f"Minimum exchanges not reached: {session_data.currentStep} < 3"
+            
+        if session_data.currentStep >= 6:
+            return True, f"Maximum exchanges reached: {session_data.currentStep} >= 6"
+        
+        # Check if we have narrative assessment data
+        if hasattr(session_data, 'narrativeAssessment') and session_data.narrativeAssessment:
+            assessment = session_data.narrativeAssessment
+            
+            completeness = assessment.get('completeness_score', 0)
+            character_growth = assessment.get('character_growth', 0)
+            ready_to_resolve = assessment.get('ready_to_resolve', False)
+            current_phase = assessment.get('current_phase', 'development')
+            
+            # Intelligent ending conditions
+            if completeness >= 85 and character_growth >= 70:
+                return True, f"Story complete: {completeness}% completeness, {character_growth}% character growth"
+                
+            if ready_to_resolve and current_phase == 'resolution' and session_data.currentStep >= 4:
+                return True, f"Natural resolution reached in {current_phase} phase after {session_data.currentStep} exchanges"
+                
+            if character_growth >= 80 and completeness >= 60 and session_data.currentStep >= 4:
+                return True, f"Strong character development: {character_growth}% growth, {completeness}% complete"
+            
+            return False, f"Story developing: {completeness}% complete, {character_growth}% growth, phase: {current_phase}"
+        
+        # Fallback to improved quality gates if no assessment available
+        story_parts = getattr(session_data, 'storyParts', [])
+        if story_parts:
+            story_text = ' '.join(story_parts).lower()
+            
+            # Quality indicators
+            has_character = any(word in story_text for word in ['he', 'she', 'they', 'character', 'hero', 'girl', 'boy'])
+            has_action = any(word in story_text for word in ['went', 'found', 'discovered', 'saw', 'met', 'tried', 'solved'])
+            has_resolution = any(word in story_text for word in ['finally', 'then', 'after', 'solved', 'learned', 'the end'])
+            
+            word_count = len(story_text.split())
+            
+            # Quality-based ending decision
+            quality_score = 0
+            if has_character: quality_score += 25
+            if has_action: quality_score += 25
+            if has_resolution: quality_score += 35
+            if word_count >= 100: quality_score += 15
+            
+            if quality_score >= 70 and session_data.currentStep >= 3:
+                return True, f"Quality threshold met: {quality_score}% quality score with {session_data.currentStep} exchanges"
+            
+            return False, f"Quality developing: {quality_score}% quality, {word_count} words, {session_data.currentStep} exchanges"
+        
+        # Final fallback
+        return False, f"Insufficient data for assessment at step {session_data.currentStep}"
     
     # ================================
     # FUN FACTS MODE PROMPTS  
@@ -583,6 +824,12 @@ TARGET USAGE: Select 2-4 most natural words only"""
                 "get_story_completion_prompt",
                 "get_topic_selection_story_prompt",
                 "get_continue_story_prompt"
+            ],
+            "enhanced_story_structure": [
+                "get_story_arc_assessment_prompt",
+                "get_narrative_continuation_prompt",
+                "get_conflict_integration_prompt",
+                "should_end_story_intelligently"
             ],
             "facts_mode": [
                 "get_facts_system_prompt",

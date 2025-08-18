@@ -1,0 +1,20 @@
+CONFLICT VARIETY TEST
+========================================
+Testing 30 random conflict selections...
+
+CONFLICT TYPE DISTRIBUTION:
+  Emotional Conflicts: 7 (23.3%)
+  Environmental: 9 (30.0%)
+  Problem Solving: 8 (26.7%)
+  Social Conflicts: 6 (20.0%)
+
+SCALE DISTRIBUTION:
+  Daily Scale: 16 (53.3%)
+  Epic Scale: 14 (46.7%)
+
+SAMPLE SCENARIOS:
+  1. environmental (epic_scale): Navigate through magical storm to deliver important message
+  2. problem_solving (daily_scale): Figure out how to fix broken favorite toy
+  3. problem_solving (epic_scale): Find missing artifact before villain does
+  4. social_conflicts (epic_scale): Unite warring kingdoms through friendship
+  5. problem_solving (daily_scale): Figure out how to fix broken favorite toy
