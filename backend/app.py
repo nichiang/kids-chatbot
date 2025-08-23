@@ -853,16 +853,24 @@ def validate_entity_structure(entities: StoryEntities) -> bool:
         logging.warning("⚠️ VALIDATION: No entities found for design phase")
         return False
         
-    # Check for designable entities (unnamed entities that need naming/design)
-    designable_entities = len(entities.characters.unnamed) + len(entities.locations.unnamed)
-    if designable_entities == 0:
-        logging.info("ℹ️ VALIDATION: Only named entities found - no design phase needed")
+    # Check for designable entities (both named and unnamed entities can be designed)
+    named_entities = len(entities.characters.named) + len(entities.locations.named)
+    unnamed_entities = len(entities.characters.unnamed) + len(entities.locations.unnamed)
+    total_designable = named_entities + unnamed_entities
+    
+    if total_designable == 0:
+        logging.info("ℹ️ VALIDATION: No entities found - no design phase needed")
         return False
         
-    logging.info(f"✅ VALIDATION: Found {designable_entities} designable entities for design phase")
+    if unnamed_entities > 0:
+        logging.info(f"✅ VALIDATION: Found {unnamed_entities} unnamed entities for full design phase (naming + aspects)")
+    if named_entities > 0:
+        logging.info(f"✅ VALIDATION: Found {named_entities} named entities for aspect design phase (skip naming)")
+        
+    logging.info(f"✅ VALIDATION: Total {total_designable} entities available for design phase")
     return True
 
-def get_next_design_entity(entities: StoryEntities, designed_entities: List[str] = None) -> Optional[Tuple[str, str]]:
+def get_next_design_entity(entities: StoryEntities, designed_entities: List[str] = None) -> Optional[Tuple[str, str, bool]]:
     """
     Get the next entity that needs design from entity lists
     
@@ -871,22 +879,37 @@ def get_next_design_entity(entities: StoryEntities, designed_entities: List[str]
         designed_entities: List of entities already designed
         
     Returns:
-        Tuple of (entity_type, entity_descriptor) or None if no more entities
+        Tuple of (entity_type, entity_descriptor, is_named) or None if no more entities
+        is_named indicates whether to skip naming phase (True = skip naming, False = start with naming)
     """
     if designed_entities is None:
         designed_entities = []
         
+    # Priority 1: Unnamed entities (need full design: naming + aspects)
     # Check unnamed characters first
     for char in entities.characters.unnamed:
         if char not in designed_entities:
-            logging.info(f"🎯 DESIGN: Next entity is character '{char}'")
-            return ("character", char)
+            logging.info(f"🎯 DESIGN: Next entity is unnamed character '{char}' (full design)")
+            return ("character", char, False)  # is_named = False, so start with naming
             
     # Check unnamed locations next
     for loc in entities.locations.unnamed:
         if loc not in designed_entities:
-            logging.info(f"🎯 DESIGN: Next entity is location '{loc}'")
-            return ("location", loc)
+            logging.info(f"🎯 DESIGN: Next entity is unnamed location '{loc}' (full design)")
+            return ("location", loc, False)  # is_named = False, so start with naming
+    
+    # Priority 2: Named entities (aspect design only, skip naming)
+    # Check named characters
+    for char in entities.characters.named:
+        if char not in designed_entities:
+            logging.info(f"🎯 DESIGN: Next entity is named character '{char}' (aspect design only)")
+            return ("character", char, True)  # is_named = True, so skip naming
+            
+    # Check named locations
+    for loc in entities.locations.named:
+        if loc not in designed_entities:
+            logging.info(f"🎯 DESIGN: Next entity is named location '{loc}' (aspect design only)")
+            return ("location", loc, True)  # is_named = True, so skip naming
             
     logging.info("✅ DESIGN: All entities have been designed")
     return None
@@ -1229,15 +1252,26 @@ def trigger_enhanced_design_phase(session_data: SessionData, enhanced_response: 
             sessionData=session_data
         )
         
-    entity_type, entity_descriptor = next_entity
+    entity_type, entity_descriptor, is_named = next_entity
     session_data.currentEntityType = entity_type
     session_data.currentEntityDescriptor = entity_descriptor
     
     # Set design phase type
     session_data.designPhase = entity_type
     
-    # Always start with naming for unnamed entities
-    session_data.currentDesignAspect = "naming"
+    # Determine starting aspect based on whether entity is already named
+    if is_named:
+        # Named entity: Skip naming, start with appearance/personality/etc
+        session_data.namingComplete = True  # Mark as already named
+        # Choose a random aspect for variety (appearance, personality, dreams, skills)
+        import random
+        aspects = ["appearance", "personality", "dreams", "skills"] 
+        session_data.currentDesignAspect = random.choice(aspects)
+        logging.info(f"🎯 ENHANCED DESIGN: Named entity '{entity_descriptor}' - starting with {session_data.currentDesignAspect} aspect")
+    else:
+        # Unnamed entity: Start with naming as before
+        session_data.currentDesignAspect = "naming"
+        logging.info(f"🎯 ENHANCED DESIGN: Unnamed entity '{entity_descriptor}' - starting with naming")
     
     logging.info(f"🎯 ENHANCED DESIGN: Starting design for {entity_type} '{entity_descriptor}'")
     
@@ -1315,13 +1349,43 @@ def create_enhanced_design_prompt(session_data: SessionData) -> ChatResponse:
     else:
         # Handle description aspects (appearance, personality, dreams, skills, flaws)
         try:
-            # Get the named entity (should exist since we just completed naming)
+            # Get the named entity - prioritize enhanced system for named entities
             entity_name = "the entity"  # fallback
-            if session_data.storyMetadata:
+            
+            # For enhanced system: check if we have a current entity descriptor 
+            if hasattr(session_data, 'currentEntityDescriptor') and session_data.currentEntityDescriptor:
+                # If this is a design phase for a named entity (already has a name in storyMetadata)
+                # or if the descriptor looks like a name (single word, capitalized), use it directly
+                descriptor = session_data.currentEntityDescriptor
+                
+                # Check if this looks like a proper name (single capitalized word)
+                if descriptor and len(descriptor.split()) == 1 and descriptor[0].isupper():
+                    entity_name = descriptor
+                    logging.info(f"🎯 ENHANCED ENTITY NAME: Using currentEntityDescriptor '{entity_name}' (detected as proper name)")
+                # Otherwise, check storyMetadata for the actual name (for entities that went through naming)
+                elif session_data.storyMetadata:
+                    if entity_type == "character" and session_data.storyMetadata.character_name:
+                        entity_name = session_data.storyMetadata.character_name
+                        logging.info(f"🎯 ENHANCED ENTITY NAME: Using storyMetadata character_name '{entity_name}' for descriptor '{descriptor}'")
+                    elif entity_type == "location" and session_data.storyMetadata.location_name:
+                        entity_name = session_data.storyMetadata.location_name
+                        logging.info(f"🎯 ENHANCED ENTITY NAME: Using storyMetadata location_name '{entity_name}' for descriptor '{descriptor}'")
+                    else:
+                        # If no name in storyMetadata, use descriptor as fallback
+                        entity_name = descriptor
+                        logging.info(f"🎯 ENHANCED ENTITY NAME: Using currentEntityDescriptor '{entity_name}' as fallback")
+                else:
+                    # Use descriptor directly if no storyMetadata
+                    entity_name = descriptor
+                    logging.info(f"🎯 ENHANCED ENTITY NAME: Using currentEntityDescriptor '{entity_name}' (no storyMetadata)")
+            
+            # Legacy system fallback: check storyMetadata only
+            elif session_data.storyMetadata:
                 if entity_type == "character" and session_data.storyMetadata.character_name:
                     entity_name = session_data.storyMetadata.character_name
                 elif entity_type == "location" and session_data.storyMetadata.location_name:
                     entity_name = session_data.storyMetadata.location_name
+                logging.info(f"🎯 LEGACY ENTITY NAME: Using storyMetadata name '{entity_name}'")
             
             # Get design template for this aspect
             design_templates = content_manager.content.get("design_templates", {})
@@ -1904,7 +1968,7 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
                 session_data.narrativeAssessment = None
                 
                 # Generate story beginning with enhanced entity metadata system
-                story_prompt = create_enhanced_story_prompt(potential_new_topic, "auto")
+                story_prompt = prompt_manager.get_story_opening_prompt(potential_new_topic, "auto")
                 raw_response = llm_provider.generate_response(story_prompt)
                 
                 # Parse response using same logic as first story (enhanced entity system)
@@ -2021,7 +2085,7 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
                     session_data.narrativeAssessment = None
                     
                     # Generate story beginning with enhanced entity metadata system (topic switch)
-                    story_prompt = create_enhanced_story_prompt(potential_new_topic, "auto")
+                    story_prompt = prompt_manager.get_story_opening_prompt(potential_new_topic, "auto")
                     raw_response = llm_provider.generate_response(story_prompt)
                     
                     # Parse response using same logic as first story (enhanced entity system)
