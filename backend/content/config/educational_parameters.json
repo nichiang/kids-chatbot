@@ -1,0 +1,96 @@
+{
+  "description": "Educational parameters and settings for the English Learning Chatbot",
+  
+  "age_range": {
+    "target_grade": "2nd-3rd grade",
+    "reading_level": "Strong 2nd grader to 3rd grader",
+    "vocabulary_difficulty": "Tier 2 (cross-curricular) and Tier 3 (domain-specific) words",
+    "attention_span": "3-6 exchanges per story for optimal engagement"
+  },
+  
+  "story_parameters": {
+    "length_guidelines": {
+      "target_word_count": 300,
+      "paragraph_length": "2-4 sentences",
+      "vocabulary_words_per_section": "2-3 bolded words"
+    },
+    "narrative_structure": {
+      "phases": ["setup", "development", "climax", "resolution"],
+      "character_growth_target": 70,
+      "completeness_threshold": 85,
+      "minimum_exchanges": 3,
+      "maximum_exchanges": 6
+    },
+    "design_phase": {
+      "max_design_aspects": 2,
+      "aspect_rotation": true,
+      "naming_phase_required": true
+    }
+  },
+  
+  "vocabulary_parameters": {
+    "pool_sizes": {
+      "general_words": 20,
+      "topic_words": 20,
+      "total_examples": 40
+    },
+    "selection_criteria": {
+      "target_word_count": "2-4 words per content piece",
+      "anti_repetition": true,
+      "context_appropriateness": "high",
+      "educational_value": "tier 2-3 words preferred"
+    },
+    "assessment": {
+      "questions_per_story": 3,
+      "multiple_choice_options": 4,
+      "context_based_questions": true
+    }
+  },
+  
+  "fun_facts_parameters": {
+    "facts_per_topic": 3,
+    "engagement_techniques": {
+      "real_world_examples": true,
+      "famous_personalities": true,
+      "record_breaking_facts": true,
+      "cultural_connections": true
+    },
+    "content_variety": [
+      "Scientific discoveries",
+      "Historical events", 
+      "Amazing abilities",
+      "Scale comparisons",
+      "Cultural traditions"
+    ]
+  },
+  
+  "feedback_guidelines": {
+    "grammar_correction": {
+      "approach": "positive and encouraging",
+      "format": "suggestion with explanation",
+      "examples_provided": true
+    },
+    "vocabulary_feedback": {
+      "correct_answer": "enthusiastic praise",
+      "incorrect_answer": "gentle correction with answer"
+    },
+    "writing_encouragement": {
+      "creativity_focus": true,
+      "effort_recognition": true,
+      "specific_praise": true
+    }
+  },
+  
+  "technical_parameters": {
+    "response_timeout": "2 minutes",
+    "content_length_limits": {
+      "story_paragraph": "2-4 sentences",
+      "fun_fact": "2-3 sentences",
+      "feedback_message": "1-2 sentences"
+    },
+    "fallback_behavior": {
+      "api_unavailable": "use_system_fallbacks",
+      "content_missing": "graceful_degradation"
+    }
+  }
+}

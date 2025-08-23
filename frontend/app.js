@@ -35,6 +35,86 @@ document.addEventListener("DOMContentLoaded", async function () {
         };
     }
 
+    // === LATENCY MEASUREMENT SYSTEM ===
+    
+    class LatencyTracker {
+        constructor() {
+            this.measurements = [];
+            this.storyExchanges = [];
+        }
+        
+        startMeasurement(interactionType) {
+            return {
+                type: interactionType,
+                startTime: performance.now(),
+                timestamp: new Date().toISOString()
+            };
+        }
+        
+        endMeasurement(measurement, responseType) {
+            const endTime = performance.now();
+            const latency = endTime - measurement.startTime;
+            
+            const result = {
+                ...measurement,
+                latency: Math.round(latency),
+                responseType: responseType,
+                endTime: endTime
+            };
+            
+            this.measurements.push(result);
+            
+            // Story-specific tracking
+            if (measurement.type === 'story_exchange') {
+                this.storyExchanges.push(result);
+            }
+            
+            console.log(`🕐 ${measurement.type}: ${Math.round(latency)}ms`);
+            return result;
+        }
+        
+        getStoryAverageLatency() {
+            if (this.storyExchanges.length === 0) return 0;
+            const total = this.storyExchanges.reduce((sum, ex) => sum + ex.latency, 0);
+            return Math.round(total / this.storyExchanges.length);
+        }
+        
+        logStoryCompletion(topic, mode) {
+            const avgLatency = this.getStoryAverageLatency();
+            const storyData = {
+                exchangeCount: this.storyExchanges.length,
+                averageLatency: avgLatency,
+                exchanges: this.storyExchanges,
+                completionTime: new Date().toISOString(),
+                topic: topic,
+                mode: mode
+            };
+            
+            console.log('📊 Story Completed:', storyData);
+            
+            // Send to backend for logging (if desired)
+            this.sendToBackend('story_completed', storyData);
+            
+            // Reset for next story
+            this.storyExchanges = [];
+        }
+        
+        async sendToBackend(eventType, data) {
+            try {
+                // Optional: Send latency data to backend for centralized logging
+                // Could be implemented as a separate endpoint like /api/latency
+                console.log(`📤 Frontend latency data (${eventType}):`, data);
+            } catch (error) {
+                console.warn('Failed to send latency data to backend:', error);
+            }
+        }
+    }
+    
+    // Initialize latency tracker
+    const latencyTracker = new LatencyTracker();
+    
+    // === END LATENCY MEASUREMENT SYSTEM ===
+
     // App state
     let currentMode = 'funfacts'; // 'storywriting' or 'funfacts'
     let isInDesignPhase = false; // Track if user is currently in character/location design phase
@@ -203,7 +283,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     // Initialize Storywriting mode
     function initializeStorywriting() {
         if (!sessionData.storywriting.topic) {
-            appendMessage("bot", "Hi there! I'm excited to co-write a story with you! 📚✨\n\nWhat kind of story would you like to write today? Here are some fun options:\n\n🚀 Space adventures\n🏰 Fantasy quests\n⚽ Sports excitement\n🦄 Magical creatures\n🕵️ Mystery solving\n\nWhat sounds interesting to you?");
+            appendMessage("bot", "Hi there! I'm excited to co-write a story with you! 📚✨\n\nWhat kind of story would you like to write today? Here are some fun options:\n\n🚀 Space adventures\n🏰 Fantasy quests\n⚽ Sports excitement\n🎉 School adventures\n👫 Friendship journeys \n🦄 Magical creatures\n🕵️ Mystery solving\n\nWhat sounds interesting to you?");
         } else {
             // Continue existing story
             appendMessage("bot", "Let's continue our story! What happens next?");
@@ -898,6 +978,10 @@ document.addEventListener("DOMContentLoaded", async function () {
         const userMessage = chatInput.value.trim();
         if (!userMessage) return;
 
+        // Start latency measurement
+        const interactionType = currentMode === 'storywriting' ? 'story_exchange' : 'fun_facts_exchange';
+        const measurement = latencyTracker.startMeasurement(interactionType);
+
         appendMessage("user", userMessage);
         chatInput.value = "";
         
@@ -997,10 +1081,23 @@ document.addEventListener("DOMContentLoaded", async function () {
                     setTimeout(() => {
                         startVocabularyPhase();
                     }, 2000);
+                    
+                    // Log story completion latency
+                    latencyTracker.logStoryCompletion(
+                        data.sessionData.topic || 'unknown',
+                        currentMode
+                    );
                 }
             }
+            
+            // End latency measurement
+            const responseType = data.vocabQuestion ? 'vocab_question' : 
+                                data.designPrompt ? 'design_prompt' : 'content_response';
+            latencyTracker.endMeasurement(measurement, responseType);
 
         } catch (err) {
+            // End latency measurement for error case
+            latencyTracker.endMeasurement(measurement, 'error');
             // Remove thinking message
             chatLog.removeChild(chatLog.lastChild);
             appendMessage("bot", "Sorry, I'm having trouble connecting right now. Please try again!");

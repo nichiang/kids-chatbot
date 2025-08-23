@@ -1,0 +1,65 @@
+{
+  "description": "Centralized bot responses for English Learning Chatbot. Edit these messages to change what the bot says to users.",
+  
+  "errors": {
+    "mode_error": "I'm not sure what mode that is! Try storywriting or fun facts.",
+    "processing_error": "Sorry, I'm having trouble right now. Please try again!",
+    "clarification_needed": "I'm not sure if you want to write another story. Would you like to pick one of those story ideas, or are you done for now?"
+  },
+  
+  "story_mode": {
+    "story_ending": "The end! 🌟",
+    "continue_story": "Let's continue with your story!",
+    "session_goodbye": "That's perfectly fine! Thanks for sharing this wonderful story adventure with me. You did such a great job! 🌟",
+    "new_story_celebration": "Great choice! Let's write a {topic} story! 🌟",
+    "design_feedback": "What a perfect name! {name} is such a wonderful choice for this {entity_type}! 🌟",
+    "design_transition": "Now let's bring {name} to life with more details!",
+    "design_completion": "Perfect! Now let's continue our story with {name}. What happens next in the adventure?",
+    "writing_encouragement": "Great description! I love how creative you are with your writing.",
+    "continue_same_topic": "Great! Let's continue with more {topic} facts!"
+  },
+  
+  "vocabulary": {
+    "intro_after_story": "Great story! Now let's test your vocabulary:",
+    "next_question": "Let's try another vocabulary question:",
+    "completion_celebration": "Wonderful job with the vocabulary! You've done great! Would you like to write another story? Here are some fun ideas:",
+    "correct_answer": "That's right! Great job!",
+    "incorrect_answer": "Nice try — the right answer is {correct_answer}."
+  },
+  
+  "fun_facts": {
+    "topic_exhausted": "We've explored some great {topic} facts! Would you like to learn about a different topic? Try animals, space, inventions, or something else!"
+  },
+  
+  "new_story_suggestions": {
+    "topics_list": [
+      "🚀 Space adventures",
+      "🏰 Fantasy quests", 
+      "⚽ Sports excitement",
+      "🦄 Magical creatures",
+      "🕵️ Mystery solving",
+      "🍕 Food adventures",
+      "🐾 Animal stories",
+      "🌊 Ocean explorations"
+    ],
+    "intro_text": "Wonderful job with the vocabulary! You've done great! Would you like to write another story? Here are some fun ideas:",
+    "closing_text": "What sounds interesting to you?"
+  },
+  
+  "design_phase": {
+    "naming_feedback": "What a perfect name! {provided_name} is such a wonderful choice for this {design_phase}! 🌟",
+    "naming_transition": "Now let's bring {provided_name} to life with more details!",
+    "design_feedback_transition": "{feedback_response}\n\nWonderful! Now let's add more details to make {subject_name} even more interesting!",
+    "design_completion": "{feedback_response}\n\nPerfect! You've helped bring {subject_name} to life! Here's how the story continues:",
+    "design_completion_simple": "{feedback_response}\n\nThanks for helping design {subject_name}! Let's continue our story. What happens next?"
+  },
+  
+  "encouragement": {
+    "creative_writing": "I love how creative you are with your writing!",
+    "good_description": "Great description!",
+    "wonderful_details": "Wonderful! You're adding such great details!",
+    "perfect_choice": "What a perfect choice!",
+    "great_job": "Great job!",
+    "nice_work": "Nice work!"
+  }
+}

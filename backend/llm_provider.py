@@ -1,6 +1,8 @@
 import os
 import json
 import logging
+import time
+from functools import wraps
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 from dotenv import load_dotenv
@@ -13,6 +15,40 @@ load_dotenv()
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Global list to track LLM call timing data - accessed by app.py latency logger
+llm_call_timings = []
+
+def measure_llm_call(call_type: str):
+    """Decorator to measure LLM API call duration (for sync functions)"""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            start_time = time.perf_counter()
+            
+            try:
+                result = func(*args, **kwargs)
+                duration = (time.perf_counter() - start_time) * 1000
+                
+                llm_call_timings.append({
+                    'type': call_type,
+                    'duration': round(duration, 2),
+                    'timestamp': time.time()
+                })
+                
+                return result
+            except Exception as e:
+                duration = (time.perf_counter() - start_time) * 1000
+                llm_call_timings.append({
+                    'type': call_type,
+                    'duration': round(duration, 2),
+                    'error': str(e),
+                    'timestamp': time.time()
+                })
+                raise
+                
+        return wrapper
+    return decorator
 
 class LLMProvider:
     def __init__(self):
@@ -40,6 +76,7 @@ class LLMProvider:
         
     # REMOVED: _load_fun_facts_system_prompt() -> now handled by prompt_manager.get_facts_system_prompt()
     
+    @measure_llm_call('story_generation')
     def generate_response(self, prompt: str, max_tokens: int = 300, system_prompt: str = None) -> str:
         """
         Generate a response using OpenAI API or fallback to sample responses
@@ -109,6 +146,7 @@ What happens next in our story? Tell me how our hero begins their adventure!"""
         else:
             return "I'm here to help with stories and fun facts! What would you like to explore?"
 
+    @measure_llm_call('vocabulary_question')
     def generate_vocabulary_question(self, word: str, context: str) -> Dict:
         """Generate vocabulary questions following Step 8 format"""
         if self.client and self.api_key:
@@ -311,6 +349,7 @@ Return ONLY valid JSON with: question, options (array of 4 strings), correctInde
                 cleaned_words.append(cleaned_word)
         return cleaned_words
 
+    @measure_llm_call('grammar_feedback')
     def provide_grammar_feedback(self, user_text: str) -> Optional[str]:
         """Provide grammar feedback following Step 5 of the story process"""
         if self.client and self.api_key:
@@ -382,6 +421,7 @@ Always provide encouraging feedback and specific examples to help young learners
         
         return None
 
+    @measure_llm_call('api_status_check')
     def check_api_status(self) -> Dict[str, str]:
         """Check if OpenAI API is available"""
         if not self.api_key:

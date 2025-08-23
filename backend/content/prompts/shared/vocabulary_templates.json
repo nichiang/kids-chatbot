@@ -1,0 +1,37 @@
+{
+  "description": "Vocabulary-related prompt templates for educational content enhancement",
+  
+  "integration_instructions": {
+    "general_pool_guidance": "Select tier 2+3 general vocabulary words that challenge but don't overwhelm 2nd-3rd graders",
+    "topic_pool_guidance": "Choose topic-specific vocabulary that naturally fits the content context",
+    "bolding_format": "Bold selected words using **word** format for visual emphasis",
+    "target_count": "Select ONLY 2-4 words total that fit most naturally in the content",
+    "selection_priority": "Choose words that enhance meaning rather than feel forced"
+  },
+  
+  "enhancement_template": {
+    "instruction_format": "\n\nVOCABULARY INTEGRATION INSTRUCTIONS:\nGENERAL WORDS (Tier 2+3): {general_pool}\nTOPIC-SPECIFIC WORDS: {topic_pool}\n\nCRITICAL INSTRUCTIONS:\n- Select ONLY 2-4 words total that fit most naturally in your content\n- Choose words that enhance meaning rather than feel forced\n- Bold selected words using **word** format\n- DO NOT include vocabulary questions or definitions in the content\n- Focus on creating compelling educational content\n\nTARGET USAGE: Select 2-4 most natural words only",
+    "fallback_instruction": " Bold 2-4 challenging or important words using **word** format. DO NOT include vocabulary questions or definitions in the content."
+  },
+  
+  "question_generation": {
+    "format_template": "What does the word **{word}** mean?\n\n\"{sentence_context}\"",
+    "options_structure": ["a) {incorrect_option_1}", "b) {correct_answer}", "c) {incorrect_option_2}", "d) {incorrect_option_3}"],
+    "feedback_positive": "That's right! Great job!",
+    "feedback_negative": "Nice try — the right answer is {correct_answer}."
+  },
+  
+  "anti_repetition": {
+    "tracking_method": "Exclude previously used words from vocabulary pools",
+    "rotation_strategy": "Prioritize fresh vocabulary over recently used words",
+    "pool_size_target": "40 total example words (20 general + 20 topic-specific)",
+    "variety_multiplier": "Provides 1,233% more variety than previous 3-word approach"
+  },
+  
+  "educational_standards": {
+    "age_appropriateness": "Strong 2nd grader to 3rd grader vocabulary level",
+    "difficulty_tiers": "Focus on tier 2 (cross-curricular) and tier 3 (domain-specific) words",
+    "context_integration": "Words should appear naturally within educational content",
+    "assessment_approach": "Multiple choice questions with context-based examples"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "description": "Frontend UI messages and error messages for English Learning Chatbot.",
+  
+  "speech_recognition": {
+    "not_supported": "Speech recognition not supported in this browser. Please use Chrome, Edge, Safari, or Firefox with HTTPS.",
+    "https_required": "Speech recognition requires HTTPS or localhost. Current protocol: {protocol}",
+    "started": "Speech recognition started",
+    "ended": "Speech recognition ended",
+    "error_prefix": "Speech recognition error: ",
+    "error_no_speech": "No speech was detected. Please try speaking again.",
+    "error_audio_capture": "Audio capture failed. Please check your microphone.",
+    "error_not_allowed": "Microphone access denied. Please allow microphone access and try again.",
+    "error_network": "Network error occurred. Please check your connection.",
+    "error_aborted": "Speech recognition was aborted.",
+    "error_generic": "An error occurred with speech recognition."
+  },
+  
+  "loading": {
+    "processing": "Processing...",
+    "thinking": "Thinking...",
+    "generating_story": "Creating your story...",
+    "generating_fact": "Finding a fun fact...",
+    "loading_vocabulary": "Preparing vocabulary question..."
+  },
+  
+  "buttons": {
+    "story_writing": "Story Writing",
+    "fun_facts": "Fun Facts",
+    "start_microphone": "Start speaking",
+    "stop_microphone": "Stop speaking",
+    "send_message": "Send",
+    "new_story": "New Story",
+    "continue": "Continue"
+  },
+  
+  "placeholders": {
+    "message_input": "Type your message here...",
+    "story_input": "Continue the story...",
+    "topic_input": "What topic interests you?",
+    "design_input": "Describe your character or location..."
+  },
+  
+  "labels": {
+    "choose_mode": "Choose your learning mode:",
+    "current_topic": "Current topic: {topic}",
+    "vocabulary_question": "Vocabulary Question",
+    "multiple_choice": "Choose the best answer:",
+    "story_progress": "Story Progress",
+    "facts_learned": "Facts learned: {count}"
+  },
+  
+  "accessibility": {
+    "microphone_button": "Voice input microphone button",
+    "send_button": "Send message button", 
+    "character_image": "Friendly character avatar",
+    "theme_indicator": "Current theme: {theme}"
+  },
+  
+  "errors": {
+    "network_error": "Connection error. Please check your internet and try again.",
+    "server_error": "Server error. Please try again in a moment.",
+    "invalid_input": "Please enter a valid message.",
+    "session_expired": "Your session has expired. Please refresh the page.",
+    "feature_unavailable": "This feature is temporarily unavailable."
+  }
+}

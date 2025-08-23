@@ -99,26 +99,78 @@ This is a **fully functional, mature educational application** with comprehensiv
 
 **Testing Results**: Verified fix works correctly - "the young astronaut" now triggers character naming template instead of location template.
 
-### NEXT: Enhanced Story Structure Implementation
-**STATUS**: 🎯 **PLANNING APPROVED** - Ready to implement intelligent narrative completion system
+### COMPLETED: Content Management System Implementation (Latest Session)
+**STATUS**: ✅ **FULLY IMPLEMENTED** - Revolutionary content centralization system
 
-#### Story Flow Enhancement Project Goals
-**Objective**: Implement aspects of Solution 1 from story-structure-and-flow.md research with improved narrative structure.
+#### Content Management System Achievement
+**Problem Solved**: Scattered hardcoded bot strings, prompts, and configuration across multiple files made content updates difficult and error-prone.
 
-**Key Requirements from User**:
-- Minimum 3 exchanges, maximum 6 exchanges for attention span
-- Intelligent story completion based on conflict resolution and lesson learned
-- Diverse conflict types: emotional, social, environmental, epic to day-to-day variety
-- Quick testing capability without running full app (story flow simulator)
-- Sample story logs to demonstrate improvements
+**Solution Implemented**: Complete centralized content management system
+- **New Architecture**: `backend/content/` directory with organized hierarchy:
+  - `content/strings/` - All bot responses, UI messages, educational feedback, system messages
+  - `content/prompts/` - Story/facts system contexts, design templates, vocabulary templates
+  - `content/config/` - Topics configuration, educational parameters
+- **ContentManager Class**: Centralized loading with dot notation access and template interpolation
+- **Developer Experience**: Edit any bot message by changing JSON files, no code changes needed
 
-**Implementation Phases Planned**:
-1. **Story Flow Simulator** - Standalone testing tool for quick iteration without full app
-2. **Conflict Variety System** - Comprehensive conflict taxonomy for age-appropriate scenarios  
-3. **Intelligent Arc Assessment** - LLM-based story completeness analysis (conflict resolution, lesson learned)
-4. **Enhanced Story Logic** - Replace rigid character count (400 chars) with narrative intelligence
+**Migration Completed**:
+- ✅ All hardcoded strings from `app.py` → `bot_responses.json`
+- ✅ All prompt templates → organized JSON/text files
+- ✅ Design aspects → centralized `design_templates.json`
+- ✅ Frontend config → `frontend/config/` folder organization
+- ✅ Old `backend/prompts/` → archived for backup
 
-**Expected Impact**: Stories will have proper narrative structure, character growth, lesson learning, and natural completion based on content quality rather than arbitrary limits.
+**Technical Implementation**:
+```python
+# Before: Hardcoded strings
+feedback_response = f"What a perfect name! {provided_name} is such a wonderful choice..."
+
+# After: Centralized content
+feedback_response = content_manager.get_bot_response(
+    "design_phase.naming_feedback", 
+    provided_name=provided_name, 
+    design_phase=session_data.designPhase
+)
+```
+
+**Developer Impact**: Content updates now take seconds instead of hunting through code files. Template interpolation supports dynamic messaging with variables.
+
+#### Design Phase Bug Resolution (Latest Session)
+**STATUS**: ✅ **FULLY RESOLVED** - Fixed critical entity type determination bugs
+
+**Bug 24: Character Using Location Name Suggestions**
+**Problem**: Story "A curious girl discovered a mysterious door..." correctly identified character needs naming, but showed location name suggestions like "Crystal", "Golden" instead of character names like "Alex", "Maya".
+
+**Root Cause Analysis**: 
+- `entity_descriptor: 'the curious girl'` vs `character_description: 'a curious girl'` 
+- Article mismatch ("the" vs "a") caused `determine_entity_type_from_descriptor()` to fail
+- System randomly selected 'location' design aspects instead of 'character'
+- `load_design_aspects('location')` loaded location naming suggestions
+
+**Solutions Implemented**:
+1. **Fixed Hardcoded File Paths**: Updated `load_design_aspects()` to use ContentManager instead of old `prompts/design/character_design_aspects.json` path
+2. **Enhanced Fallback Logic**: Added proper naming vs description template fallbacks for missing design aspects
+3. **Improved Template Selection**: Ensured naming phase gets naming templates, description phase gets description templates
+4. **Centralized Feedback Messages**: Migrated all feedback strings to ContentManager with proper template interpolation
+
+**Code Changes**:
+- `app.py:700-724` - Updated `load_design_aspects()` to use ContentManager
+- `app.py:882-893` - Enhanced fallback logic for naming vs description phases  
+- `app.py:1033-1037` - Updated feedback to use ContentManager templates
+- Multiple template migrations to `content/strings/bot_responses.json`
+
+**Educational Impact**: Character naming now correctly shows character name suggestions, location naming shows location suggestions, eliminating user confusion.
+
+**Testing Results**: Verified fix works - "the curious girl" now triggers character naming with proper suggestions (Alex, Maya, Sam) instead of location names (Crystal, Golden).
+
+### NEXT: Enhanced Story Structure Implementation  
+**STATUS**: 🎯 **READY FOR PLANNING** - Content management foundation complete
+
+With content management system implemented, the next phase can focus on educational enhancements:
+- Intelligent narrative completion based on conflict resolution
+- Diverse conflict types for age-appropriate scenarios  
+- Story flow optimization using content quality vs arbitrary limits
+- Enhanced educational structure with proper story arcs
 
 ### PREVIOUS: Character Naming and Design Phase Bug Resolution
 **STATUS**: ✅ **FULLY RESOLVED** - Major character design system overhaul with comprehensive bug fixes

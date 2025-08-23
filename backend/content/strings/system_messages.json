@@ -1,0 +1,55 @@
+{
+  "description": "System messages, error handling, and fallback responses for the English Learning Chatbot.",
+  
+  "api_errors": {
+    "openai_unavailable": "I'm having trouble connecting to my learning brain right now. Let me use my backup knowledge!",
+    "rate_limit": "I need a quick break to think! Please try again in a moment.",
+    "invalid_response": "I got a bit confused there. Let me try again!",
+    "network_timeout": "That took longer than expected. Let's try once more!",
+    "general_api_error": "I'm having a small technical hiccup. Please try again!"
+  },
+  
+  "fallback_responses": {
+    "space_story": "Captain Luna strapped herself into the **gleaming** spacecraft and prepared for her **amazing** journey to the mysterious planet ahead!",
+    "animal_story": "The **curious** elephant walked through the **magnificent** forest, wondering what adventures awaited beyond the tall trees.",
+    "fantasy_story": "The young wizard found a **magical** crystal that began to **sparkle** with ancient power in the enchanted castle.",
+    "ocean_fact": "The blue whale is so **massive** that its heart alone weighs as much as a car! These **magnificent** creatures can **communicate** with each other across hundreds of miles using low-frequency sounds.",
+    "space_fact": "Jupiter is so **enormous** that more than 1,300 Earths could fit inside it! Scientists still **investigate** Jupiter to learn about its powerful storms and **discover** new facts about our solar system.",
+    "general_fact": "Did you know that honey never spoils? Archaeologists have found **ancient** honey in Egyptian tombs that's over 3,000 years old and still perfectly good to eat!"
+  },
+  
+  "validation_errors": {
+    "empty_message": "Please type something before sending!",
+    "invalid_topic": "I didn't quite catch that topic. Could you try again?",
+    "session_data_missing": "Something went wrong with your session. Let's start fresh!",
+    "vocabulary_word_missing": "I couldn't find a vocabulary word to ask about. Let's continue with the story!",
+    "design_phase_error": "Something went wrong with the design phase. Let's continue with your story!"
+  },
+  
+  "development_messages": {
+    "content_missing": "[Missing content: {content_key}]",
+    "template_error": "[Template error in {template_name}]",
+    "fallback_active": "Using fallback response (no OpenAI API key)",
+    "loading_error": "Failed to load {resource_type}: {error_message}"
+  },
+  
+  "health_check": {
+    "status_healthy": "English Learning Chatbot API is running!",
+    "content_loaded": "Content Manager loaded successfully",
+    "services_operational": "All services operational"
+  },
+  
+  "session_management": {
+    "session_started": "Welcome! Let's start learning together!",
+    "session_reset": "Starting fresh! What would you like to explore?",
+    "session_timeout": "Your session has been inactive. Everything is reset for a fresh start!",
+    "mode_switch": "Switching to {mode} mode! Let's explore something new!"
+  },
+  
+  "educational_standards": {
+    "age_appropriate_content": "All content is designed for 2nd-3rd grade reading level",
+    "vocabulary_difficulty": "Vocabulary words are selected for strong 2nd/3rd graders",
+    "story_length_guideline": "Stories are kept short and engaging (under 300 words)",
+    "positive_reinforcement": "All feedback focuses on encouragement and growth"
+  }
+}

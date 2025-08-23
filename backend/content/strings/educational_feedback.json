@@ -1,0 +1,52 @@
+{
+  "description": "Educational feedback messages for grammar correction, writing improvement, and encouragement.",
+  
+  "grammar": {
+    "improvement_prefix": "You could make that sentence even better by saying '{improved_version}'. {explanation}",
+    "capitalization": "Remember to start sentences with a capital letter!",
+    "punctuation": "Don't forget to end sentences with punctuation!",
+    "past_tense": "For past actions, we use '{correct_form}' instead of '{incorrect_form}'.",
+    "agreement": "When we talk about {subject}, we say '{correct_verb}' instead of '{incorrect_verb}'.",
+    "complete_sentence": "Try making a complete sentence with a subject and action!",
+    "more_details": "You could add more details like '{example}'. This makes the description more vivid!"
+  },
+  
+  "encouragement": {
+    "good_start": "Great job, that's a nice start!",
+    "creative_thinking": "I love your creative thinking!",
+    "descriptive_writing": "Your descriptive writing is wonderful!",
+    "vocabulary_use": "Great use of vocabulary words!",
+    "story_development": "You're developing the story beautifully!",
+    "character_development": "Your character details are fantastic!",
+    "setting_description": "You paint such a vivid picture of the setting!",
+    "problem_solving": "I love how you're solving problems in the story!",
+    "imagination": "Your imagination is amazing!",
+    "effort": "I can see you're putting great effort into your writing!"
+  },
+  
+  "writing_tips": {
+    "show_dont_tell": "Instead of saying '{tell_example}', try showing us: '{show_example}'",
+    "sensory_details": "Add details about what {character} sees, hears, or feels!",
+    "dialogue": "You could add what {character} says: '{dialogue_example}'",
+    "action_words": "Try using action words like '{action_examples}' to make it more exciting!",
+    "sequence_words": "Use words like 'first', 'then', 'next', or 'finally' to show what happens when!",
+    "character_feelings": "How does {character} feel about this? Happy, nervous, excited?"
+  },
+  
+  "vocabulary_help": {
+    "synonym_suggestion": "Another word for '{word}' could be '{synonym}'.",
+    "context_usage": "Great use of '{word}'! It fits perfectly in this story.",
+    "word_building": "'{word}' is a great word! Do you know other words that mean something similar?",
+    "definition_hint": "Remember, '{word}' means '{definition}'.",
+    "usage_example": "Here's how you could use '{word}' in a sentence: '{example}'"
+  },
+  
+  "story_structure": {
+    "beginning_tips": "Every good story has a beginning that introduces the character and setting.",
+    "middle_development": "The middle of the story is where exciting things happen!",
+    "problem_introduction": "Stories are more interesting when characters face challenges.",
+    "resolution_guidance": "How do you think {character} will solve this problem?",
+    "ending_satisfaction": "A good ending shows how the character has grown or learned something.",
+    "transition_help": "Try connecting your ideas with words like 'meanwhile', 'suddenly', or 'after that'."
+  }
+}

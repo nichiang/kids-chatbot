@@ -378,6 +378,114 @@ topic_keywords = {
 # First match wins, fallback to raw user input as topic
 ```
 
+### Content Management Architecture Pattern (LATEST IMPLEMENTATION)
+
+**Pattern**: Centralized JSON/Text Content System for All User-Facing Content
+- **Structure**: Organized `backend/content/` directory hierarchy:
+  - `content/strings/` - Bot responses, UI messages, educational feedback, system messages
+  - `content/prompts/` - LLM system contexts, story/facts templates, design templates
+  - `content/config/` - Topics configuration, educational parameters
+- **Implementation**: ContentManager class with dot notation access and template interpolation
+- **Benefits**: Maintainable content without code changes, template variables, organized messaging
+
+**ContentManager Pattern**:
+```python
+# Centralized content loading with fallback system
+class ContentManager:
+    def get_bot_response(self, key: str, **kwargs) -> str:
+        # Supports dot notation: "design_phase.naming_feedback"
+        # Template interpolation: "{provided_name} is wonderful!"
+        bot_responses = self.content.get("bot_responses", {})
+        if '.' in key:
+            keys = key.split('.')
+            response = bot_responses
+            for k in keys:
+                response = response[k]
+        return response.format(**kwargs) if kwargs else response
+```
+
+**Migration Pattern** (From Hardcoded to Centralized):
+```python
+# OLD: Hardcoded strings scattered in app.py
+feedback_response = f"What a perfect name! {provided_name} is such a wonderful choice for this {design_phase}! 🌟"
+
+# NEW: Centralized content with template interpolation
+feedback_response = content_manager.get_bot_response(
+    "design_phase.naming_feedback", 
+    provided_name=provided_name, 
+    design_phase=design_phase
+)
+```
+
+**Content Organization Pattern**:
+```
+backend/content/
+├── strings/
+│   ├── bot_responses.json      # User-facing bot messages
+│   ├── ui_messages.json        # Frontend UI text, errors
+│   ├── educational_feedback.json # Grammar tips, encouragement
+│   └── system_messages.json    # Error handling, fallbacks
+├── prompts/
+│   ├── story_mode/system_context.txt
+│   ├── facts_mode/system_context.txt
+│   └── shared/design_templates.json
+└── config/
+    ├── topics.json
+    └── educational_parameters.json
+```
+
+### Design Phase Entity Resolution Pattern (MAJOR BUG FIX)
+
+**Pattern**: Improved Entity Type Determination with Flexible Matching and Proper Fallbacks
+- **Problem Solved**: Character naming showing location suggestions ("Crystal") instead of character names ("Alex", "Maya")
+- **Root Cause**: Article mismatch in entity matching ("the curious girl" vs "a curious girl") + hardcoded file paths
+- **Solution**: Enhanced matching logic + ContentManager integration + proper fallback templates
+
+**Entity Type Determination Fix**:
+```python
+# PROBLEM: load_design_aspects() used hardcoded file paths
+file_path = os.path.join(os.path.dirname(__file__), "prompts", "design", filename)  # BROKEN
+
+# SOLUTION: Use ContentManager for design aspects
+def load_design_aspects(design_type: str) -> dict:
+    design_templates = content_manager.content.get("design_templates", {})
+    aspects = design_templates.get(design_type, {})  # "character" or "location"
+    return aspects
+```
+
+**Fallback Template Fix**:
+```python
+# PROBLEM: Wrong templates for naming vs description phases  
+if not aspect_data:
+    aspect_data = {"prompt_template": f"Help us describe {subject_name}!"}  # ALWAYS description
+
+# SOLUTION: Context-aware fallbacks
+if not aspect_data:
+    if session_data.currentDesignAspect == "naming":
+        aspect_data = {
+            "prompt_template": "What should we call {descriptor}?",
+            "suggestions": ["Alex", "Maya", "Sam", "Riley", "Jordan"]  # CHARACTER names
+        }
+    else:
+        aspect_data = {
+            "prompt_template": f"Help us describe {subject_name}!",
+            "suggestions": ["wonderful", "amazing", "creative"]  # DESCRIPTION words
+        }
+```
+
+**Template Integration Pattern**:
+```python
+# Centralized feedback using ContentManager templates
+feedback_response = content_manager.get_bot_response(
+    "design_phase.naming_feedback",      # Dot notation access
+    provided_name=provided_name,         # Template interpolation
+    design_phase=session_data.designPhase
+)
+# Result: "What a perfect name! Luna is such a wonderful choice for this character! 🌟"
+```
+
+**Architectural Rule**: Always use ContentManager for user-facing content; never hardcode strings in business logic.
+
 ## Critical Architectural Decisions
 
 ### Why Hybrid Prompt Architecture Over Pure Prompt-Based

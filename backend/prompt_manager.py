@@ -11,7 +11,6 @@ what prompts exist for each educational scenario.
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 import json
-import csv
 import random
 import logging
 
@@ -30,28 +29,21 @@ class PromptManager:
         self._load_templates()
     
     def _load_templates(self):
-        """Load all prompt templates and configurations"""
+        """Load templates from ContentManager (centralized content system)"""
         try:
-            # Load story generation templates
-            story_templates_path = Path("prompts/story/04_story_generation.json")
-            with open(story_templates_path, 'r') as f:
-                self.story_templates = json.load(f)
+            # Import here to avoid circular imports
+            from content_manager import content_manager
             
-            # Load design aspects
-            char_aspects_path = Path("prompts/design/character_design_aspects.json")
-            with open(char_aspects_path, 'r') as f:
-                self.character_aspects = json.load(f)
-                
-            loc_aspects_path = Path("prompts/design/location_design_aspects.json")
-            with open(loc_aspects_path, 'r') as f:
-                self.location_aspects = json.load(f)
+            # Get templates from ContentManager
+            self.story_templates = content_manager.content.get("story_templates", {})
+            self.conflict_types = content_manager.content.get("narrative_guidance", {})
             
-            # Load conflict types for enhanced story structure
-            conflict_types_path = Path("prompts/story/05_conflict_types.json")
-            with open(conflict_types_path, 'r') as f:
-                self.conflict_types = json.load(f)
+            # Get design aspects from ContentManager
+            design_templates = content_manager.content.get("design_templates", {})
+            self.character_aspects = design_templates.get("character", {})
+            self.location_aspects = design_templates.get("location", {})
                 
-            logger.info("✅ PromptManager templates loaded successfully")
+            logger.info("✅ PromptManager templates loaded from ContentManager")
             
         except Exception as e:
             logger.error(f"❌ Failed to load PromptManager templates: {e}")
@@ -65,14 +57,6 @@ class PromptManager:
         """Load text content from file"""
         return Path(file_path).read_text().strip()
     
-    def _load_vocabulary_csv(self, csv_path: str) -> List[str]:
-        """Load vocabulary from CSV file"""
-        with open(csv_path, newline='') as csvfile:
-            reader = csv.reader(csvfile)
-            for row in reader:  # CSV holds everything in a single row
-                return row
-        return []
-    
     # ================================
     # STORY MODE PROMPTS
     # ================================
@@ -81,17 +65,13 @@ class PromptManager:
         """
         Complete educational context and framework for story mode LLM.
         
-        Combines system role, vocabulary context, and 10-step educational process.
-        This provides the LLM with full educational framework and tone.
+        Uses ContentManager for centralized content management.
+        This provides the LLM with the educational framework and tone.
         """
         try:
-            intro_system_role = self._load_file("prompts/story/01_system_role.txt")
-            vocab_list = self._load_vocabulary_csv("prompts/story/02_vocabulary_context.csv")
-            vocab_text = ",".join(vocab_list)
-            vocab_section = f"Here is an example list of vocabulary words for a 2nd or 3rd grader: {vocab_text} "
-            process_instructions = self._load_file("prompts/story/03_process_instructions.txt")
-            
-            return "\n".join([intro_system_role, vocab_section, process_instructions])
+            # Import here to avoid circular imports
+            from content_manager import content_manager
+            return content_manager.get_system_prompt("story")
             
         except Exception as e:
             logger.error(f"❌ Failed to load story system prompt: {e}")
@@ -109,6 +89,9 @@ class PromptManager:
             Structured prompt requesting JSON response with story and metadata
         """
         try:
+            # Import here to avoid circular imports
+            from content_manager import content_manager
+            
             # Select template based on story mode
             if story_mode == "named":
                 template_key = "named_entities"
@@ -121,8 +104,14 @@ class PromptManager:
                 template_key = "named_entities" if random.random() < 0.6 else "unnamed_entities"
                 logger.info(f"🎯 Story Opening: Random selection chose '{template_key}' template")
             
-            # Get template and format with topic
-            selected_template = self.story_templates[template_key]["prompt_template"]
+            # Get template from ContentManager
+            story_templates = content_manager.get_prompt_template("story_templates", template_key)
+            if isinstance(story_templates, dict) and "prompt_template" in story_templates:
+                selected_template = story_templates["prompt_template"]
+            else:
+                # Fallback if template structure is different
+                selected_template = str(story_templates)
+            
             formatted_prompt = selected_template.format(topic=topic)
             
             logger.info(f"🎯 Story Opening: Generated prompt for topic '{topic}' using '{template_key}' template")
@@ -498,7 +487,9 @@ Bold 2-3 vocabulary words using **word** format."""
             System prompt for facts mode personality and requirements
         """
         try:
-            return self._load_file("prompts/fun_facts/01_system_role.txt")
+            # Import here to avoid circular imports
+            from content_manager import content_manager
+            return content_manager.get_system_prompt("facts")
         except Exception as e:
             logger.error(f"❌ Failed to load facts system prompt: {e}")
             return "You are a friendly and educational content creator for elementary school students."

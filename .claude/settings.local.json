@@ -16,7 +16,11 @@
       "Bash(node:*)",
       "Bash(mkdir:*)",
       "Bash(cp:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(pip install:*)",
+      "Bash(move:*)",
+      "Bash(mv:*)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }

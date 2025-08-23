@@ -2,14 +2,20 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import logging
 import json
 import os
+import time
+import glob
+from datetime import datetime
+from functools import wraps
+import statistics
 from llm_provider import llm_provider
 # REMOVED: generate_prompt import no longer needed (PromptManager handles all prompt logic)
 from vocabulary_manager import vocabulary_manager
 from prompt_manager import prompt_manager
+from content_manager import content_manager
 
 # PROMPT MANAGER ARCHITECTURE:
 # Centralized prompt generation with self-documenting methods for maintainability:
@@ -31,9 +37,245 @@ from prompt_manager import prompt_manager
 # - Easy to find, modify, and test individual prompts
 # - Inherently maintainable without separate documentation
 
+# === LATENCY MEASUREMENT SYSTEM ===
+
+def setup_latency_logging():
+    """Initialize latency logging with 5MB rotation strategy"""
+    # Create logs directory
+    os.makedirs('logs', exist_ok=True)
+    
+    # Rotate logs if they exceed 5MB
+    rotate_logs_if_needed()
+    
+    # Clean up old archives (keep 5 most recent)
+    cleanup_old_archives(keep_count=5)
+    
+    # Configure latency logger
+    latency_logger = logging.getLogger('latency')
+    latency_logger.setLevel(logging.INFO)
+    
+    # Clear existing handlers
+    latency_logger.handlers.clear()
+    
+    # File handler for latency logs
+    handler = logging.FileHandler('logs/latency.jsonl', mode='a')
+    handler.setFormatter(logging.Formatter('%(message)s'))
+    latency_logger.addHandler(handler)
+    
+    # Console handler for development
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(logging.Formatter('🕐 LATENCY: %(message)s'))
+    latency_logger.addHandler(console_handler)
+
+def rotate_logs_if_needed():
+    """Rotate logs when they exceed 5MB threshold"""
+    MAX_LOG_SIZE = 5_000_000  # 5MB
+    
+    log_files = [
+        'logs/latency.jsonl',
+        'logs/story_latency.jsonl'
+    ]
+    
+    for log_file in log_files:
+        if os.path.exists(log_file) and os.path.getsize(log_file) > MAX_LOG_SIZE:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            archive_name = f"{log_file}.{timestamp}.archive"
+            
+            print(f"📁 Rotating log file: {log_file} -> {archive_name}")
+            os.rename(log_file, archive_name)
+
+def cleanup_old_archives(keep_count=5):
+    """Keep only the most recent archive files"""
+    for log_type in ['latency.jsonl', 'story_latency.jsonl']:
+        pattern = f"logs/{log_type}.*.archive"
+        archives = glob.glob(pattern)
+        
+        if len(archives) > keep_count:
+            # Sort by modification time, keep newest
+            archives.sort(key=os.path.getmtime)
+            old_archives = archives[:-keep_count]
+            
+            for old_file in old_archives:
+                os.remove(old_file)
+                print(f"🗑️ Cleaned up old archive: {old_file}")
+
+class LatencyLogger:
+    """Comprehensive request and LLM call timing measurement"""
+    
+    def __init__(self):
+        self.logger = logging.getLogger('latency')
+        self.request_start = None
+        self.llm_calls = []
+        
+    def measure_request(self, func):
+        """Decorator to measure total request processing time"""
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            self.request_start = time.perf_counter()
+            
+            try:
+                result = await func(*args, **kwargs)
+                
+                total_time = (time.perf_counter() - self.request_start) * 1000
+                
+                # Log comprehensive timing data
+                self.log_request_completion(
+                    total_time=total_time,
+                    llm_calls=self.llm_calls.copy(),
+                    result_type=getattr(result, 'response_type', 'unknown')
+                )
+                
+                return result
+            finally:
+                self.llm_calls.clear()
+                
+        return wrapper
+    
+    def measure_llm_call(self, call_type: str):
+        """Decorator to measure individual LLM API calls"""
+        def decorator(func):
+            @wraps(func)
+            async def wrapper(*args, **kwargs):
+                start_time = time.perf_counter()
+                
+                try:
+                    result = await func(*args, **kwargs)
+                    duration = (time.perf_counter() - start_time) * 1000
+                    
+                    self.llm_calls.append({
+                        'type': call_type,
+                        'duration': round(duration, 2),
+                        'timestamp': time.time()
+                    })
+                    
+                    return result
+                except Exception as e:
+                    duration = (time.perf_counter() - start_time) * 1000
+                    self.llm_calls.append({
+                        'type': call_type,
+                        'duration': round(duration, 2),
+                        'error': str(e),
+                        'timestamp': time.time()
+                    })
+                    raise
+                    
+            return wrapper
+        return decorator
+    
+    def log_request_completion(self, total_time: float, llm_calls: list, result_type: str):
+        """Log comprehensive request timing data"""
+        # Import here to avoid circular imports
+        from llm_provider import llm_call_timings
+        
+        # Get LLM call timings from llm_provider and clear the list
+        current_llm_calls = llm_call_timings.copy()
+        llm_call_timings.clear()
+        
+        llm_total = sum(call['duration'] for call in current_llm_calls)
+        processing_time = total_time - llm_total
+        
+        log_data = {
+            'timestamp': time.time(),
+            'total_request_time': round(total_time, 2),
+            'llm_total_time': round(llm_total, 2),
+            'processing_time': round(processing_time, 2),
+            'llm_calls': current_llm_calls,
+            'result_type': result_type,
+            'llm_call_count': len(current_llm_calls)
+        }
+        
+        self.logger.info(json.dumps(log_data))
+
+class StoryLatencyTracker:
+    """Track latency specifically for story exchanges and completion"""
+    
+    def __init__(self):
+        self.story_exchanges = []
+        self.story_start_time = None
+        
+    def start_story(self, topic: str, mode: str):
+        """Initialize story tracking"""
+        self.story_start_time = time.time()
+        self.story_exchanges = []
+        
+    def log_exchange(self, exchange_type: str, latency: float, user_input: str, response_type: str):
+        """Log individual story exchange timing"""
+        exchange_data = {
+            'exchange_number': len(self.story_exchanges) + 1,
+            'exchange_type': exchange_type,  # 'story_continuation', 'vocab_question', 'design_phase'
+            'latency': round(latency, 2),
+            'response_type': response_type,
+            'timestamp': time.time(),
+            'user_input_length': len(user_input) if user_input else 0
+        }
+        
+        self.story_exchanges.append(exchange_data)
+        
+    def complete_story(self, topic: str, mode: str):
+        """Log story completion summary with latency analysis"""
+        if not self.story_exchanges:
+            return None
+            
+        total_story_time = time.time() - self.story_start_time if self.story_start_time else 0
+        average_latency = sum(ex['latency'] for ex in self.story_exchanges) / len(self.story_exchanges)
+        latencies = [ex['latency'] for ex in self.story_exchanges]
+        
+        story_summary = {
+            'story_completion_time': time.time(),
+            'topic': topic,
+            'mode': mode,
+            'total_exchanges': len(self.story_exchanges),
+            'average_latency': round(average_latency, 2),
+            'total_story_duration': round(total_story_time, 2),
+            'exchanges': self.story_exchanges,
+            'latency_distribution': {
+                'min': min(latencies),
+                'max': max(latencies),
+                'median': round(statistics.median(latencies), 2)
+            }
+        }
+        
+        # Log to dedicated story latency file
+        os.makedirs('logs', exist_ok=True)
+        with open('logs/story_latency.jsonl', 'a') as f:
+            f.write(json.dumps(story_summary) + '\n')
+        
+        # Reset for next story
+        self.story_exchanges = []
+        self.story_start_time = None
+        
+        return story_summary
+
+# Initialize global instances
+latency_logger = LatencyLogger()
+story_tracker = StoryLatencyTracker()
+
+def determine_story_exchange_type(session_data: 'SessionData', result: 'ChatResponse') -> str:
+    """Determine the type of story exchange for latency tracking"""
+    # Check if vocabulary question was returned
+    if hasattr(result, 'vocabQuestion') and result.vocabQuestion:
+        return 'vocab_question'
+    
+    # Check if design phase is active
+    if hasattr(session_data, 'designPhase') and session_data.designPhase:
+        return 'design_phase'
+    
+    # Check if this is story completion
+    if hasattr(session_data, 'isComplete') and session_data.isComplete:
+        return 'story_completion'
+    
+    # Check if this is topic selection
+    if not session_data.topic or session_data.currentStep == 0:
+        return 'topic_selection'
+    
+    # Default to story continuation
+    return 'story_continuation'
+
+# === END LATENCY MEASUREMENT SYSTEM ===
+
 # Design Phase Models - Must be defined before functions that use them
 class StoryMetadata(BaseModel):
-    """Metadata about characters and locations introduced in the story"""
+    """Metadata about characters and locations introduced in the story (LEGACY)"""
     character_name: Optional[str] = None
     character_description: Optional[str] = None
     location_name: Optional[str] = None
@@ -42,8 +284,24 @@ class StoryMetadata(BaseModel):
     needs_naming: bool = False  # True if entities are unnamed
     entity_descriptor: Optional[str] = None  # e.g., "the little boy", "the mysterious village"
 
+class EntityLists(BaseModel):
+    """Entity lists with explicit categorization from LLM"""
+    named: List[str] = []     # Named entities (e.g., ["Alex", "Maya"])
+    unnamed: List[str] = []   # Unnamed entities (e.g., ["the little boy", "clever inventor"])
+
+class StoryEntities(BaseModel):
+    """Complete entity structure from LLM response"""
+    characters: EntityLists = EntityLists()
+    locations: EntityLists = EntityLists()
+
+class EnhancedStoryResponse(BaseModel):
+    """New response format with explicit entity metadata"""
+    story: str
+    entities: StoryEntities
+    vocabulary_words: List[str] = []
+
 class StructuredStoryResponse(BaseModel):
-    """Response format for story generation with metadata"""
+    """Response format for story generation with metadata (LEGACY)"""
     story: str
     metadata: StoryMetadata
 
@@ -79,9 +337,14 @@ class SessionData(BaseModel):
     designPhase: Optional[str] = None  # "character", "location", or None
     currentDesignAspect: Optional[str] = None  # Current aspect being designed
     designAspectHistory: List[str] = []  # Track used aspects to ensure rotation
-    storyMetadata: Optional[StoryMetadata] = None  # Store LLM metadata about story elements
+    storyMetadata: Optional[StoryMetadata] = None  # Store LLM metadata about story elements (LEGACY)
     designComplete: bool = False  # Track if design phase is finished
     namingComplete: bool = False  # Track if naming phase is finished for unnamed entities
+    
+    # Enhanced Entity System Fields
+    designedEntities: List[str] = []  # Track entities that have been designed
+    currentEntityType: Optional[str] = None  # "character" or "location" for current entity
+    currentEntityDescriptor: Optional[str] = None  # Descriptor of current entity being designed
     
     # Enhanced Story Structure Fields
     storyPhase: Optional[str] = None  # "setup", "development", "climax", "resolution"
@@ -455,9 +718,182 @@ def parse_structured_story_response(llm_response: str) -> StructuredStoryRespons
             metadata=StoryMetadata(design_options=[])  # No design options available
         )
 
+def parse_enhanced_story_response(llm_response: str) -> EnhancedStoryResponse:
+    """
+    Parse JSON response with new entity-based metadata structure
+    
+    Args:
+        llm_response: Raw LLM response with new entities format
+        
+    Returns:
+        EnhancedStoryResponse with story and explicit entity lists
+    """
+    try:
+        import json
+        data = json.loads(llm_response.strip())
+        
+        # Validate basic structure
+        if not isinstance(data, dict) or "story" not in data:
+            raise ValueError("Invalid JSON structure - missing 'story' field")
+            
+        # Extract entities with validation
+        entities_dict = data.get("entities", {})
+        if not isinstance(entities_dict, dict):
+            logging.warning("⚠️ VALIDATION: entities field is not a dictionary, using empty entities")
+            entities_dict = {}
+            
+        # Validate and extract character entities
+        characters_dict = entities_dict.get("characters", {})
+        if not isinstance(characters_dict, dict):
+            logging.warning("⚠️ VALIDATION: entities.characters is not a dictionary, using empty lists")
+            characters_dict = {}
+            
+        named_chars = characters_dict.get("named", [])
+        unnamed_chars = characters_dict.get("unnamed", [])
+        
+        # Validate list types
+        if not isinstance(named_chars, list):
+            logging.warning("⚠️ VALIDATION: characters.named is not a list, converting to empty list")
+            named_chars = []
+        if not isinstance(unnamed_chars, list):
+            logging.warning("⚠️ VALIDATION: characters.unnamed is not a list, converting to empty list")
+            unnamed_chars = []
+            
+        # Validate and extract location entities
+        locations_dict = entities_dict.get("locations", {})
+        if not isinstance(locations_dict, dict):
+            logging.warning("⚠️ VALIDATION: entities.locations is not a dictionary, using empty lists")
+            locations_dict = {}
+            
+        named_locs = locations_dict.get("named", [])
+        unnamed_locs = locations_dict.get("unnamed", [])
+        
+        # Validate list types
+        if not isinstance(named_locs, list):
+            logging.warning("⚠️ VALIDATION: locations.named is not a list, converting to empty list")
+            named_locs = []
+        if not isinstance(unnamed_locs, list):
+            logging.warning("⚠️ VALIDATION: locations.unnamed is not a list, converting to empty list")
+            unnamed_locs = []
+            
+        # Extract vocabulary words
+        vocab_words = data.get("vocabulary_words", [])
+        if not isinstance(vocab_words, list):
+            logging.warning("⚠️ VALIDATION: vocabulary_words is not a list, converting to empty list")
+            vocab_words = []
+            
+        # Create validated entity structure
+        entities = StoryEntities(
+            characters=EntityLists(named=named_chars, unnamed=unnamed_chars),
+            locations=EntityLists(named=named_locs, unnamed=unnamed_locs)
+        )
+        
+        # Log successful parsing
+        total_entities = len(named_chars) + len(unnamed_chars) + len(named_locs) + len(unnamed_locs)
+        logging.info(f"✅ ENTITY PARSE: Found {total_entities} entities - "
+                    f"chars({len(named_chars)} named, {len(unnamed_chars)} unnamed), "
+                    f"locs({len(named_locs)} named, {len(unnamed_locs)} unnamed)")
+        
+        return EnhancedStoryResponse(
+            story=data["story"],
+            entities=entities,
+            vocabulary_words=vocab_words
+        )
+        
+    except (json.JSONDecodeError, ValueError, KeyError) as e:
+        # Fallback: treat as plain story text with empty entities
+        logging.warning(f"Failed to parse enhanced story response: {e}")
+        logging.warning(f"Raw response: {llm_response[:200]}...")
+        
+        # Try to fall back to legacy parsing
+        try:
+            legacy_response = parse_structured_story_response(llm_response)
+            logging.info("🔧 FALLBACK: Successfully used legacy parser")
+            
+            # Convert legacy format to new format
+            entities = StoryEntities()
+            if legacy_response.metadata.character_name:
+                entities.characters.named = [legacy_response.metadata.character_name]
+            elif legacy_response.metadata.character_description:
+                entities.characters.unnamed = [legacy_response.metadata.character_description]
+                
+            if legacy_response.metadata.location_name:
+                entities.locations.named = [legacy_response.metadata.location_name]
+            elif legacy_response.metadata.location_description:
+                entities.locations.unnamed = [legacy_response.metadata.location_description]
+                
+            return EnhancedStoryResponse(
+                story=legacy_response.story,
+                entities=entities,
+                vocabulary_words=[]  # Legacy format doesn't include vocab words explicitly
+            )
+            
+        except Exception as legacy_error:
+            logging.error(f"❌ FALLBACK FAILED: Legacy parser also failed: {legacy_error}")
+            return EnhancedStoryResponse(
+                story=llm_response,
+                entities=StoryEntities(),
+                vocabulary_words=[]
+            )
+
+def validate_entity_structure(entities: StoryEntities) -> bool:
+    """
+    Validate that entity structure has at least one designable entity
+    
+    Args:
+        entities: StoryEntities to validate
+        
+    Returns:
+        True if there are entities that need design, False otherwise
+    """
+    total_entities = (len(entities.characters.named) + len(entities.characters.unnamed) + 
+                     len(entities.locations.named) + len(entities.locations.unnamed))
+    
+    if total_entities == 0:
+        logging.warning("⚠️ VALIDATION: No entities found for design phase")
+        return False
+        
+    # Check for designable entities (unnamed entities that need naming/design)
+    designable_entities = len(entities.characters.unnamed) + len(entities.locations.unnamed)
+    if designable_entities == 0:
+        logging.info("ℹ️ VALIDATION: Only named entities found - no design phase needed")
+        return False
+        
+    logging.info(f"✅ VALIDATION: Found {designable_entities} designable entities for design phase")
+    return True
+
+def get_next_design_entity(entities: StoryEntities, designed_entities: List[str] = None) -> Optional[Tuple[str, str]]:
+    """
+    Get the next entity that needs design from entity lists
+    
+    Args:
+        entities: StoryEntities with all entities
+        designed_entities: List of entities already designed
+        
+    Returns:
+        Tuple of (entity_type, entity_descriptor) or None if no more entities
+    """
+    if designed_entities is None:
+        designed_entities = []
+        
+    # Check unnamed characters first
+    for char in entities.characters.unnamed:
+        if char not in designed_entities:
+            logging.info(f"🎯 DESIGN: Next entity is character '{char}'")
+            return ("character", char)
+            
+    # Check unnamed locations next
+    for loc in entities.locations.unnamed:
+        if loc not in designed_entities:
+            logging.info(f"🎯 DESIGN: Next entity is location '{loc}'")
+            return ("location", loc)
+            
+    logging.info("✅ DESIGN: All entities have been designed")
+    return None
+
 def load_design_aspects(design_type: str) -> dict:
     """
-    Load design aspects from JSON file
+    Load design aspects from ContentManager
     
     Args:
         design_type: "character" or "location"
@@ -465,20 +901,20 @@ def load_design_aspects(design_type: str) -> dict:
     Returns:
         Dictionary of design aspects with prompts and vocabulary
     """
-    import json
-    import os
-    
-    filename = f"{design_type}_design_aspects.json"
-    file_path = os.path.join(os.path.dirname(__file__), "prompts", "design", filename)
-    
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        logging.error(f"Design aspects file not found: {file_path}")
-        return {}
-    except json.JSONDecodeError as e:
-        logging.error(f"Invalid JSON in design aspects file {file_path}: {e}")
+        # Get design templates from ContentManager
+        design_templates = content_manager.content.get("design_templates", {})
+        aspects = design_templates.get(design_type, {})
+        
+        if not aspects:
+            logging.warning(f"No design aspects found for type: {design_type}")
+            return {}
+            
+        logging.info(f"✅ Loaded design aspects for {design_type} from ContentManager")
+        return aspects
+        
+    except Exception as e:
+        logging.error(f"❌ Failed to load design aspects for {design_type}: {e}")
         return {}
 
 def determine_entity_type_from_descriptor(metadata: StoryMetadata) -> Optional[str]:
@@ -602,7 +1038,7 @@ def create_design_prompt(session_data: SessionData) -> ChatResponse:
     if not session_data.designPhase or not session_data.storyMetadata:
         logging.error("create_design_prompt called without active design phase")
         return ChatResponse(
-            response="Let's continue with your story!",
+            response=content_manager.get_bot_response("story_mode.continue_story"),
             sessionData=session_data
         )
     
@@ -636,12 +1072,19 @@ def create_design_prompt(session_data: SessionData) -> ChatResponse:
     aspect_data = aspects.get(session_data.currentDesignAspect, {})
     
     if not aspect_data:
-        # Fallback data
-        aspect_data = {
-            "prompt_template": f"Help us describe {subject_name}!",
-            "placeholder": "Write 1-2 sentences describing them",
-            "suggestions": ["wonderful", "amazing", "special", "unique", "interesting", "fantastic", "incredible", "magical"]
-        }
+        # Fallback data based on current aspect
+        if session_data.currentDesignAspect == "naming":
+            aspect_data = {
+                "prompt_template": "What should we call {descriptor}?",
+                "placeholder": "What would you like to name them?",
+                "suggestions": ["Alex", "Maya", "Sam", "Riley", "Jordan", "Casey", "Taylor", "Morgan"]
+            }
+        else:
+            aspect_data = {
+                "prompt_template": f"Help us describe {subject_name}!",
+                "placeholder": "Write 1-2 sentences describing them",
+                "suggestions": ["wonderful", "amazing", "special", "unique", "interesting", "fantastic", "incredible", "magical"]
+            }
     
     # Generate the prompt text (use descriptor for naming, name for other aspects)
     if session_data.currentDesignAspect == "naming":
@@ -749,6 +1192,172 @@ def trigger_design_phase(session_data: SessionData, structured_response: Structu
     
     return design_response
 
+def trigger_enhanced_design_phase(session_data: SessionData, enhanced_response: EnhancedStoryResponse) -> ChatResponse:
+    """
+    Initialize design phase using new entity-based metadata system
+    
+    Args:
+        session_data: Current session state
+        enhanced_response: Parsed story with explicit entity lists
+        
+    Returns:
+        ChatResponse with design prompt for first designable entity
+    """
+    entities = enhanced_response.entities
+    
+    # Initialize entity tracking if not exists
+    if not hasattr(session_data, 'designedEntities'):
+        session_data.designedEntities = []
+    if not hasattr(session_data, 'currentEntityType'):
+        session_data.currentEntityType = None
+    if not hasattr(session_data, 'currentEntityDescriptor'):
+        session_data.currentEntityDescriptor = None
+        
+    # Reset design state
+    session_data.currentDesignAspect = None
+    session_data.designAspectHistory = []
+    session_data.designComplete = False
+    session_data.namingComplete = False
+    
+    # Get the next entity that needs design
+    next_entity = get_next_design_entity(entities, session_data.designedEntities)
+    if not next_entity:
+        # No more entities to design, continue with regular story
+        logging.info("✅ ENHANCED DESIGN: All entities designed, continuing with story")
+        return ChatResponse(
+            response=enhanced_response.story,
+            sessionData=session_data
+        )
+        
+    entity_type, entity_descriptor = next_entity
+    session_data.currentEntityType = entity_type
+    session_data.currentEntityDescriptor = entity_descriptor
+    
+    # Set design phase type
+    session_data.designPhase = entity_type
+    
+    # Always start with naming for unnamed entities
+    session_data.currentDesignAspect = "naming"
+    
+    logging.info(f"🎯 ENHANCED DESIGN: Starting design for {entity_type} '{entity_descriptor}'")
+    
+    # Create design prompt using the enhanced entity system
+    design_response = create_enhanced_design_prompt(session_data)
+    design_response.response = enhanced_response.story
+    
+    return design_response
+
+def create_enhanced_design_prompt(session_data: SessionData) -> ChatResponse:
+    """
+    Create design prompt using enhanced entity system
+    
+    Args:
+        session_data: Current session state with entity information
+        
+    Returns:
+        ChatResponse with design prompt
+    """
+    from content_manager import content_manager
+    
+    entity_type = session_data.currentEntityType
+    entity_descriptor = session_data.currentEntityDescriptor
+    current_aspect = session_data.currentDesignAspect
+    
+    if current_aspect == "naming":
+        # Generate naming prompt
+        try:
+            # Get naming templates
+            naming_template = content_manager.get_design_template(f"{entity_type}.naming")
+            
+            # Create naming prompt
+            prompt_text = f"Can you name {entity_descriptor}?"
+            
+            # Get name suggestions based on entity type
+            if entity_type == "character":
+                suggested_words = ["Alex", "Maya", "Sam", "River", "Sky", "Sage", "Blake", "Quinn"]
+            else:  # location
+                suggested_words = ["Crystal Palace", "Mystic Falls", "Adventure Park", "Sunset Beach", "Secret Garden", "Magic Library", "Wonder Cave", "Star Station"]
+                
+            placeholder = f"Enter a name for {entity_descriptor}"
+            
+            design_prompt = DesignPrompt(
+                type=entity_type,
+                subject_name=entity_descriptor,
+                aspect=current_aspect,
+                prompt_text=prompt_text,
+                suggested_words=suggested_words,
+                input_placeholder=placeholder
+            )
+            
+            return ChatResponse(
+                response="",  # No story text for design prompts
+                sessionData=session_data,
+                designPrompt=design_prompt
+            )
+            
+        except Exception as e:
+            logging.error(f"❌ Failed to create enhanced naming prompt: {e}")
+            # Fallback to simple prompt
+            design_prompt = DesignPrompt(
+                type=entity_type,
+                subject_name=entity_descriptor,
+                aspect="naming",
+                prompt_text=f"Can you name {entity_descriptor}?",
+                suggested_words=["Alex", "Maya", "Sam", "River"],
+                input_placeholder=f"Enter a name for {entity_descriptor}"
+            )
+            
+            return ChatResponse(
+                response="",
+                sessionData=session_data,
+                designPrompt=design_prompt
+            )
+    else:
+        # Handle description aspects (appearance, personality, dreams, skills, flaws)
+        try:
+            # Get the named entity (should exist since we just completed naming)
+            entity_name = "the entity"  # fallback
+            if session_data.storyMetadata:
+                if entity_type == "character" and session_data.storyMetadata.character_name:
+                    entity_name = session_data.storyMetadata.character_name
+                elif entity_type == "location" and session_data.storyMetadata.location_name:
+                    entity_name = session_data.storyMetadata.location_name
+            
+            # Get design template for this aspect
+            design_templates = content_manager.content.get("design_templates", {})
+            entity_templates = design_templates.get(entity_type, {})
+            aspect_template = entity_templates.get(current_aspect, {})
+            
+            # Extract template information
+            prompt_template = aspect_template.get("prompt_template", f"Tell me about {entity_name}'s {current_aspect}")
+            placeholder = aspect_template.get("placeholder", f"Describe the {current_aspect}")
+            suggestions = aspect_template.get("suggestions", [])
+            
+            # Format the prompt with the entity name
+            prompt_text = prompt_template.format(name=entity_name, descriptor=entity_descriptor)
+            
+            logging.info(f"🎯 ENHANCED DESIGN: Created {current_aspect} prompt for {entity_name}")
+            
+            design_prompt = DesignPrompt(
+                type=entity_type,
+                subject_name=entity_name,
+                aspect=current_aspect,
+                prompt_text=prompt_text,
+                suggested_words=suggestions[:8] if suggestions else [],  # Limit to 8 suggestions
+                input_placeholder=placeholder
+            )
+            
+            return ChatResponse(
+                response="",
+                sessionData=session_data,
+                designPrompt=design_prompt
+            )
+            
+        except Exception as e:
+            logging.error(f"❌ Failed to create enhanced description prompt: {e}")
+            # Final fallback to legacy system
+            return create_design_prompt(session_data)
+
 async def handle_design_phase_interaction(user_message: str, session_data: SessionData) -> ChatResponse:
     """
     Handle user input during design phase
@@ -760,10 +1369,13 @@ async def handle_design_phase_interaction(user_message: str, session_data: Sessi
     Returns:
         ChatResponse with next design prompt or story continuation
     """
+    # Import content_manager at function scope to avoid variable scope issues
+    from content_manager import content_manager
+    
     if not session_data.designPhase or not session_data.currentDesignAspect:
         logging.error("handle_design_phase_interaction called without active design phase")
         return ChatResponse(
-            response="Let's continue with your story!",
+            response=content_manager.get_bot_response("story_mode.continue_story"),
             sessionData=session_data
         )
     
@@ -771,46 +1383,205 @@ async def handle_design_phase_interaction(user_message: str, session_data: Sessi
     if session_data.currentDesignAspect == "naming":
         # User provided a name - update the metadata
         provided_name = user_message.strip()
-        if session_data.designPhase == "character":
-            session_data.storyMetadata.character_name = provided_name
-        else:  # location
-            session_data.storyMetadata.location_name = provided_name
+        
+        # Handle both enhanced and legacy session structures
+        if hasattr(session_data, 'currentEntityType') and session_data.currentEntityType:
+            # Enhanced system: store the provided name and track designed entities
+            if not hasattr(session_data, 'designedEntities'):
+                session_data.designedEntities = []
+            session_data.designedEntities.append(session_data.currentEntityDescriptor)
+            
+            # Store the provided name in storyMetadata for later use
+            if not session_data.storyMetadata:
+                session_data.storyMetadata = StoryMetadata()
+            
+            if session_data.currentEntityType == "character":
+                session_data.storyMetadata.character_name = provided_name
+            else:  # location
+                session_data.storyMetadata.location_name = provided_name
+            
+            logging.info(f"🏷️ ENHANCED NAMING: Named '{session_data.currentEntityDescriptor}' as '{provided_name}'")
+        elif session_data.storyMetadata:
+            # Legacy system: update storyMetadata
+            if session_data.designPhase == "character":
+                session_data.storyMetadata.character_name = provided_name
+            else:  # location
+                session_data.storyMetadata.location_name = provided_name
+            logging.info(f"🏷️ LEGACY NAMING: Updated {session_data.designPhase} name to '{provided_name}'")
+        else:
+            # Initialize storyMetadata if it doesn't exist
+            session_data.storyMetadata = StoryMetadata()
+            if session_data.designPhase == "character":
+                session_data.storyMetadata.character_name = provided_name
+            else:
+                session_data.storyMetadata.location_name = provided_name
+            logging.info(f"🏷️ INIT NAMING: Created storyMetadata and set {session_data.designPhase} name to '{provided_name}'")
         
         # Mark naming as complete
         session_data.namingComplete = True
         session_data.designAspectHistory.append("naming")
         
         # Provide positive feedback about the name choice
-        feedback_response = f"What a perfect name! {provided_name} is such a wonderful choice for this {session_data.designPhase}! 🌟"
+        feedback_response = content_manager.get_bot_response(
+            "design_phase.naming_feedback", 
+            provided_name=provided_name, 
+            design_phase=session_data.designPhase
+        )
         
-        # Continue to next design aspect
-        aspects = load_design_aspects(session_data.designPhase)
-        remaining_aspects = [aspect for aspect in aspects.keys() 
-                            if aspect not in session_data.designAspectHistory and aspect != "naming"]
-        
-        if remaining_aspects and len(session_data.designAspectHistory) < 2:  # Limit to 2 aspects total
-            session_data.currentDesignAspect = remaining_aspects[0]
+        # Check if this is enhanced system and if there are more entities to design
+        if hasattr(session_data, 'currentEntityType') and session_data.currentEntityType:
+            # Enhanced system: continue to description phase after naming
+            entity_type = session_data.currentEntityType
             
-            feedback_with_transition = f"{feedback_response}\n\nNow let's bring {provided_name} to life with more details!"
-            design_response = create_design_prompt(session_data)
-            design_response.response = feedback_with_transition
-            return design_response
-        else:
-            # Design phase complete after naming
+            # Get available design aspects from templates
+            try:
+                design_templates = content_manager.content.get("design_templates", {})
+                entity_templates = design_templates.get(entity_type, {})
+                
+                # Available aspects excluding naming
+                available_aspects = [aspect for aspect in entity_templates.keys() 
+                                   if aspect != "naming" and aspect not in session_data.designAspectHistory]
+                
+                # Continue to description phase if we haven't done one yet (limit to 2 total: naming + 1 description)
+                if available_aspects and len(session_data.designAspectHistory) < 2:
+                    # Select a random aspect for variety
+                    import random
+                    selected_aspect = random.choice(available_aspects)
+                    session_data.currentDesignAspect = selected_aspect
+                    
+                    logging.info(f"🎯 ENHANCED DESIGN: Continuing to {selected_aspect} aspect for {entity_type}")
+                    
+                    # Create transition message and description prompt
+                    transition_message = f"Now let's bring {provided_name} to life with more details!"
+                    feedback_with_transition = f"{feedback_response}\n\n{transition_message}"
+                    
+                    # Create design prompt for the selected aspect
+                    design_response = create_enhanced_design_prompt(session_data)
+                    design_response.response = feedback_with_transition
+                    return design_response
+                    
+            except Exception as e:
+                logging.error(f"❌ Failed to continue enhanced design phase: {e}")
+            
+            # Fallback or completion after description phase
             session_data.designComplete = True
             session_data.designPhase = None
             session_data.currentDesignAspect = None
+            session_data.currentEntityType = None
+            session_data.currentEntityDescriptor = None
             
-            completion_message = f"{feedback_response}\n\nPerfect! Now let's continue our story with {provided_name}. What happens next in the adventure?"
+            # Story continuation message
+            completion_message = f"{feedback_response}\n\nGreat! Now that we've designed {provided_name}, let's continue with our story!"
+            
+            return ChatResponse(
+                response=completion_message,
+                sessionData=session_data
+            )
+        else:
+            # Legacy system: continue to next design aspect
+            aspects = load_design_aspects(session_data.designPhase)
+            remaining_aspects = [aspect for aspect in aspects.keys() 
+                                if aspect not in session_data.designAspectHistory and aspect != "naming"]
+            
+            if remaining_aspects and len(session_data.designAspectHistory) < 2:  # Limit to 2 aspects total
+                session_data.currentDesignAspect = remaining_aspects[0]
+                
+                transition_message = content_manager.get_bot_response("design_phase.naming_transition", provided_name=provided_name)
+                feedback_with_transition = f"{feedback_response}\n\n{transition_message}"
+                design_response = create_design_prompt(session_data)
+                design_response.response = feedback_with_transition
+                return design_response
+            else:
+                # Design phase complete after naming
+                session_data.designComplete = True
+                session_data.designPhase = None
+                session_data.currentDesignAspect = None
+                
+                design_completion = content_manager.get_bot_response("design_phase.design_completion_simple", feedback_response=feedback_response, subject_name=provided_name)
+                completion_message = design_completion
+                
+                return ChatResponse(
+                    response=completion_message,
+                    sessionData=session_data
+                )
+    
+    # Handle description aspects for enhanced system
+    if hasattr(session_data, 'currentEntityType') and session_data.currentEntityType and session_data.currentDesignAspect != "naming":
+        # Enhanced system description completion
+        entity_type = session_data.currentEntityType
+        provided_description = user_message.strip()
+        
+        # Get the entity name from storyMetadata
+        entity_name = "the entity"  # fallback
+        if session_data.storyMetadata:
+            if entity_type == "character" and session_data.storyMetadata.character_name:
+                entity_name = session_data.storyMetadata.character_name
+            elif entity_type == "location" and session_data.storyMetadata.location_name:
+                entity_name = session_data.storyMetadata.location_name
+        
+        logging.info(f"🎯 ENHANCED DESIGN: Completed {session_data.currentDesignAspect} description for {entity_name}")
+        
+        # Provide feedback on the description
+        feedback_response = f"Wonderful description! I love how you described {entity_name}. That really brings them to life!"
+        
+        # Complete design phase after description
+        session_data.designComplete = True
+        session_data.designPhase = None  
+        session_data.currentDesignAspect = None
+        session_data.currentEntityType = None
+        session_data.currentEntityDescriptor = None
+        
+        # Generate actual story continuation (like legacy system does)
+        story_context = " | ".join(session_data.storyParts[-3:]) if session_data.storyParts else ""
+        design_summary = f"The child has helped design {entity_name} with these details from our design session."
+        
+        continuation_prompt = prompt_manager.get_design_continuation_prompt(
+            session_data.topic, story_context, design_summary, provided_description, entity_name
+        )
+        
+        enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
+            continuation_prompt, session_data.topic, 
+            session_data.askedVocabWords + session_data.contentVocabulary
+        )
+        
+        try:
+            story_continuation = llm_provider.generate_response(enhanced_prompt)
+            session_data.storyParts.append(story_continuation)
+            
+            # Track vocabulary from continuation
+            story_vocab = extract_vocabulary_from_content(story_continuation, session_data.contentVocabulary)
+            if story_vocab:
+                session_data.contentVocabulary.extend(story_vocab)
+                logging.info(f"📋 VOCABULARY TRACKING: Added {len(story_vocab)} words from enhanced design continuation. Total: {len(session_data.contentVocabulary)}")
+            
+            # Complete response with feedback + story continuation
+            complete_response = f"{feedback_response}\n\nPerfect! You've helped bring {entity_name} to life! Here's how the story continues:\n\n{story_continuation}"
+            
+            logging.info(f"✅ ENHANCED STORY CONTINUATION: Generated continuation after designing {entity_name}")
+            
+            return ChatResponse(
+                response=complete_response,
+                sessionData=session_data
+            )
+            
+        except Exception as e:
+            logging.error(f"❌ Error generating enhanced story continuation after design: {e}")
+            # Fallback to simple continuation message
+            completion_message = f"{feedback_response}\n\nThanks for helping design {entity_name}! Let's continue our story. What happens next?"
             
             return ChatResponse(
                 response=completion_message,
                 sessionData=session_data
             )
     
-    # Regular design aspect handling
-    subject_name = (session_data.storyMetadata.character_name if session_data.designPhase == "character" 
-                   else session_data.storyMetadata.location_name)
+    # Regular design aspect handling (legacy system)
+    if session_data.storyMetadata:
+        subject_name = (session_data.storyMetadata.character_name if session_data.designPhase == "character" 
+                       else session_data.storyMetadata.location_name)
+    else:
+        # Fallback if storyMetadata is missing
+        subject_name = "the entity"
+        logging.warning("Regular design aspect handling called but storyMetadata is None")
     
     # Provide brief writing feedback (act as English tutor)
     feedback_prompt = prompt_manager.get_grammar_feedback_prompt(user_message, subject_name, session_data.designPhase)
@@ -819,7 +1590,7 @@ async def handle_design_phase_interaction(user_message: str, session_data: Sessi
         feedback_response = llm_provider.generate_response(feedback_prompt)
     except Exception as e:
         logging.error(f"Error generating writing feedback: {e}")
-        feedback_response = "Great description! I love how creative you are with your writing."
+        feedback_response = content_manager.get_bot_response("encouragement.creative_writing")
     
     # Add the current aspect to history
     session_data.designAspectHistory.append(session_data.currentDesignAspect)
@@ -896,6 +1667,12 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+# Initialize latency logging on startup
+@app.on_event("startup")
+async def startup_event():
+    setup_latency_logging()
+    print("Latency logging initialized with 5MB rotation")
+
 # Allow frontend to call backend locally
 app.add_middleware(
     CORSMiddleware,
@@ -909,7 +1686,10 @@ app.add_middleware(
 # Request/Response models already defined at top of file
 
 @app.post("/chat", response_model=ChatResponse)
+@latency_logger.measure_request
 async def chat_endpoint(chat_request: ChatRequest):
+    request_start = time.perf_counter()
+    
     try:
         user_message = chat_request.message
         mode = chat_request.mode
@@ -920,15 +1700,43 @@ async def chat_endpoint(chat_request: ChatRequest):
         if mode == "storywriting":
             story_mode = chat_request.storyMode or "auto"
             logger.info(f"🎯 STORY MODE DEBUG: Received story_mode parameter: '{story_mode}'")
-            return await handle_storywriting(user_message, session_data, story_mode)
+            
+            # Initialize story tracking if this is a new story
+            if not session_data.topic or session_data.currentStep == 0:
+                story_tracker.start_story(topic=session_data.topic or "unknown", mode=mode)
+            
+            result = await handle_storywriting(user_message, session_data, story_mode)
+            
+            # Log story exchange timing
+            request_latency = (time.perf_counter() - request_start) * 1000
+            exchange_type = determine_story_exchange_type(session_data, result)
+            story_tracker.log_exchange(
+                exchange_type=exchange_type,
+                latency=request_latency,
+                user_input=user_message,
+                response_type=getattr(result, 'response_type', 'story_response')
+            )
+            
+            # Check if story completed and log summary
+            if result.sessionData and result.sessionData.isComplete:
+                story_summary = story_tracker.complete_story(
+                    topic=result.sessionData.topic or "unknown",
+                    mode=mode
+                )
+                # Add summary to response for frontend logging
+                if hasattr(result, 'latency_summary'):
+                    result.latency_summary = story_summary
+            
+            return result
+            
         elif mode == "funfacts":
             return await handle_funfacts(user_message, session_data)
         else:
-            return ChatResponse(response="I'm not sure what mode that is! Try storywriting or fun facts.")
+            return ChatResponse(response=content_manager.get_bot_response("errors.mode_error"))
             
     except Exception as e:
         logger.error(f"Error processing chat request: {e}")
-        return ChatResponse(response="Sorry, I'm having trouble right now. Please try again!")
+        return ChatResponse(response=content_manager.get_bot_response("errors.processing_error"))
 
 async def handle_storywriting(user_message: str, session_data: SessionData, story_mode: str = "auto") -> ChatResponse:
     """Handle storywriting mode interactions following the 10-step process"""
@@ -962,38 +1770,82 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
         logger.info(f"🎯 LLM RESPONSE DEBUG: Raw response length: {len(raw_response)} characters")
         logger.info(f"🎯 LLM RESPONSE DEBUG: First 200 chars: {raw_response[:200]}...")
         
-        structured_response = parse_structured_story_response(raw_response)
-        logger.info(f"🎯 METADATA DEBUG: Parsed metadata: {structured_response.metadata}")
-        logger.info(f"🎯 METADATA DEBUG: design_options: {structured_response.metadata.design_options}")
-        logger.info(f"🎯 METADATA DEBUG: needs_naming: {getattr(structured_response.metadata, 'needs_naming', 'NOT_SET')}")
-        
-        # Add story to parts for tracking
-        session_data.storyParts.append(structured_response.story)
-        
-        # Track vocabulary words used in the story
-        story_vocab_words = extract_vocabulary_from_content(structured_response.story, session_data.contentVocabulary)
-        if story_vocab_words:
-            session_data.contentVocabulary.extend(story_vocab_words)
-            logger.info(f"📋 VOCABULARY TRACKING: Added {len(story_vocab_words)} words from story content. Total tracked: {len(session_data.contentVocabulary)}")
-        
-        # Log vocabulary debug info to server logs  
-        log_vocabulary_debug_info(
-            topic, session_data.askedVocabWords, structured_response.story, "Initial Story Generation", len(session_data.contentVocabulary)
-        )
-        
-        # Check if design phase should be triggered
-        should_trigger = should_trigger_design_phase(structured_response)
-        logger.info(f"🎯 DESIGN PHASE DEBUG: should_trigger_design_phase() returned: {should_trigger}")
-        logger.info(f"🎯 DESIGN PHASE DEBUG: design_options length: {len(structured_response.metadata.design_options) if structured_response.metadata.design_options else 0}")
+        # Try new entity-based parsing first, fall back to legacy if needed
+        try:
+            enhanced_response = parse_enhanced_story_response(raw_response)
+            logger.info(f"✅ ENTITY PARSE: Successfully parsed with new entity system")
+            logger.info(f"🎯 ENTITY DEBUG: Characters named={enhanced_response.entities.characters.named}, unnamed={enhanced_response.entities.characters.unnamed}")
+            logger.info(f"🎯 ENTITY DEBUG: Locations named={enhanced_response.entities.locations.named}, unnamed={enhanced_response.entities.locations.unnamed}")
+            logger.info(f"🎯 ENTITY DEBUG: Vocabulary words: {enhanced_response.vocabulary_words}")
+            
+            # Add story to parts for tracking
+            session_data.storyParts.append(enhanced_response.story)
+            
+            # Track vocabulary words from entity metadata (more reliable than content extraction)
+            if enhanced_response.vocabulary_words:
+                session_data.contentVocabulary.extend(enhanced_response.vocabulary_words)
+                logger.info(f"📋 VOCABULARY TRACKING: Added {len(enhanced_response.vocabulary_words)} words from entity metadata. Total tracked: {len(session_data.contentVocabulary)}")
+            else:
+                # Fallback: extract from content if metadata doesn't have vocab words
+                story_vocab_words = extract_vocabulary_from_content(enhanced_response.story, session_data.contentVocabulary)
+                if story_vocab_words:
+                    session_data.contentVocabulary.extend(story_vocab_words)
+                    logger.info(f"📋 VOCABULARY TRACKING: Fallback - Added {len(story_vocab_words)} words from story content. Total tracked: {len(session_data.contentVocabulary)}")
+            
+            # Log vocabulary debug info  
+            log_vocabulary_debug_info(
+                topic, session_data.askedVocabWords, enhanced_response.story, "Initial Story Generation", len(session_data.contentVocabulary)
+            )
+            
+            # Check if design phase should be triggered using new entity validation
+            should_trigger = validate_entity_structure(enhanced_response.entities)
+            logger.info(f"🎯 DESIGN PHASE DEBUG: validate_entity_structure() returned: {should_trigger}")
+            
+            # Store enhanced response for design phase use
+            structured_response = enhanced_response
+            
+        except Exception as e:
+            logger.warning(f"⚠️ FALLBACK: Enhanced parsing failed, using legacy parser: {e}")
+            structured_response = parse_structured_story_response(raw_response)
+            logger.info(f"🎯 LEGACY DEBUG: Parsed metadata: {structured_response.metadata}")
+            logger.info(f"🎯 LEGACY DEBUG: design_options: {structured_response.metadata.design_options}")
+            
+            # Add story to parts for tracking
+            session_data.storyParts.append(structured_response.story)
+            
+            # Track vocabulary words using legacy method
+            story_vocab_words = extract_vocabulary_from_content(structured_response.story, session_data.contentVocabulary)
+            if story_vocab_words:
+                session_data.contentVocabulary.extend(story_vocab_words)
+                logger.info(f"📋 VOCABULARY TRACKING: Legacy - Added {len(story_vocab_words)} words from story content. Total tracked: {len(session_data.contentVocabulary)}")
+            
+            # Log vocabulary debug info  
+            log_vocabulary_debug_info(
+                topic, session_data.askedVocabWords, structured_response.story, "Initial Story Generation", len(session_data.contentVocabulary)
+            )
+            
+            # Check design phase using legacy method
+            should_trigger = should_trigger_design_phase(structured_response)
+            logger.info(f"🎯 DESIGN PHASE DEBUG: Legacy should_trigger_design_phase() returned: {should_trigger}")
         
         if should_trigger:
-            logger.info(f"✅ DESIGN PHASE: Triggering design phase with options: {structured_response.metadata.design_options}")
-            design_response = trigger_design_phase(session_data, structured_response)
+            # Log appropriate information based on response type
+            if hasattr(structured_response, 'entities'):
+                # Enhanced response
+                total_entities = (len(structured_response.entities.characters.unnamed) + 
+                                len(structured_response.entities.locations.unnamed))
+                logger.info(f"✅ DESIGN PHASE: Triggering design phase with {total_entities} designable entities")
+                design_response = trigger_enhanced_design_phase(session_data, structured_response)
+            else:
+                # Legacy response
+                logger.info(f"✅ DESIGN PHASE: Triggering legacy design phase with options: {structured_response.metadata.design_options}")
+                design_response = trigger_design_phase(session_data, structured_response)
+                
             design_response.suggestedTheme = get_theme_suggestion(topic)
             return design_response
         
         # No design phase needed, continue with regular story
-        logger.info(f"❌ DESIGN PHASE: Skipping design phase - no design options or empty array")
+        logger.info(f"❌ DESIGN PHASE: Skipping design phase - no designable entities found")
         suggested_theme = get_theme_suggestion(topic)
         
         return ChatResponse(
@@ -1017,7 +1869,7 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
                 # User doesn't want another story
                 session_data.awaiting_story_confirmation = False
                 return ChatResponse(
-                    response="That's perfectly fine! Thanks for sharing this wonderful story adventure with me. You did such a great job! 🌟",
+                    response=content_manager.get_bot_response("story_mode.session_goodbye"),
                     sessionData=session_data
                 )
             
@@ -1036,37 +1888,94 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
                 session_data.vocabularyPhase = VocabularyPhase()  # Reset vocabulary phase
                 session_data.contentVocabulary = []  # Reset content vocabulary for new story
                 
-                # Generate story beginning with vocabulary integration
-                base_prompt = prompt_manager.get_topic_selection_story_prompt(potential_new_topic)
-                enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
-                    base_prompt, potential_new_topic, session_data.askedVocabWords
-                )
-                story_response = llm_provider.generate_response(enhanced_prompt)
-                session_data.storyParts.append(story_response)
+                # Reset ALL design phase fields for new story
+                session_data.designPhase = None
+                session_data.currentDesignAspect = None
+                session_data.designAspectHistory = []
+                session_data.storyMetadata = None
+                session_data.designComplete = False
+                session_data.namingComplete = False
+                session_data.designedEntities = []
+                session_data.currentEntityType = None
+                session_data.currentEntityDescriptor = None
+                session_data.storyPhase = None
+                session_data.conflictType = None
+                session_data.conflictScale = None
+                session_data.narrativeAssessment = None
                 
-                # Track vocabulary words that were intended to be used
-                if selected_vocab:
-                    logger.info(f"New story generation included vocabulary: {selected_vocab}")
-                    session_data.contentVocabulary.extend(selected_vocab)
-                    logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+                # Generate story beginning with enhanced entity metadata system
+                story_prompt = create_enhanced_story_prompt(potential_new_topic, "auto")
+                raw_response = llm_provider.generate_response(story_prompt)
                 
-                # Log vocabulary debug info to server logs
-                log_vocabulary_debug_info(
-                    potential_new_topic, session_data.askedVocabWords, story_response, "New Story Generation", len(session_data.contentVocabulary)
-                )
-                
-                # Get theme suggestion for new topic
-                suggested_theme = get_theme_suggestion(potential_new_topic)
-                
-                return ChatResponse(
-                    response=f"Great choice! Let's write a {potential_new_topic} story! 🌟\n\n{story_response}",
-                    sessionData=session_data,
-                    suggestedTheme=suggested_theme
-                )
+                # Parse response using same logic as first story (enhanced entity system)
+                try:
+                    # Try enhanced parsing first (with entity metadata)
+                    enhanced_response = parse_enhanced_story_response(raw_response)
+                    logger.info(f"✅ ENTITY PARSE: Found {len(enhanced_response.entities.characters.named + enhanced_response.entities.characters.unnamed)} characters, {len(enhanced_response.entities.locations.named + enhanced_response.entities.locations.unnamed)} locations")
+                    
+                    # Add story to parts and track vocabulary
+                    session_data.storyParts.append(enhanced_response.story)
+                    
+                    # Track vocabulary using enhanced method
+                    if enhanced_response.vocabulary_words:
+                        session_data.contentVocabulary.extend(enhanced_response.vocabulary_words)
+                        logger.info(f"📋 VOCABULARY TRACKING: Enhanced - Added {len(enhanced_response.vocabulary_words)} words from entity metadata. Total tracked: {len(session_data.contentVocabulary)}")
+                    
+                    # Log vocabulary debug info
+                    log_vocabulary_debug_info(
+                        potential_new_topic, session_data.askedVocabWords, enhanced_response.story, "New Story Generation", len(session_data.contentVocabulary)
+                    )
+                    
+                    # Check if design phase should be triggered
+                    should_trigger = validate_entity_structure(enhanced_response.entities)
+                    logger.info(f"🎯 NEW STORY DESIGN: validate_entity_structure() returned: {should_trigger}")
+                    
+                    if should_trigger:
+                        # Trigger design phase for new story
+                        total_entities = (len(enhanced_response.entities.characters.unnamed) + 
+                                        len(enhanced_response.entities.locations.unnamed))
+                        logger.info(f"✅ NEW STORY DESIGN: Triggering design phase with {total_entities} designable entities")
+                        design_response = trigger_enhanced_design_phase(session_data, enhanced_response)
+                        design_response.response = f"Great choice! Let's write a {potential_new_topic} story! 🌟\n\n{enhanced_response.story}"
+                        design_response.suggestedTheme = get_theme_suggestion(potential_new_topic)
+                        return design_response
+                    
+                    # No design phase needed for new story
+                    logger.info(f"❌ NEW STORY DESIGN: Skipping design phase - no designable entities found")
+                    return ChatResponse(
+                        response=f"Great choice! Let's write a {potential_new_topic} story! 🌟\n\n{enhanced_response.story}",
+                        sessionData=session_data,
+                        suggestedTheme=get_theme_suggestion(potential_new_topic)
+                    )
+                    
+                except Exception as e:
+                    logger.warning(f"⚠️ NEW STORY FALLBACK: Enhanced parsing failed, using simple generation: {e}")
+                    # Fallback to simple story generation
+                    base_prompt = prompt_manager.get_topic_selection_story_prompt(potential_new_topic)
+                    enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
+                        base_prompt, potential_new_topic, session_data.askedVocabWords
+                    )
+                    story_response = llm_provider.generate_response(enhanced_prompt)
+                    session_data.storyParts.append(story_response)
+                    
+                    # Track vocabulary words from fallback
+                    if selected_vocab:
+                        session_data.contentVocabulary.extend(selected_vocab)
+                        logger.info(f"📋 VOCABULARY TRACKING: Fallback - Added {len(selected_vocab)} words. Total: {len(session_data.contentVocabulary)}")
+                    
+                    log_vocabulary_debug_info(
+                        potential_new_topic, session_data.askedVocabWords, story_response, "New Story Generation (Fallback)", len(session_data.contentVocabulary)
+                    )
+                    
+                    return ChatResponse(
+                        response=f"Great choice! Let's write a {potential_new_topic} story! 🌟\n\n{story_response}",
+                        sessionData=session_data,
+                        suggestedTheme=get_theme_suggestion(potential_new_topic)
+                    )
             else:
                 # Unclear response - ask for clarification
                 return ChatResponse(
-                    response="I'm not sure if you want to write another story. Would you like to pick one of those story ideas, or are you done for now?",
+                    response=content_manager.get_bot_response("errors.clarification_needed"),
                     sessionData=session_data
                 )
         
@@ -1096,38 +2005,95 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
                     session_data.vocabularyPhase = VocabularyPhase()  # Reset vocabulary phase
                     session_data.contentVocabulary = []  # Reset content vocabulary for new story
                     
-                    # Generate story beginning with vocabulary integration
-                    base_prompt = prompt_manager.get_topic_selection_story_prompt(potential_new_topic)
-                    enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
-                        base_prompt, potential_new_topic, session_data.askedVocabWords
-                    )
-                    story_response = llm_provider.generate_response(enhanced_prompt)
-                    session_data.storyParts.append(story_response)
+                    # Reset ALL design phase fields for new story (topic switch)
+                    session_data.designPhase = None
+                    session_data.currentDesignAspect = None
+                    session_data.designAspectHistory = []
+                    session_data.storyMetadata = None
+                    session_data.designComplete = False
+                    session_data.namingComplete = False
+                    session_data.designedEntities = []
+                    session_data.currentEntityType = None
+                    session_data.currentEntityDescriptor = None
+                    session_data.storyPhase = None
+                    session_data.conflictType = None
+                    session_data.conflictScale = None
+                    session_data.narrativeAssessment = None
                     
-                    # Track vocabulary words that were intended to be used
-                    if selected_vocab:
-                        logger.info(f"Story topic switch included vocabulary: {selected_vocab}")
-                        session_data.contentVocabulary.extend(selected_vocab)
-                        logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+                    # Generate story beginning with enhanced entity metadata system (topic switch)
+                    story_prompt = create_enhanced_story_prompt(potential_new_topic, "auto")
+                    raw_response = llm_provider.generate_response(story_prompt)
                     
-                    # Log vocabulary debug info to server logs
-                    log_vocabulary_debug_info(
-                        potential_new_topic, session_data.askedVocabWords, story_response, "Story Topic Switch", len(session_data.contentVocabulary)
-                    )
-                    
-                    # Get theme suggestion for new topic
-                    suggested_theme = get_theme_suggestion(potential_new_topic)
-                    
-                    return ChatResponse(
-                        response=story_response,
-                        sessionData=session_data,
-                        suggestedTheme=suggested_theme
-                    )
+                    # Parse response using same logic as first story (enhanced entity system)
+                    try:
+                        # Try enhanced parsing first (with entity metadata)
+                        enhanced_response = parse_enhanced_story_response(raw_response)
+                        logger.info(f"✅ TOPIC SWITCH PARSE: Found {len(enhanced_response.entities.characters.named + enhanced_response.entities.characters.unnamed)} characters, {len(enhanced_response.entities.locations.named + enhanced_response.entities.locations.unnamed)} locations")
+                        
+                        # Add story to parts and track vocabulary
+                        session_data.storyParts.append(enhanced_response.story)
+                        
+                        # Track vocabulary using enhanced method
+                        if enhanced_response.vocabulary_words:
+                            session_data.contentVocabulary.extend(enhanced_response.vocabulary_words)
+                            logger.info(f"📋 VOCABULARY TRACKING: Topic Switch Enhanced - Added {len(enhanced_response.vocabulary_words)} words from entity metadata. Total tracked: {len(session_data.contentVocabulary)}")
+                        
+                        # Log vocabulary debug info
+                        log_vocabulary_debug_info(
+                            potential_new_topic, session_data.askedVocabWords, enhanced_response.story, "Story Topic Switch", len(session_data.contentVocabulary)
+                        )
+                        
+                        # Check if design phase should be triggered
+                        should_trigger = validate_entity_structure(enhanced_response.entities)
+                        logger.info(f"🎯 TOPIC SWITCH DESIGN: validate_entity_structure() returned: {should_trigger}")
+                        
+                        if should_trigger:
+                            # Trigger design phase for topic switch story
+                            total_entities = (len(enhanced_response.entities.characters.unnamed) + 
+                                            len(enhanced_response.entities.locations.unnamed))
+                            logger.info(f"✅ TOPIC SWITCH DESIGN: Triggering design phase with {total_entities} designable entities")
+                            design_response = trigger_enhanced_design_phase(session_data, enhanced_response)
+                            design_response.response = enhanced_response.story
+                            design_response.suggestedTheme = get_theme_suggestion(potential_new_topic)
+                            return design_response
+                        
+                        # No design phase needed for topic switch story
+                        logger.info(f"❌ TOPIC SWITCH DESIGN: Skipping design phase - no designable entities found")
+                        return ChatResponse(
+                            response=enhanced_response.story,
+                            sessionData=session_data,
+                            suggestedTheme=get_theme_suggestion(potential_new_topic)
+                        )
+                        
+                    except Exception as e:
+                        logger.warning(f"⚠️ TOPIC SWITCH FALLBACK: Enhanced parsing failed, using simple generation: {e}")
+                        # Fallback to simple story generation
+                        base_prompt = prompt_manager.get_topic_selection_story_prompt(potential_new_topic)
+                        enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
+                            base_prompt, potential_new_topic, session_data.askedVocabWords
+                        )
+                        story_response = llm_provider.generate_response(enhanced_prompt)
+                        session_data.storyParts.append(story_response)
+                        
+                        # Track vocabulary words from fallback
+                        if selected_vocab:
+                            session_data.contentVocabulary.extend(selected_vocab)
+                            logger.info(f"📋 VOCABULARY TRACKING: Topic Switch Fallback - Added {len(selected_vocab)} words. Total: {len(session_data.contentVocabulary)}")
+                        
+                        log_vocabulary_debug_info(
+                            potential_new_topic, session_data.askedVocabWords, story_response, "Story Topic Switch (Fallback)", len(session_data.contentVocabulary)
+                        )
+                        
+                        return ChatResponse(
+                            response=story_response,
+                            sessionData=session_data,
+                            suggestedTheme=get_theme_suggestion(potential_new_topic)
+                        )
         
         # Story is done - vocabulary phase will be handled by new system
         # Mark story as complete and let the frontend trigger vocabulary phase
         return ChatResponse(
-            response="The end! 🌟",
+            response=content_manager.get_bot_response("story_mode.story_ending"),
             sessionData=session_data
         )
     
@@ -1299,7 +2265,7 @@ async def handle_start_vocabulary(session_data: SessionData) -> ChatResponse:
         logger.info(f"  Generated question: '{vocab_question.get('question', 'N/A')}'")
         
         return ChatResponse(
-            response="Great story! Now let's test your vocabulary:",
+            response=content_manager.get_bot_response("vocabulary.intro_after_story"),
             vocabQuestion=VocabQuestion(**vocab_question),
             sessionData=session_data
         )
@@ -1319,7 +2285,7 @@ async def handle_start_vocabulary(session_data: SessionData) -> ChatResponse:
             )
             
             return ChatResponse(
-                response="Great story! Now let's test your vocabulary:",
+                response=content_manager.get_bot_response("vocabulary.intro_after_story"),
                 vocabQuestion=VocabQuestion(**vocab_question),
                 sessionData=session_data
             )
@@ -1365,7 +2331,7 @@ async def handle_next_vocabulary(session_data: SessionData) -> ChatResponse:
         logger.info(f"  Generated question: '{vocab_question.get('question', 'N/A')}'")
         
         return ChatResponse(
-            response="Let's try another vocabulary question:",
+            response=content_manager.get_bot_response("vocabulary.next_question"),
             vocabQuestion=VocabQuestion(**vocab_question),
             sessionData=session_data
         )
@@ -1385,7 +2351,7 @@ async def handle_next_vocabulary(session_data: SessionData) -> ChatResponse:
             )
             
             return ChatResponse(
-                response="Let's try another vocabulary question:",
+                response=content_manager.get_bot_response("vocabulary.next_question"),
                 vocabQuestion=VocabQuestion(**vocab_question),
                 sessionData=session_data
             )

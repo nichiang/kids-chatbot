@@ -1,5 +1,7 @@
 {
-  "topicKeywords": {
+  "description": "Topic configuration for educational content generation",
+  
+  "topic_keywords": {
     "space": ["space", "planet", "star", "rocket", "astronaut", "jupiter", "mars", "galaxy", "alien"],
     "animals": ["animal", "dog", "cat", "elephant", "lion", "whale", "bird"],
     "fantasy": ["fantasy", "magic", "magical", "dragon", "unicorn", "wizard", "fairy", "enchanted", "mystical", "creature"],
@@ -10,7 +12,8 @@
     "mystery": ["mystery", "detective", "clue", "solve", "secret", "hidden"],
     "adventure": ["adventure", "explore", "journey", "quest", "travel"]
   },
-  "themeMapping": {
+  
+  "theme_mapping": {
     "fantasy": "theme-fantasy",
     "sports": "theme-sports", 
     "food": "theme-food",
@@ -18,9 +21,20 @@
     "ocean": "theme-ocean",
     "space": "theme-space",
     "mystery": "theme-elegant",
-    "adventure": "theme-sports",
+    "adventure": "theme-elegant",
     "inventions": "theme-space"
   },
-  "defaultTheme": "theme-space",
-  "description": "Centralized configuration for topic keyword detection and theme mapping. Edit this file to customize how topics are detected and which themes they map to."
+  
+  "default_theme": "theme-space",
+  
+  "educational_focus": {
+    "space": "Scientific discovery, exploration, scale and measurement",
+    "animals": "Biology, habitats, adaptation, conservation",
+    "fantasy": "Creativity, imagination, mythology, storytelling",
+    "sports": "Teamwork, perseverance, physical activity, competition",
+    "food": "Culture, nutrition, science, global awareness",
+    "ocean": "Marine biology, exploration, environmental science",
+    "mystery": "Critical thinking, problem-solving, deductive reasoning",
+    "adventure": "Courage, exploration, perseverance, discovery"
+  }
 }

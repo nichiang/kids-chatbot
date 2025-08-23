@@ -1,0 +1,64 @@
+{
+  "description": "Design prompt templates for character and location creation phases",
+  
+  "character": {
+    "naming": {
+      "prompt_template": "Can you name the {descriptor}?",
+      "placeholder": "What would you like to name them?",
+      "suggestions": ["Alex", "Maya", "Sam", "Riley", "Jordan", "Casey", "Taylor", "Morgan"]
+    },
+    "appearance": {
+      "prompt_template": "Help us bring {name} to life! Describe how {name} looks like",
+      "placeholder": "Write 1-2 sentences about what they look like",
+      "suggestions": ["tall", "curly", "bright", "gentle", "strong", "tiny", "colorful", "shiny"]
+    },
+    "personality": {
+      "prompt_template": "Let's describe {name}'s personality!",
+      "placeholder": "Write 1-2 sentences about their personality", 
+      "suggestions": ["brave", "curious", "kind", "funny", "creative", "patient", "helpful", "clever"]
+    },
+    "dreams": {
+      "prompt_template": "Help give more details to {name}. What does {name} dream of becoming?",
+      "placeholder": "Write about their hopes and dreams. They are dreaming to become",
+      "suggestions": ["explorer", "inventor", "teacher", "artist", "scientist", "chef", "musician", "hero"]
+    },
+    "skills": {
+      "prompt_template": "Help give more details to {name}. What is {name} amazing at?", 
+      "placeholder": "Describe their special talents",
+      "suggestions": ["climbing", "singing", "drawing", "cooking", "building", "dancing", "solving puzzles", "making friends"]
+    },
+    "flaws": {
+      "prompt_template": "Help us design {name}! Describe a small, relatable flaw",
+      "placeholder": "Describe a small, relatable flaw in 1-2 sentences",
+      "suggestions": ["forgetful", "impatient", "too trusting", "afraid of heights", "talks too much", "loses things", "shy", "easily distracted"]
+    }
+  },
+  
+  "location": {
+    "naming": {
+      "prompt_template": "What should we call {descriptor}?",
+      "placeholder": "What would you like to call this place?",
+      "suggestions": ["Crystal", "Golden", "Secret", "Mystic", "Wonder", "Dream", "Magic", "Starlight"]
+    },
+    "appearance": {
+      "prompt_template": "Help us bring {name} to life! Describe what this place looks like",
+      "placeholder": "Write 1-2 sentences. What do you see when you look around?",
+      "suggestions": ["towering", "sparkling", "mysterious", "ancient", "colorful", "hidden", "magical", "peaceful"]
+    },
+    "sounds_smells": {
+      "prompt_template": "What can you hear and smell in {name}?",
+      "placeholder": "Describe the sounds and smells. You can hear...",
+      "suggestions": ["chirping", "rushing", "sweet", "fresh", "echoing", "crackling", "whispering", "aromatic"]
+    },
+    "mood_weather": {
+      "prompt_template": "What is the atmosphere in {name} like?",
+      "placeholder": "Describe the mood and atmosphere. This place feels...", 
+      "suggestions": ["cozy", "exciting", "peaceful", "welcoming", "breezy", "warm", "misty", "bright"]
+    },
+    "unique_feature": {
+      "prompt_template": "What makes {name} special?",
+      "placeholder": "Describe what makes this place unique. The most special thing here is...",
+      "suggestions": ["glowing", "floating", "singing", "changing", "crystal", "golden", "invisible", "living"]
+    }
+  }
+}
