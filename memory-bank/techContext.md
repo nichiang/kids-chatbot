@@ -27,6 +27,21 @@ python-dotenv==1.0.0
 pydantic==2.5.0
 ```
 
+### Testing Infrastructure (Phase 16 Addition)
+- **pytest**: Python testing framework with advanced fixtures
+- **pytest-asyncio**: Async test support for FastAPI endpoints
+- **unittest.mock**: Mock and patch functionality for LLM response simulation
+- **JSON fixtures**: Realistic mock data for educational content testing
+
+**Testing Architecture**:
+```python
+tests/
+├── integration/          # End-to-end educational flow testing
+├── regression/           # Specific bug prevention tests  
+├── fixtures/            # Mock LLM responses and educational content
+└── unit/               # Individual function testing
+```
+
 ## Architecture Decisions
 
 ### Why FastAPI + Vanilla JS

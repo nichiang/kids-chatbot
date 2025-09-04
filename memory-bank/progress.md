@@ -266,6 +266,41 @@
 
 **Educational Impact**: Ensures consistent character and location design opportunities across multiple stories, maintaining engagement and educational value throughout extended learning sessions.
 
+### Phase 16: Missing Function Bug Fix (CRITICAL PRODUCTION RECOVERY)
+**Goal**: Fix critical NameError that completely broke second story generation capability
+- ✅ **Root Cause Identified**: Phase 15 implementation called non-existent `create_enhanced_story_prompt()` function
+- ✅ **Impact Assessment**: Users experienced complete failure when attempting second/third stories
+- ✅ **Solution Implemented**: Replaced with correct `prompt_manager.get_story_opening_prompt()` calls
+- ✅ **Two Path Coverage**: Fixed both new story confirmation flow and spontaneous topic switch flow
+- ✅ **Regression Testing**: Created comprehensive test suite to prevent this specific bug class
+- ✅ **Production Validation**: Server startup and story generation verified working
+
+**Technical Details**:
+- **Files Modified**: `backend/app.py` lines 1907 and 2024 - function call corrections
+- **Error Eliminated**: `name 'create_enhanced_story_prompt' is not defined` NameError
+- **Test Suite Created**: `tests/regression/test_missing_function_bug.py` prevents regression
+- **Integration Tests**: `tests/integration/test_multiple_story_flow.py` and `test_complete_story_flow.py`
+
+**Educational Impact**: Restored ability for students to write multiple stories in extended learning sessions, eliminating catastrophic workflow interruption.
+
+### Phase 17: Named Entity Design Phase Implementation (DEAD-END STORY ELIMINATION)  
+**Goal**: Fix critical UX issue where stories with named entities provided no user interaction opportunities
+- ✅ **Root Cause Analysis**: `validate_entity_structure()` only triggered design phases for unnamed entities
+- ✅ **Educational Gap Identified**: Named entities (like "Oliver") skipped all design opportunities
+- ✅ **Validation Logic Enhanced**: Both named and unnamed entities now trigger design phases
+- ✅ **Design Flow Differentiation**: Named entities skip naming, go directly to appearance/personality/dreams/skills
+- ✅ **Priority System**: Unnamed entities get full design (naming + aspects), named entities get aspect design
+- ✅ **Random Aspect Selection**: Variety in educational experience through random aspect choice
+- ✅ **Complete Flow Testing**: Verified all entity types now provide engaging interactions
+
+**Technical Details**:
+- **Files Modified**: `backend/app.py` - `validate_entity_structure()`, `get_next_design_entity()`, `trigger_enhanced_design_phase()`
+- **Enhanced Return Format**: `get_next_design_entity()` now returns `(entity_type, entity_descriptor, is_named)` tuple
+- **Smart Design Logic**: Named entities start with random aspect (appearance/personality/dreams/skills)
+- **Educational Continuity**: All stories now provide design opportunities followed by story continuation
+
+**Educational Impact**: Eliminates dead-end stories where students receive initial paragraph with no follow-up interaction, ensuring consistent educational engagement regardless of entity types in generated content.
+
 #### Critical Bug Fixes - Previous Session  
 - ✅ **GitHub Issue #1 - Vocabulary Reference Bug**: Showing entire context instead of single sentence → **ROOT CAUSE**: Word form mismatch (intended "constellation" vs actual "constellations") → **SOLUTION**: Use actual bolded words from LLM output instead of forcing intended words
 - ✅ **Constellation Case**: Exact regex match failure on singular/plural word forms → Fixed with flexible word extraction  

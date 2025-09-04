@@ -32,14 +32,19 @@
 - Receive gentle grammar feedback without discouragement
 - Build confidence in written expression
 
-**Learning Flow**:
+**Learning Flow** (Enhanced Post-Phase 17):
 1. **Topic Selection**: Child chooses story theme (honors their interests)
-2. **Collaborative Creation**: AI and child alternate writing paragraphs
-3. **Vocabulary Integration**: 2-3 educational words naturally woven into each AI paragraph
-4. **Grammar Support**: Constructive suggestions that improve rather than criticize
-5. **Story Completion**: Structured ending that feels satisfying and complete
-6. **Vocabulary Assessment**: Questions using actual story sentences for context
-7. **Celebration**: Complete story display celebrates the collaborative achievement
+2. **Story Generation**: AI creates engaging opening with vocabulary-rich content
+3. **Smart Design Phase**: Interactive character/location development
+   - **Named Entities**: Design appearance, personality, dreams, skills (skip naming)
+   - **Unnamed Entities**: Full design flow from naming through aspects
+4. **Story Continuation**: Rich narrative development incorporating design choices
+5. **Collaborative Creation**: AI and child alternate writing paragraphs
+6. **Vocabulary Integration**: 2-3 educational words naturally woven throughout
+7. **Grammar Support**: Constructive suggestions that improve rather than criticize
+8. **Story Completion**: Structured ending that feels satisfying and complete
+9. **Vocabulary Assessment**: Questions using actual story sentences for context
+10. **Celebration**: Complete story display celebrates the collaborative achievement
 
 #### Fun Facts Mode - Curiosity-Driven Learning
 **Educational Objectives**:

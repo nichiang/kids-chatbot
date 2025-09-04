@@ -15,7 +15,41 @@ app.get("/health", ...)
 app.mount("/", StaticFiles(directory="../frontend", html=True), name="static")
 ```
 
-### Hybrid Prompt Architecture Pattern (LATEST DISCOVERY)
+### Enhanced Entity Design Phase Pattern (LATEST BREAKTHROUGH - Phase 17)
+
+**Pattern**: Unified Named/Unnamed Entity Design Flow with Smart Phase Selection
+- **Why**: Eliminates dead-end stories and provides consistent educational engagement
+- **Discovery**: Named entities (like "Oliver") can provide equal educational value through aspect design
+- **Implementation**: Enhanced validation and entity selection with smart phase skipping
+
+**Entity Handling Logic**:
+```python
+# Enhanced validation - both named and unnamed entities are designable
+def validate_entity_structure(entities: StoryEntities) -> bool:
+    named_entities = len(entities.characters.named) + len(entities.locations.named)
+    unnamed_entities = len(entities.characters.unnamed) + len(entities.locations.unnamed)
+    return (named_entities + unnamed_entities) > 0  # Any entities = designable
+
+# Smart entity selection with phase awareness  
+def get_next_design_entity(entities, designed_entities) -> Tuple[str, str, bool]:
+    # Priority 1: Unnamed entities (full design: naming + aspects)
+    # Priority 2: Named entities (aspect design only, skip naming)
+    return (entity_type, entity_descriptor, is_named)
+
+# Adaptive design flow based on entity status
+if is_named:
+    session_data.namingComplete = True
+    session_data.currentDesignAspect = random.choice(["appearance", "personality", "dreams", "skills"])
+else:
+    session_data.currentDesignAspect = "naming"
+```
+
+**Educational Impact**: 
+- Named entities like "Oliver" → Design appearance/personality → Continue story
+- Unnamed entities like "young explorer" → Name → Design aspects → Continue story  
+- ALL stories provide engaging educational interactions (no dead ends)
+
+### Hybrid Prompt Architecture Pattern
 
 **Pattern**: Dual-Layer Prompt System - System Context + Programmatic Flow Control
 - **Why**: Balances LLM educational context with reliable educational progression
@@ -189,12 +223,51 @@ logger.info(f"🎯 METADATA DEBUG: design_options: {structured_response.metadata
 logger.info(f"🎯 DESIGN PHASE DEBUG: should_trigger_design_phase() returned: {should_trigger}")
 ```
 
+### End-to-End Testing Infrastructure Pattern (Phase 16 Implementation)
+
+**Pattern**: Comprehensive Integration Testing with Mock LLM Responses
+- **Why**: Critical story flow bugs were reaching production without detection
+- **Implementation**: Multi-layer testing strategy with realistic educational flow simulation
+- **Coverage**: Complete story journeys from topic selection through multiple stories
+
+**Testing Architecture**:
+```python
+# Integration Tests - Full Educational Flows
+tests/integration/test_multiple_story_flow.py      # Story 1 → Vocab → Story 2 → Design
+tests/integration/test_complete_story_flow.py      # Single story full experience
+
+# Regression Tests - Specific Bug Prevention  
+tests/regression/test_missing_function_bug.py      # Prevents NameError class bugs
+
+# Mock Infrastructure - Realistic LLM Simulation
+tests/fixtures/educational_content.py              # Story responses, entity metadata, vocab questions
+```
+
+**Mock Strategy**:
+```python
+@patch('llm_provider.llm_provider.generate_response')
+def test_complete_multiple_story_flow(self, mock_generate):
+    # Deterministic responses for consistent testing
+    mock_generate.side_effect = [
+        json.dumps(mock_story_1_with_entities),    # First story  
+        mock_vocab_question,                       # Vocabulary phase
+        json.dumps(mock_story_2_with_design),      # Second story
+        mock_design_continuation                   # After design phase
+    ]
+```
+
+**Validation Coverage**:
+- Session field reset verification between stories
+- Design phase triggering for named vs unnamed entities  
+- Educational flow continuity (no dead-end scenarios)
+- Error recovery and graceful degradation
+
 ### Character/Location Design System Architecture (MATURE FEATURE)
 
-**Pattern**: Structured LLM Response with Interactive Design Phase
-- **Revolutionary Detection**: JSON-based character/location metadata eliminates fragile regex extraction
-- **Educational Flow**: Topic → Story Generation → **Design Phase** → Story Continuation  
-- **Aspect Rotation**: Character (appearance → personality → skills) / Location (appearance → sounds → mood)
+**Pattern**: Enhanced Entity-Aware Design Phase with Smart Flow Selection
+- **Revolutionary Detection**: LLM-provided JSON entity metadata with named/unnamed categorization
+- **Educational Flow**: Topic → Story Generation → **Smart Design Phase** → Story Continuation  
+- **Adaptive Logic**: Named entities (aspect design) vs Unnamed entities (naming + aspects)
 - **UI Integration**: Themed design prompts with vocabulary suggestion pills for all 10+ themes
 
 **Critical Implementation - Structured Response**:

@@ -49,3 +49,7 @@ build/
 
 # Design files and mockups
 design/
+
+# Log files
+logs/
+backend/logs/
