@@ -95,6 +95,8 @@ class LLMProvider:
                     max_tokens=max_tokens,
                     temperature=0.7
                 )
+
+                print(prompt)
                 
                 return response.choices[0].message.content.strip()
                 
