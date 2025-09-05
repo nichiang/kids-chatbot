@@ -1824,73 +1824,61 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
         session_data.topic = topic
         session_data.currentStep = 2  # Moving to Step 2 after topic selection
         
-        # Generate story beginning with structured response (includes character/location metadata)
-        structured_prompt = prompt_manager.get_story_opening_prompt(topic, story_mode)
-        enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
-            structured_prompt, topic, session_data.askedVocabWords
+        # CONSOLIDATED: Generate story beginning with single API call
+        logger.info(f"Generating consolidated story opening for topic: {topic}")
+        consolidated_response = llm_provider.generate_story_response(
+            topic=topic,
+            story_step="opening",
+            include_feedback=False,  # No user input yet for feedback
+            include_vocabulary=True
         )
         
-        raw_response = llm_provider.generate_response(enhanced_prompt)
-        logger.info(f"🎯 LLM RESPONSE DEBUG: Raw response length: {len(raw_response)} characters")
-        logger.info(f"🎯 LLM RESPONSE DEBUG: First 200 chars: {raw_response[:200]}...")
+        # Extract story content and metadata
+        story_content = consolidated_response.get("story_content", "")
+        entities = consolidated_response.get("entities", {})
+        vocab_words = consolidated_response.get("vocabulary_words", [])
         
-        # Try new entity-based parsing first, fall back to legacy if needed
-        try:
-            enhanced_response = parse_enhanced_story_response(raw_response)
-            logger.info(f"✅ ENTITY PARSE: Successfully parsed with new entity system")
-            logger.info(f"🎯 ENTITY DEBUG: Characters named={enhanced_response.entities.characters.named}, unnamed={enhanced_response.entities.characters.unnamed}")
-            logger.info(f"🎯 ENTITY DEBUG: Locations named={enhanced_response.entities.locations.named}, unnamed={enhanced_response.entities.locations.unnamed}")
-            logger.info(f"🎯 ENTITY DEBUG: Vocabulary words: {enhanced_response.vocabulary_words}")
-            
-            # Add story to parts for tracking
-            session_data.storyParts.append(enhanced_response.story)
-            
-            # Track vocabulary words from entity metadata (more reliable than content extraction)
-            if enhanced_response.vocabulary_words:
-                session_data.contentVocabulary.extend(enhanced_response.vocabulary_words)
-                logger.info(f"📋 VOCABULARY TRACKING: Added {len(enhanced_response.vocabulary_words)} words from entity metadata. Total tracked: {len(session_data.contentVocabulary)}")
-            else:
-                # Fallback: extract from content if metadata doesn't have vocab words
-                story_vocab_words = extract_vocabulary_from_content(enhanced_response.story, session_data.contentVocabulary)
-                if story_vocab_words:
-                    session_data.contentVocabulary.extend(story_vocab_words)
-                    logger.info(f"📋 VOCABULARY TRACKING: Fallback - Added {len(story_vocab_words)} words from story content. Total tracked: {len(session_data.contentVocabulary)}")
-            
-            # Log vocabulary debug info  
-            log_vocabulary_debug_info(
-                topic, session_data.askedVocabWords, enhanced_response.story, "Initial Story Generation", len(session_data.contentVocabulary)
-            )
-            
-            # Check if design phase should be triggered using new entity validation
-            should_trigger = validate_entity_structure(enhanced_response.entities)
-            logger.info(f"🎯 DESIGN PHASE DEBUG: validate_entity_structure() returned: {should_trigger}")
-            
-            # Store enhanced response for design phase use
-            structured_response = enhanced_response
-            
-        except Exception as e:
-            logger.warning(f"⚠️ FALLBACK: Enhanced parsing failed, using legacy parser: {e}")
-            structured_response = parse_structured_story_response(raw_response)
-            logger.info(f"🎯 LEGACY DEBUG: Parsed metadata: {structured_response.metadata}")
-            logger.info(f"🎯 LEGACY DEBUG: design_options: {structured_response.metadata.design_options}")
-            
-            # Add story to parts for tracking
-            session_data.storyParts.append(structured_response.story)
-            
-            # Track vocabulary words using legacy method
-            story_vocab_words = extract_vocabulary_from_content(structured_response.story, session_data.contentVocabulary)
-            if story_vocab_words:
-                session_data.contentVocabulary.extend(story_vocab_words)
-                logger.info(f"📋 VOCABULARY TRACKING: Legacy - Added {len(story_vocab_words)} words from story content. Total tracked: {len(session_data.contentVocabulary)}")
-            
-            # Log vocabulary debug info  
-            log_vocabulary_debug_info(
-                topic, session_data.askedVocabWords, structured_response.story, "Initial Story Generation", len(session_data.contentVocabulary)
-            )
-            
-            # Check design phase using legacy method
-            should_trigger = should_trigger_design_phase(structured_response)
-            logger.info(f"🎯 DESIGN PHASE DEBUG: Legacy should_trigger_design_phase() returned: {should_trigger}")
+        logger.info(f"✅ CONSOLIDATED: Story generated with {len(vocab_words)} vocabulary words")
+        logger.info(f"🎯 ENTITY DEBUG: Entities found: {entities}")
+        
+        # Add story to parts for tracking
+        session_data.storyParts.append(story_content)
+        
+        # Track vocabulary words from consolidated response
+        if vocab_words:
+            session_data.contentVocabulary.extend(vocab_words)
+            logger.info(f"📋 VOCABULARY TRACKING: Added {len(vocab_words)} words from consolidated response. Total tracked: {len(session_data.contentVocabulary)}")
+        
+        # Log vocabulary debug info  
+        log_vocabulary_debug_info(
+            topic, session_data.askedVocabWords, story_content, "Consolidated Story Generation", len(session_data.contentVocabulary)
+        )
+        
+        # Check if design phase should be triggered (simplified check based on entities)
+        should_trigger = bool(entities.get("characters", {}).get("unnamed") or entities.get("locations", {}).get("unnamed"))
+        logger.info(f"🎯 DESIGN PHASE DEBUG: Consolidated entity check returned: {should_trigger}")
+        
+        # Create structured response for compatibility
+        class ConsolidatedResponse:
+            def __init__(self, story, entities, vocab_words):
+                self.story = story
+                self.entities = self._create_entity_structure(entities)
+                self.vocabulary_words = vocab_words
+                
+            def _create_entity_structure(self, entities_dict):
+                class EntityStructure:
+                    def __init__(self, entities):
+                        self.characters = type('Characters', (), {
+                            'named': entities.get('characters', {}).get('named', []),
+                            'unnamed': entities.get('characters', {}).get('unnamed', [])
+                        })()
+                        self.locations = type('Locations', (), {
+                            'named': entities.get('locations', {}).get('named', []),
+                            'unnamed': entities.get('locations', {}).get('unnamed', [])
+                        })()
+                return EntityStructure(entities)
+        
+        structured_response = ConsolidatedResponse(story_content, entities, vocab_words)
         
         if should_trigger:
             # Log appropriate information based on response type
@@ -2166,10 +2154,21 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
         # Add user's contribution to story
         session_data.storyParts.append(f"User: {user_message}")
         
-        # Provide grammar feedback if needed (Step 5)
-        grammar_feedback = llm_provider.provide_grammar_feedback(user_message)
+        # CONSOLIDATED: Generate story continuation, feedback, and vocabulary in single call
+        logger.info(f"Generating consolidated story continuation with feedback")
+        consolidated_response = llm_provider.generate_story_response(
+            topic=session_data.topic,
+            user_input=user_message,
+            story_step="continuation",
+            include_feedback=True,
+            include_vocabulary=True
+        )
         
-        # Generate next part of story (Steps 2-4 repeated)
+        # Extract feedback
+        writing_feedback = consolidated_response.get("writing_feedback", {})
+        grammar_feedback = writing_feedback.get("feedback") if writing_feedback else None
+        
+        # Get story context for assessment
         story_context = "\n".join(session_data.storyParts[-3:])  # Last 3 parts for context
         
         # ENHANCED STORY STRUCTURE: Intelligent story assessment
@@ -2206,22 +2205,19 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
         logger.info(f"📖 STORY ENDING DECISION: {should_end_story}, reason: {ending_reason}")
         
         if should_end_story:
-            # End the story with vocabulary integration
-            base_prompt = prompt_manager.get_story_ending_prompt(session_data.topic, story_context)
-            enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
-                base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
-            )
-            story_response = llm_provider.generate_response(enhanced_prompt)
+            # CONSOLIDATED: End the story with consolidated call (already got response above)
+            story_response = consolidated_response.get("story_content", "")
+            vocab_words = consolidated_response.get("vocabulary_words", [])
             
-            # Track vocabulary words that were intended to be used
-            if selected_vocab:
-                logger.info(f"Story ending included vocabulary: {selected_vocab}")
-                session_data.contentVocabulary.extend(selected_vocab)
-                logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+            # Track vocabulary words from consolidated response
+            if vocab_words:
+                logger.info(f"Story ending included vocabulary: {vocab_words}")
+                session_data.contentVocabulary.extend(vocab_words)
+                logger.info(f"📋 VOCABULARY TRACKING: Added {len(vocab_words)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
             
             # Log vocabulary debug info to server logs
             log_vocabulary_debug_info(
-                session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary, story_response, "Story Ending", len(session_data.contentVocabulary)
+                session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary, story_response, "Consolidated Story Ending", len(session_data.contentVocabulary)
             )
             
             # Add grammar feedback if available
@@ -2240,44 +2236,21 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
                 sessionData=session_data
             )
         else:
-            # Continue story with narrative-aware prompts based on assessment
-            if session_data.narrativeAssessment:
-                # Use intelligent narrative continuation based on story arc assessment
-                base_prompt = prompt_manager.get_narrative_continuation_prompt(
-                    session_data.narrativeAssessment, session_data.topic, story_context
-                )
-                logger.info(f"📖 NARRATIVE CONTINUATION: Using phase-aware prompt for {session_data.storyPhase} phase")
-            else:
-                # Fallback to standard continuation prompt
-                base_prompt = prompt_manager.get_continue_story_prompt(session_data.topic, story_context)
-                logger.info(f"📖 NARRATIVE CONTINUATION: Using standard continuation prompt")
+            # CONSOLIDATED: Continue story (already got response from consolidated call above)
+            story_response = consolidated_response.get("story_content", "")
+            vocab_words = consolidated_response.get("vocabulary_words", [])
             
-            # Add conflict integration if story lacks clear conflict
-            if (session_data.narrativeAssessment and 
-                not session_data.narrativeAssessment.get('has_clear_conflict', False) and 
-                session_data.currentStep <= 3):
-                
-                # Add age-appropriate conflict to enhance story
-                conflict_prompt = prompt_manager.get_conflict_integration_prompt(
-                    session_data.topic, session_data.conflictType, session_data.conflictScale
-                )
-                base_prompt += f"\n\nADDITIONAL GUIDANCE: {conflict_prompt}"
-                logger.info(f"📖 CONFLICT INTEGRATION: Added conflict guidance for {session_data.topic} story")
+            logger.info(f"📖 CONSOLIDATED CONTINUATION: Generated story continuation with {len(vocab_words)} vocab words")
             
-            enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
-                base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
-            )
-            story_response = llm_provider.generate_response(enhanced_prompt)
-            
-            # Track vocabulary words that were intended to be used
-            if selected_vocab:
-                logger.info(f"Story continuation included vocabulary: {selected_vocab}")
-                session_data.contentVocabulary.extend(selected_vocab)
-                logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+            # Track vocabulary words from consolidated response
+            if vocab_words:
+                logger.info(f"Story continuation included vocabulary: {vocab_words}")
+                session_data.contentVocabulary.extend(vocab_words)
+                logger.info(f"📋 VOCABULARY TRACKING: Added {len(vocab_words)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
             
             # Log vocabulary debug info to server logs
             log_vocabulary_debug_info(
-                session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary, story_response, "Story Continuation", len(session_data.contentVocabulary)
+                session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary, story_response, "Consolidated Story Continuation", len(session_data.contentVocabulary)
             )
             
             # Add grammar feedback if available
