@@ -6,7 +6,7 @@
       "variables": ["format_structure"]
     },
     "story_response_format": {
-      "structure": "{\n  \"story\": \"your story text here with **bolded** vocabulary words...\",\n  \"entities\": {\n    \"characters\": {\n      \"named\": [\"list character names here if any\"],\n      \"unnamed\": [\"list unnamed character descriptors if any\"]\n    },\n    \"locations\": {\n      \"named\": [\"list location names here if any\"],\n      \"unnamed\": [\"list unnamed location descriptors if any\"]\n    }\n  },\n  \"vocabulary_words\": [\"list the bolded vocabulary words here\"]\n}"
+      "structure": "{\n  \"story\": \"your story text here with **bolded** vocabulary words...\",\n  \"entities\": {\n    \"characters\": {\n      \"named\": [\"list only actual character names like 'Leo', 'Sarah', 'Captain Smith'\"],\n      \"unnamed\": [\"list only SEPARATE unnamed characters like 'the wizard', 'a friendly robot' - DO NOT include descriptors of already named characters\"]\n    },\n    \"locations\": {\n      \"named\": [\"list only actual location names like 'Planet Zorba', 'Crystal Cave'\"],\n      \"unnamed\": [\"list only SEPARATE unnamed locations like 'a mysterious forest', 'an ancient castle' - DO NOT include descriptors of already named locations\"]\n    }\n  },\n  \"vocabulary_words\": [\"list the bolded vocabulary words here\"]\n}"
     },
     "vocabulary_question_format": {
       "structure": "{\n  \"question\": \"What does [word] mean?\",\n  \"options\": {\n    \"a\": \"first option\",\n    \"b\": \"second option\", \n    \"c\": \"third option\",\n    \"d\": \"fourth option\"\n  },\n  \"correct_answer\": \"letter of correct option\",\n  \"explanation\": \"brief explanation of the correct answer\"\n}"

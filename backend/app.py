@@ -1527,20 +1527,64 @@ async def handle_design_phase_interaction(user_message: str, session_data: Sessi
             except Exception as e:
                 logging.error(f"❌ Failed to continue enhanced design phase: {e}")
             
-            # Fallback or completion after description phase
+            # Fallback or completion after naming - generate story continuation
             session_data.designComplete = True
             session_data.designPhase = None
             session_data.currentDesignAspect = None
-            session_data.currentEntityType = None
-            session_data.currentEntityDescriptor = None
             
-            # Story continuation message
-            completion_message = f"{feedback_response}\n\nGreat! Now that we've designed {provided_name}, let's continue with our story!"
+            # Generate consolidated story continuation after naming completion
+            story_context = " | ".join(session_data.storyParts[-3:]) if session_data.storyParts else ""
+            design_details = f"The child named this {session_data.currentEntityType} '{provided_name}'"
             
-            return ChatResponse(
-                response=completion_message,
-                sessionData=session_data
-            )
+            logging.info(f"Generating consolidated story continuation after naming {provided_name}")
+            
+            try:
+                # Use consolidated prompts for story continuation after naming
+                result = llm_provider.generate_story_response(
+                    topic=session_data.topic,
+                    user_input=design_details,
+                    story_step="continuation",
+                    include_feedback=False,
+                    include_vocabulary=True
+                )
+                
+                if result and "story_content" in result:
+                    story_continuation = result["story_content"]
+                    session_data.storyParts.append(story_continuation)
+                    
+                    # Handle vocabulary words from consolidated result
+                    if "vocabulary_words" in result:
+                        vocab_words = result["vocabulary_words"]
+                        session_data.contentVocabulary.extend(vocab_words)
+                        logging.info(f"📋 CONSOLIDATED NAMING CONTINUATION: Added {len(vocab_words)} vocab words. Total: {len(session_data.contentVocabulary)}")
+                    
+                    # Complete response with feedback + story continuation
+                    complete_response = f"{feedback_response}\n\nGreat! Now that we've named {provided_name}, let's continue with our story!\n\n{story_continuation}"
+                    
+                    logging.info(f"✅ CONSOLIDATED NAMING CONTINUATION: Generated continuation after naming {provided_name}")
+                    
+                    # Clean up entity tracking
+                    session_data.currentEntityType = None
+                    session_data.currentEntityDescriptor = None
+                    
+                    return ChatResponse(
+                        response=complete_response,
+                        sessionData=session_data
+                    )
+                else:
+                    raise Exception("No story content in consolidated response")
+                
+            except Exception as e:
+                logging.error(f"❌ Error generating consolidated story continuation after naming: {e}")
+                # Clean up and fallback to simple continuation message
+                session_data.currentEntityType = None
+                session_data.currentEntityDescriptor = None
+                completion_message = f"{feedback_response}\n\nGreat! Now that we've designed {provided_name}, let's continue with our story!"
+                
+                return ChatResponse(
+                    response=completion_message,
+                    sessionData=session_data
+                )
         else:
             # Legacy system: continue to next design aspect
             aspects = load_design_aspects(session_data.designPhase)
@@ -1595,41 +1639,46 @@ async def handle_design_phase_interaction(user_message: str, session_data: Sessi
         session_data.currentEntityType = None
         session_data.currentEntityDescriptor = None
         
-        # Generate actual story continuation (like legacy system does)
+        # CONSOLIDATED: Generate story continuation after design phase using consolidated prompts
         story_context = " | ".join(session_data.storyParts[-3:]) if session_data.storyParts else ""
-        design_summary = f"The child has helped design {entity_name} with these details from our design session."
+        design_details = f"The child named this {entity_type} '{entity_name}' and described: {provided_description}"
         
-        continuation_prompt = prompt_manager.get_design_continuation_prompt(
-            session_data.topic, story_context, design_summary, provided_description, entity_name
-        )
-        
-        enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
-            continuation_prompt, session_data.topic, 
-            session_data.askedVocabWords + session_data.contentVocabulary
-        )
+        logging.info(f"Generating consolidated story continuation after design phase for {entity_name}")
         
         try:
-            story_continuation = llm_provider.generate_response(enhanced_prompt)
-            session_data.storyParts.append(story_continuation)
-            
-            # Track vocabulary from continuation
-            story_vocab = extract_vocabulary_from_content(story_continuation, session_data.contentVocabulary)
-            if story_vocab:
-                session_data.contentVocabulary.extend(story_vocab)
-                logging.info(f"📋 VOCABULARY TRACKING: Added {len(story_vocab)} words from enhanced design continuation. Total: {len(session_data.contentVocabulary)}")
-            
-            # Complete response with feedback + story continuation
-            complete_response = f"{feedback_response}\n\nPerfect! You've helped bring {entity_name} to life! Here's how the story continues:\n\n{story_continuation}"
-            
-            logging.info(f"✅ ENHANCED STORY CONTINUATION: Generated continuation after designing {entity_name}")
-            
-            return ChatResponse(
-                response=complete_response,
-                sessionData=session_data
+            # Use consolidated prompts for story continuation after design
+            result = llm_provider.generate_story_response(
+                topic=session_data.topic,
+                user_input=design_details,
+                story_step="continuation",
+                include_feedback=False,
+                include_vocabulary=True
             )
             
+            if result and "story_content" in result:
+                story_continuation = result["story_content"]
+                session_data.storyParts.append(story_continuation)
+                
+                # Handle vocabulary words from consolidated result
+                if "vocabulary_words" in result:
+                    vocab_words = result["vocabulary_words"]
+                    session_data.contentVocabulary.extend(vocab_words)
+                    logging.info(f"📋 CONSOLIDATED DESIGN CONTINUATION: Added {len(vocab_words)} vocab words. Total: {len(session_data.contentVocabulary)}")
+                
+                # Complete response with feedback + story continuation
+                complete_response = f"{feedback_response}\n\nPerfect! You've helped bring {entity_name} to life! Here's how the story continues:\n\n{story_continuation}"
+                
+                logging.info(f"✅ CONSOLIDATED DESIGN CONTINUATION: Generated continuation after designing {entity_name}")
+                
+                return ChatResponse(
+                    response=complete_response,
+                    sessionData=session_data
+                )
+            else:
+                raise Exception("No story content in consolidated response")
+            
         except Exception as e:
-            logging.error(f"❌ Error generating enhanced story continuation after design: {e}")
+            logging.error(f"❌ Error generating consolidated story continuation after design: {e}")
             # Fallback to simple continuation message
             completion_message = f"{feedback_response}\n\nThanks for helping design {entity_name}! Let's continue our story. What happens next?"
             
@@ -1687,39 +1736,44 @@ async def handle_design_phase_interaction(user_message: str, session_data: Sessi
         session_data.designComplete = True
         session_data.currentDesignAspect = None
         
-        # Create story continuation prompt that incorporates the user's designs
+        # CONSOLIDATED: Generate story continuation after legacy design phase using consolidated prompts  
         story_context = " | ".join(session_data.storyParts[-3:]) if session_data.storyParts else ""
-        design_summary = f"The child has helped design {subject_name} with these details from our design session."
+        design_details = f"The child designed {subject_name} with these details: {user_message}"
         
-        continuation_prompt = prompt_manager.get_design_continuation_prompt(
-            session_data.topic, story_context, design_summary, user_message, subject_name
-        )
-        
-        enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
-            continuation_prompt, session_data.topic, 
-            session_data.askedVocabWords + session_data.contentVocabulary
-        )
+        logging.info(f"Generating consolidated story continuation after legacy design phase for {subject_name}")
         
         try:
-            story_continuation = llm_provider.generate_response(enhanced_prompt)
-            session_data.storyParts.append(story_continuation)
-            
-            # Track vocabulary from continuation
-            story_vocab = extract_vocabulary_from_content(story_continuation, session_data.contentVocabulary)
-            if story_vocab:
-                session_data.contentVocabulary.extend(story_vocab)
-                logger.info(f"📋 VOCABULARY TRACKING: Added {len(story_vocab)} words from design continuation. Total: {len(session_data.contentVocabulary)}")
-            
-            # Complete response with feedback + story continuation
-            complete_response = f"{feedback_response}\n\nPerfect! You've helped bring {subject_name} to life! Here's how the story continues:\n\n{story_continuation}"
-            
-            return ChatResponse(
-                response=complete_response,
-                sessionData=session_data
+            # Use consolidated prompts for story continuation after design
+            result = llm_provider.generate_story_response(
+                topic=session_data.topic,
+                user_input=design_details,
+                story_step="continuation",
+                include_feedback=False,
+                include_vocabulary=True
             )
             
+            if result and "story_content" in result:
+                story_continuation = result["story_content"]
+                session_data.storyParts.append(story_continuation)
+                
+                # Handle vocabulary words from consolidated result
+                if "vocabulary_words" in result:
+                    vocab_words = result["vocabulary_words"]
+                    session_data.contentVocabulary.extend(vocab_words)
+                    logging.info(f"📋 CONSOLIDATED LEGACY DESIGN CONTINUATION: Added {len(vocab_words)} vocab words. Total: {len(session_data.contentVocabulary)}")
+                
+                # Complete response with feedback + story continuation
+                complete_response = f"{feedback_response}\n\nPerfect! You've helped bring {subject_name} to life! Here's how the story continues:\n\n{story_continuation}"
+                
+                return ChatResponse(
+                    response=complete_response,
+                    sessionData=session_data
+                )
+            else:
+                raise Exception("No story content in consolidated response")
+            
         except Exception as e:
-            logging.error(f"Error generating story continuation after design: {e}")
+            logging.error(f"❌ Error generating consolidated story continuation after legacy design: {e}")
             return ChatResponse(
                 response=f"{feedback_response}\n\nThanks for helping design {subject_name}! Let's continue our story. What happens next?",
                 sessionData=session_data
