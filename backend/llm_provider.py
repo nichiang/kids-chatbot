@@ -133,8 +133,22 @@ class LLMProvider:
                     temperature=0.7
                 )
                 
-                # Parse consolidated response
-                result = json.loads(response.choices[0].message.content.strip())
+                # Parse consolidated response with error handling
+                response_content = response.choices[0].message.content.strip()
+                try:
+                    result = json.loads(response_content)
+                except json.JSONDecodeError as e:
+                    # Try to fix common JSON issues (trailing commas, etc.)
+                    logger.warning(f"JSON parsing failed, attempting to fix: {e}")
+                    # Remove trailing commas before } or ]
+                    import re
+                    fixed_content = re.sub(r',(\s*[}\]])', r'\1', response_content)
+                    try:
+                        result = json.loads(fixed_content)
+                        logger.info("JSON parsing succeeded after fixing trailing commas")
+                    except json.JSONDecodeError:
+                        logger.error(f"Could not parse JSON even after fixes: {response_content[:200]}...")
+                        raise
                 
                 # Validate and clean response structure
                 return self._validate_story_response(result)
@@ -260,40 +274,68 @@ class LLMProvider:
             "vocabulary_words": response.get("vocabulary_words", [])
         }
         
-        # Ensure vocabulary question has proper structure
+        # Validate and convert vocabulary question format
         vocab_q = validated["vocabulary_question"]
-        if vocab_q and not all(key in vocab_q for key in ["question", "options"]):
+        if vocab_q and vocab_q.get("question"):
+            # Use the validation method to convert format properly
+            validated["vocabulary_question"] = self._validate_vocabulary_question(vocab_q)
+        elif vocab_q:
             logger.warning("Vocabulary question missing required fields")
             validated["vocabulary_question"] = {}
-        
-        # Convert old format if needed
-        if "correctIndex" in vocab_q:
-            # Convert old format to new format
-            options = vocab_q.get("options", [])
-            correct_index = vocab_q.get("correctIndex", 0)
-            if isinstance(options, list) and 0 <= correct_index < len(options):
-                vocab_q["correct_answer"] = chr(97 + correct_index)  # Convert 0->a, 1->b, etc.
-            vocab_q.pop("correctIndex", None)
         
         return validated
     
     def _validate_vocabulary_question(self, response: Dict) -> Dict:
-        """Validate vocabulary question response"""
-        # Handle both old and new formats
-        if "correctIndex" in response:
-            # Convert old format
-            options = response.get("options", [])
-            correct_index = response.get("correctIndex", 0)
-            if isinstance(options, list) and 0 <= correct_index < len(options):
-                response["correct_answer"] = chr(97 + correct_index)
-            response.pop("correctIndex", None)
+        """Validate vocabulary question response and convert to app's expected format"""
+        # Convert from consolidated format to app format
+        options_dict = response.get("options", {})
+        correct_answer_letter = response.get("correct_answer", "a")
         
-        return {
-            "question": response.get("question", ""),
-            "options": response.get("options", {}),
-            "correct_answer": response.get("correct_answer", "a"),
-            "explanation": response.get("explanation", "")
-        }
+        # Convert dict format {"a": "opt1", "b": "opt2"} to list format ["opt1", "opt2", ...]
+        if isinstance(options_dict, dict):
+            # Ensure we have a,b,c,d keys in order
+            option_keys = ["a", "b", "c", "d"]
+            options_list = []
+            correct_index = 0
+            
+            for i, key in enumerate(option_keys):
+                if key in options_dict:
+                    options_list.append(options_dict[key])
+                    if key == correct_answer_letter.lower():
+                        correct_index = i
+                else:
+                    options_list.append(f"Option {key.upper()}")
+            
+            return {
+                "question": response.get("question", ""),
+                "options": options_list,
+                "correctIndex": correct_index,
+                "explanation": response.get("explanation", "")
+            }
+        elif isinstance(options_dict, list):
+            # Already in list format, just need to find correctIndex
+            correct_index = 0
+            if "correctIndex" in response:
+                correct_index = response.get("correctIndex", 0)
+            elif correct_answer_letter:
+                # Convert letter to index (a=0, b=1, c=2, d=3)
+                correct_index = max(0, ord(correct_answer_letter.lower()) - ord('a'))
+                correct_index = min(correct_index, len(options_dict) - 1)
+            
+            return {
+                "question": response.get("question", ""),
+                "options": options_dict,
+                "correctIndex": correct_index,
+                "explanation": response.get("explanation", "")
+            }
+        else:
+            # Fallback format
+            return {
+                "question": response.get("question", "What does this word mean?"),
+                "options": ["Option A", "Option B", "Option C", "Option D"],
+                "correctIndex": 0,
+                "explanation": response.get("explanation", "")
+            }
     
     # FALLBACK METHODS
     
