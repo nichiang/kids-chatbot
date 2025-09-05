@@ -118,3 +118,107 @@ def problematic_content_examples():
             "words": ["amazing", "determination", "challenging"]
         }
     }
+
+# Mock LLM responses for integration testing
+MOCK_LLM_RESPONSES = {
+    # Story responses with entity metadata for design phase testing
+    "stories": {
+        "space_with_unnamed_character": {
+            "story": "In a distant galaxy, a **curious** young explorer discovered a mysterious **ancient** spaceship.",
+            "entities": {
+                "characters": {
+                    "named": [],
+                    "unnamed": ["young explorer"]
+                },
+                "locations": {
+                    "named": [],
+                    "unnamed": ["mysterious spaceship"]
+                }
+            },
+            "vocabulary_words": ["curious", "ancient"]
+        },
+        "fantasy_with_unnamed_location": {
+            "story": "Princess Luna ventured into the **enchanted** forest where a **magical** creature lived.",
+            "entities": {
+                "characters": {
+                    "named": ["Princess Luna"],
+                    "unnamed": ["magical creature"]
+                },
+                "locations": {
+                    "named": [],
+                    "unnamed": ["enchanted forest"]
+                }
+            },
+            "vocabulary_words": ["enchanted", "magical"]
+        },
+        "food_adventure": {
+            "story": "In a **bustling** market, a **talented** chef discovered **exotic** spices from faraway lands.",
+            "entities": {
+                "characters": {
+                    "named": [],
+                    "unnamed": ["talented chef"]
+                },
+                "locations": {
+                    "named": [],
+                    "unnamed": ["bustling market"]
+                }
+            },
+            "vocabulary_words": ["bustling", "talented", "exotic"]
+        },
+        "named_entities_only": {
+            "story": "Captain Rex and Lieutenant Maya explored Planet Zephyr, searching for **valuable** crystals.",
+            "entities": {
+                "characters": {
+                    "named": ["Captain Rex", "Lieutenant Maya"],
+                    "unnamed": []
+                },
+                "locations": {
+                    "named": ["Planet Zephyr"],
+                    "unnamed": []
+                }
+            },
+            "vocabulary_words": ["valuable"]
+        }
+    },
+    
+    # Story continuations
+    "continuations": {
+        "space_exploration": "The explorer carefully approached the glowing ship, wondering what **incredible** secrets it might hold.",
+        "design_continuation": "Perfect! Now that we know our character is named Alex, let's continue the adventure. Alex felt a surge of **confidence** as they stepped forward.",
+        "location_continuation": "Wonderful! Now that we've named this place Crystal Cavern, let's see what Alex discovers there. The cavern sparkled with **mysterious** light."
+    },
+    
+    # Vocabulary questions
+    "vocab_questions": {
+        "curious": "What does 'curious' mean in this story?\nA) Sleepy\nB) Wanting to learn or know something\nC) Scared\nD) Hungry",
+        "ancient": "What does 'ancient' mean?\nA) Very new\nB) Very old or from long ago\nC) Very fast\nD) Very small",
+        "enchanted": "What does 'enchanted' mean?\nA) Broken\nB) Magical or under a spell\nC) Very heavy\nD) Very loud"
+    },
+    
+    # Grammar feedback
+    "grammar_feedback": {
+        "positive": "Great description! Your writing shows wonderful creativity and helps us understand the character better.",
+        "gentle_correction": "Nice work! You might consider adding a bit more detail about how the character feels in this moment.",
+        "encouraging": "Excellent! I love how you described that. Your story is becoming very interesting."
+    }
+}
+
+@pytest.fixture
+def mock_llm_responses():
+    """Provide mock LLM responses for integration testing"""
+    return MOCK_LLM_RESPONSES
+
+@pytest.fixture
+def story_responses_for_testing():
+    """Provide story response fixtures with various entity configurations"""
+    return MOCK_LLM_RESPONSES["stories"]
+
+@pytest.fixture
+def continuation_responses():
+    """Provide story continuation fixtures"""
+    return MOCK_LLM_RESPONSES["continuations"]
+
+@pytest.fixture
+def vocabulary_question_responses():
+    """Provide vocabulary question fixtures"""
+    return MOCK_LLM_RESPONSES["vocab_questions"]

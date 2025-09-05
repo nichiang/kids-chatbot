@@ -1,0 +1,21 @@
+{
+  "description": "Assessment and feedback modules for educational evaluation",
+  "components": {
+    "writing_feedback": {
+      "template": "If there are grammar, spelling or vocabulary errors in '{user_input}', provide a gentle suggestion using this format: 'You could make that even better by saying...'. Also provide feedback on how to improve the writing flow. If the grammar and writing flow looks good, give some encouraging feedback.\n\nREQUIREMENTS:\n- Be encouraging and supportive\n- Focus on one or two main improvements if needed\n- Use age-appropriate explanations\n- Always end with positive reinforcement\n- If no corrections needed, celebrate their good writing",
+      "variables": ["user_input"]
+    },
+    "vocabulary_assessment": {
+      "template": "Evaluate the user's vocabulary usage in: '{user_input}'\n\nREQUIREMENTS:\n- Identify any advanced or interesting word choices\n- Suggest more descriptive alternatives if appropriate\n- Encourage vocabulary expansion\n- Keep suggestions simple and age-appropriate\n- Praise good word choices",
+      "variables": ["user_input"]
+    },
+    "comprehension_check": {
+      "template": "Create a comprehension question about the story element: {story_element}\n\nREQUIREMENTS:\n- Ask about character motivations, plot development, or story details\n- Provide 3-4 multiple choice options\n- Make sure the question tests understanding, not just memory\n- Use vocabulary appropriate for 2nd-3rd graders",
+      "variables": ["story_element"]
+    },
+    "progress_encouragement": {
+      "template": "Provide encouraging feedback for the user's progress in: {learning_area}\n\nREQUIREMENTS:\n- Highlight specific improvements or strengths\n- Encourage continued learning\n- Use enthusiastic but age-appropriate language\n- Connect achievements to learning goals",
+      "variables": ["learning_area"]
+    }
+  }
+}

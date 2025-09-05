@@ -20,7 +20,10 @@
       "Bash(pip install:*)",
       "Bash(move:*)",
       "Bash(mv:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(uvicorn:*)",
+      "Bash(start http://localhost:8000)",
+      "Bash(del test_named_entity_fix.py test_comprehensive_entities.py)"
     ],
     "deny": []
   }

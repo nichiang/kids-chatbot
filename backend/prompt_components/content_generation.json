@@ -1,0 +1,21 @@
+{
+  "description": "Content generation templates for story modes and educational responses",
+  "components": {
+    "story_opening": {
+      "template": "Create a story opening for the topic: {topic}\n\nREQUIREMENTS:\n- Write 2-4 sentences suitable for strong 2nd graders or 3rd graders\n- Include characters and/or locations\n- Bold 2-3 vocabulary words using **word** format\n- Use engaging, age-appropriate language that sparks imagination\n\nExamples:\n- Space: 'Captain Luna strapped herself into the **gleaming** spacecraft and checked all the controls.'\n- Fantasy: 'Princess Maya ventured into the **enchanted** forest, carrying her grandmother's ancient map.'\n- Animals: 'Dr. Sarah watched as the **magnificent** elephants gathered at the watering hole.'",
+      "variables": ["topic"]
+    },
+    "story_continuation": {
+      "template": "Continue the story based on: {user_input}\n\nREQUIREMENTS:\n- Continue naturally from the user's contribution\n- Add 1-2 sentences that advance the story\n- Bold 1-2 new vocabulary words\n- Ask an engaging question to prompt the user's next contribution\n- Keep the tone exciting and age-appropriate",
+      "variables": ["user_input"]
+    },
+    "story_conclusion": {
+      "template": "Help conclude the story based on: {user_input}\n\nREQUIREMENTS:\n- Provide a satisfying story ending\n- Summarize the adventure briefly\n- Congratulate the user on their creativity\n- Invite them to start a new story if they'd like",
+      "variables": ["user_input"]
+    },
+    "vocabulary_question_generation": {
+      "template": "Create a vocabulary question about the word '{word}' from this context: {context}\n\nREQUIREMENTS:\n- Ask 'What does {word} mean?'\n- Provide 4 multiple choice options (a, b, c, d)\n- Make the correct answer clear but not too obvious\n- Use age-appropriate definitions and distractors\n- Include context clues in the question",
+      "variables": ["word", "context"]
+    }
+  }
+}

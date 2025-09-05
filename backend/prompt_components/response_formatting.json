@@ -1,0 +1,21 @@
+{
+  "description": "Response formatting templates for consistent output structure",
+  "components": {
+    "json_response_format": {
+      "template": "RETURN AS VALID JSON in this exact format:\n{format_structure}",
+      "variables": ["format_structure"]
+    },
+    "story_response_format": {
+      "structure": "{\n  \"story\": \"your story text here with **bolded** vocabulary words...\",\n  \"entities\": {\n    \"characters\": {\n      \"named\": [\"list character names here if any\"],\n      \"unnamed\": [\"list unnamed character descriptors if any\"]\n    },\n    \"locations\": {\n      \"named\": [\"list location names here if any\"],\n      \"unnamed\": [\"list unnamed location descriptors if any\"]\n    }\n  },\n  \"vocabulary_words\": [\"list the bolded vocabulary words here\"]\n}"
+    },
+    "vocabulary_question_format": {
+      "structure": "{\n  \"question\": \"What does [word] mean?\",\n  \"options\": {\n    \"a\": \"first option\",\n    \"b\": \"second option\", \n    \"c\": \"third option\",\n    \"d\": \"fourth option\"\n  },\n  \"correct_answer\": \"letter of correct option\",\n  \"explanation\": \"brief explanation of the correct answer\"\n}"
+    },
+    "feedback_format": {
+      "structure": "{\n  \"feedback\": \"your encouraging feedback here\",\n  \"suggestions\": [\"specific improvement suggestions if any\"],\n  \"praise\": \"positive reinforcement message\"\n}"
+    },
+    "consolidated_response_format": {
+      "structure": "{\n  \"story_content\": \"generated story content\",\n  \"vocabulary_question\": {\n    \"question\": \"vocabulary question\",\n    \"options\": {\"a\": \"option1\", \"b\": \"option2\", \"c\": \"option3\", \"d\": \"option4\"},\n    \"correct_answer\": \"a\",\n    \"explanation\": \"explanation text\"\n  },\n  \"writing_feedback\": {\n    \"feedback\": \"feedback text\",\n    \"suggestions\": [\"suggestions array\"],\n    \"praise\": \"praise text\"\n  },\n  \"next_step\": \"guidance for continuation\"\n}"
+    }
+  }
+}

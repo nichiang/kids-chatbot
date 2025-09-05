@@ -8,6 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import openai
 from prompt_manager import prompt_manager
+from consolidated_prompts import consolidated_prompt_builder
 
 # Load environment variables from .env file
 load_dotenv()
@@ -56,6 +57,9 @@ class LLMProvider:
         self.model = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
         self.base_url = os.getenv('OPENAI_BASE_URL', 'https://api.openai.com/v1')
         
+        # Feature flag for consolidated prompts (defaults to False for backward compatibility)
+        self.use_consolidated_prompts = os.getenv('USE_CONSOLIDATED_PROMPTS', 'False').lower() == 'true'
+        
         # PROMPT MANAGER ARCHITECTURE: Load system prompts via centralized PromptManager
         # Provides LLM with complete educational framework while maintaining clean separation
         # Story mode: Complete 10-step educational process with tutor personality
@@ -70,6 +74,8 @@ class LLMProvider:
                 base_url=self.base_url
             )
             logger.info("OpenAI client initialized successfully")
+            if self.use_consolidated_prompts:
+                logger.info("🚀 Consolidated prompts enabled")
         else:
             logger.warning("OpenAI API key not found. Using fallback responses.")
             self.client = None
@@ -423,6 +429,232 @@ Always provide encouraging feedback and specific examples to help young learners
         
         return None
 
+    # NEW CONSOLIDATED METHODS
+    
+    @measure_llm_call('consolidated_story_generation')
+    def generate_consolidated_story_response(self, 
+                                           topic: str, 
+                                           user_input: str = None,
+                                           story_step: str = "opening",
+                                           include_feedback: bool = True,
+                                           include_vocabulary: bool = True) -> Dict:
+        """
+        Generate consolidated response with story content, vocabulary questions, and feedback
+        in a single API call to reduce latency.
+        
+        Args:
+            topic: Story topic (space, animals, fantasy, etc.)
+            user_input: User's story contribution (for continuation/feedback)
+            story_step: Story phase (opening, continuation, conclusion)
+            include_feedback: Whether to include writing feedback
+            include_vocabulary: Whether to include vocabulary question
+            
+        Returns:
+            Dictionary with structured response containing all components
+        """
+        if not self.use_consolidated_prompts:
+            # Fallback to individual method calls for backward compatibility
+            logger.info("🔄 Falling back to individual API calls (consolidated prompts disabled)")
+            return self._generate_individual_responses(topic, user_input, story_step, include_feedback, include_vocabulary)
+        
+        if self.client and self.api_key:
+            try:
+                # Build consolidated prompt
+                consolidated_prompt = consolidated_prompt_builder.build_consolidated_story_prompt(
+                    topic=topic,
+                    user_input=user_input,
+                    story_step=story_step,
+                    include_feedback=include_feedback,
+                    include_vocabulary=include_vocabulary
+                )
+                
+                logger.info(f"🚀 Making consolidated API call for {story_step} story")
+                
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": self.system_prompt},
+                        {"role": "user", "content": consolidated_prompt}
+                    ],
+                    max_tokens=800,  # Increased for consolidated response
+                    temperature=0.7
+                )
+                
+                # Parse consolidated response
+                result = json.loads(response.choices[0].message.content.strip())
+                
+                # Validate response structure
+                return self._validate_consolidated_response(result)
+                
+            except Exception as e:
+                logger.error(f"❌ Consolidated API call failed: {e}")
+                # Fallback to individual calls
+                logger.info("🔄 Falling back to individual API calls")
+                return self._generate_individual_responses(topic, user_input, story_step, include_feedback, include_vocabulary)
+        else:
+            return self._get_consolidated_fallback_response(topic, user_input, story_step)
+    
+    def _generate_individual_responses(self, topic: str, user_input: str, story_step: str, include_feedback: bool, include_vocabulary: bool) -> Dict:
+        """
+        Generate responses using individual API calls (backward compatibility mode)
+        """
+        result = {}
+        
+        # Generate story content
+        if story_step == "opening":
+            prompt = f"Create a story opening about {topic} for 2nd-3rd graders."
+        elif story_step == "continuation":
+            prompt = f"Continue this story: {user_input}"
+        else:  # conclusion
+            prompt = f"Conclude this story: {user_input}"
+        
+        result["story_content"] = self.generate_response(prompt)
+        
+        # Add vocabulary question if requested
+        if include_vocabulary and result["story_content"]:
+            vocab_words = self.extract_vocabulary_words(result["story_content"])
+            if vocab_words:
+                result["vocabulary_question"] = self.generate_vocabulary_question(vocab_words[0], result["story_content"])
+        
+        # Add writing feedback if requested and user input exists
+        if include_feedback and user_input:
+            feedback = self.provide_grammar_feedback(user_input)
+            if feedback:
+                result["writing_feedback"] = {
+                    "feedback": feedback,
+                    "suggestions": [],
+                    "praise": "Keep up the great work!"
+                }
+        
+        result["next_step"] = "Continue the story with your next contribution!"
+        
+        return result
+    
+    def _validate_consolidated_response(self, response: Dict) -> Dict:
+        """
+        Validate and ensure consolidated response has expected structure
+        """
+        validated = {
+            "story_content": response.get("story_content", ""),
+            "vocabulary_question": response.get("vocabulary_question", {}),
+            "writing_feedback": response.get("writing_feedback", {}),
+            "next_step": response.get("next_step", "Continue the story!")
+        }
+        
+        # Ensure vocabulary question has proper structure
+        if validated["vocabulary_question"] and not all(key in validated["vocabulary_question"] for key in ["question", "options", "correct_answer"]):
+            logger.warning("⚠️  Vocabulary question missing required fields")
+            validated["vocabulary_question"] = {}
+        
+        return validated
+    
+    def _get_consolidated_fallback_response(self, topic: str, user_input: str, story_step: str) -> Dict:
+        """
+        Consolidated fallback response when API is unavailable
+        """
+        # Use existing fallback logic
+        story_content = self._get_fallback_response(f"story about {topic}")
+        
+        result = {
+            "story_content": story_content,
+            "vocabulary_question": {},
+            "writing_feedback": {},
+            "next_step": "Continue the story with your next contribution!"
+        }
+        
+        # Add vocabulary question from story content
+        vocab_words = self.extract_vocabulary_words(story_content)
+        if vocab_words:
+            result["vocabulary_question"] = self._get_fallback_vocab_question(vocab_words[0], story_content)
+        
+        return result
+    
+    @measure_llm_call('consolidated_vocabulary_generation')
+    def generate_consolidated_vocabulary_question(self, word: str, context: str) -> Dict:
+        """
+        Generate vocabulary question using consolidated prompts
+        """
+        if not self.use_consolidated_prompts:
+            return self.generate_vocabulary_question(word, context)
+        
+        if self.client and self.api_key:
+            try:
+                consolidated_prompt = consolidated_prompt_builder.build_vocabulary_question_prompt(word, context)
+                
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": self.system_prompt},
+                        {"role": "user", "content": consolidated_prompt}
+                    ],
+                    max_tokens=200,
+                    temperature=0.3
+                )
+                
+                result = json.loads(response.choices[0].message.content.strip())
+                return result
+                
+            except Exception as e:
+                logger.error(f"❌ Consolidated vocabulary question failed: {e}")
+                return self.generate_vocabulary_question(word, context)
+        else:
+            return self._get_fallback_vocab_question(word, context)
+    
+    @measure_llm_call('consolidated_writing_feedback')
+    def provide_consolidated_writing_feedback(self, user_input: str) -> Optional[Dict]:
+        """
+        Provide writing feedback using consolidated prompts
+        """
+        if not self.use_consolidated_prompts:
+            # Convert individual feedback to consolidated format
+            feedback = self.provide_grammar_feedback(user_input)
+            if feedback:
+                return {
+                    "feedback": feedback,
+                    "suggestions": [],
+                    "praise": "Keep up the great work!"
+                }
+            return None
+        
+        if self.client and self.api_key:
+            try:
+                consolidated_prompt = consolidated_prompt_builder.build_writing_feedback_prompt(user_input)
+                
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": self.system_prompt},
+                        {"role": "user", "content": consolidated_prompt}
+                    ],
+                    max_tokens=150,
+                    temperature=0.3
+                )
+                
+                result = json.loads(response.choices[0].message.content.strip())
+                return result if result.get("feedback") else None
+                
+            except Exception as e:
+                logger.error(f"❌ Consolidated writing feedback failed: {e}")
+                # Fallback to individual method
+                feedback = self.provide_grammar_feedback(user_input)
+                if feedback:
+                    return {
+                        "feedback": feedback,
+                        "suggestions": [],
+                        "praise": "Keep up the great work!"
+                    }
+                return None
+        else:
+            # Fallback to individual method
+            feedback = self._get_fallback_grammar_feedback(user_input)
+            if feedback:
+                return {
+                    "feedback": feedback,
+                    "suggestions": [],
+                    "praise": "Keep up the great work!"
+                }
+            return None
+    
     @measure_llm_call('api_status_check')
     def check_api_status(self) -> Dict[str, str]:
         """Check if OpenAI API is available"""
@@ -442,6 +674,16 @@ Always provide encouraging feedback and specific examples to help young learners
             return {"status": "connected", "message": "OpenAI API is working"}
         except Exception as e:
             return {"status": "error", "message": f"API error: {str(e)}"}
+    
+    def enable_consolidated_prompts(self):
+        """Enable consolidated prompts feature flag"""
+        self.use_consolidated_prompts = True
+        logger.info("🚀 Consolidated prompts enabled")
+    
+    def disable_consolidated_prompts(self):
+        """Disable consolidated prompts feature flag (use individual calls)"""
+        self.use_consolidated_prompts = False
+        logger.info("🔄 Consolidated prompts disabled - using individual API calls")
 
 # Global instance
 llm_provider = LLMProvider()
