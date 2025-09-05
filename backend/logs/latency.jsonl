@@ -145,3 +145,6 @@
 {"timestamp": 1756761490.4582522, "total_request_time": 2473.75, "llm_total_time": 2458.3, "processing_time": 15.45, "llm_calls": [{"type": "vocabulary_question", "duration": 2458.3, "timestamp": 1756761490.4490027}], "result_type": "unknown", "llm_call_count": 1}
 {"timestamp": 1756761530.7884886, "total_request_time": 2447.66, "llm_total_time": 2435.3, "processing_time": 12.36, "llm_calls": [{"type": "vocabulary_question", "duration": 2435.3, "timestamp": 1756761530.7867038}], "result_type": "unknown", "llm_call_count": 1}
 {"timestamp": 1756761535.594652, "total_request_time": 2.8, "llm_total_time": 0, "processing_time": 2.8, "llm_calls": [], "result_type": "unknown", "llm_call_count": 0}
+{"timestamp": 1757031942.6785083, "total_request_time": 0.7, "llm_total_time": 0, "processing_time": 0.7, "llm_calls": [], "result_type": "unknown", "llm_call_count": 0}
+{"timestamp": 1757032210.0392704, "total_request_time": 4766.69, "llm_total_time": 4762.59, "processing_time": 4.1, "llm_calls": [{"type": "consolidated_story_generation", "duration": 4762.59, "timestamp": 1757032210.0360541}], "result_type": "unknown", "llm_call_count": 1}
+{"timestamp": 1757032226.110141, "total_request_time": 7.78, "llm_total_time": 0, "processing_time": 7.78, "llm_calls": [], "result_type": "unknown", "llm_call_count": 0}

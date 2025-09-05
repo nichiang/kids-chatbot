@@ -93,7 +93,8 @@ class LLMProvider:
                                user_input: str = None,
                                story_step: str = "opening",
                                include_feedback: bool = True,
-                               include_vocabulary: bool = True) -> Dict:
+                               include_vocabulary: bool = True,
+                               content_type: str = "story") -> Dict:
         """
         Generate consolidated response with story content, vocabulary questions, and feedback
         in a single API call.
@@ -116,7 +117,8 @@ class LLMProvider:
                     user_input=user_input,
                     story_step=story_step,
                     include_feedback=include_feedback,
-                    include_vocabulary=include_vocabulary
+                    include_vocabulary=include_vocabulary,
+                    content_type=content_type
                 )
                 
                 logger.info(f"Making consolidated API call for {story_step} story")

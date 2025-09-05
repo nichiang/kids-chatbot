@@ -2424,42 +2424,45 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
         session_data.factsShown = 0
         session_data.contentVocabulary = []  # Reset content vocabulary for new topic
         
-        # Generate first fact with vocabulary integration using external prompt system
-        base_prompt = prompt_manager.get_first_fact_prompt(topic)
-        enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
-            base_prompt, topic, session_data.askedVocabWords
+        # CONSOLIDATED: Generate first fact with vocabulary in single API call
+        logger.info(f"Generating consolidated fact for topic: {topic}")
+        consolidated_response = llm_provider.generate_story_response(
+            topic=topic,
+            story_step="opening",
+            include_feedback=False,  # No user input for facts mode
+            include_vocabulary=True,
+            content_type="fact"
         )
-        fact_response = llm_provider.generate_response(enhanced_prompt, system_prompt=llm_provider.fun_facts_system_prompt)
+        
+        # Extract fact content and vocabulary
+        fact_response = consolidated_response.get("story_content", "")
+        vocab_words = consolidated_response.get("vocabulary_words", [])
+        vocab_question_data = consolidated_response.get("vocabulary_question", {})
+        
         session_data.currentFact = fact_response
         session_data.allFacts.append(fact_response)
         session_data.factsShown += 1
         
-        # Track vocabulary words that were intended to be used
-        if selected_vocab:
-            logger.info(f"Fun fact generation included vocabulary: {selected_vocab}")
-            session_data.contentVocabulary.extend(selected_vocab)
-            logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+        # Track vocabulary words from consolidated response
+        if vocab_words:
+            logger.info(f"Consolidated fact included vocabulary: {vocab_words}")
+            session_data.contentVocabulary.extend(vocab_words)
+            logger.info(f"📋 VOCABULARY TRACKING: Added {len(vocab_words)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
         
         # Log vocabulary debug info to server logs
         log_vocabulary_debug_info(
-            topic, session_data.askedVocabWords, fact_response, "Initial Fun Fact", len(session_data.contentVocabulary)
+            topic, session_data.askedVocabWords, fact_response, "Consolidated Initial Fact", len(session_data.contentVocabulary)
         )
         
-        # Generate vocabulary question using content-based extraction
-        fact_vocab_words = extract_vocabulary_from_content(fact_response, session_data.contentVocabulary)
+        # Use vocabulary question from consolidated response
         vocab_question = None
-        
-        # Find a vocabulary word that hasn't been asked yet from the fact content
-        available_fact_words = [word for word in fact_vocab_words if word not in session_data.askedVocabWords]
-        
-        if available_fact_words:
-            selected_word = select_best_vocabulary_word(available_fact_words)
-            session_data.askedVocabWords.append(selected_word)
-            
-            # Use the actual fact content as context for the vocabulary question
-            vocab_question = llm_provider.generate_vocabulary_question(selected_word, context=fact_response)
+        if vocab_question_data and vocab_question_data.get("question"):
+            # Track the vocabulary word
+            if vocab_words:
+                session_data.askedVocabWords.append(vocab_words[0])
+            vocab_question = vocab_question_data
         else:
-            # Fallback to curated vocabulary if no words found in fact content
+            # Fallback to curated vocabulary if consolidated response didn't include a question
             vocab_word_data = vocabulary_manager.select_vocabulary_word(
                 topic=topic,
                 used_words=session_data.askedVocabWords
@@ -2485,47 +2488,45 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
     # Topic is set, continue with more facts
     else:
         if session_data.factsShown < 3:  # Show 3 facts per topic
-            # Generate another fact with vocabulary integration using external prompt system
-            previous_facts = " | ".join(session_data.allFacts) if session_data.allFacts else "None"
-            base_prompt = prompt_manager.get_continuing_fact_prompt(
-                session_data.topic, 
-                session_data.factsShown + 1,
-                previous_facts
+            # CONSOLIDATED: Generate continuing fact with vocabulary in single API call
+            logger.info(f"Generating consolidated continuing fact for topic: {session_data.topic}")
+            consolidated_response = llm_provider.generate_story_response(
+                topic=session_data.topic,
+                story_step="continuation", 
+                include_feedback=False,  # No user input for facts mode
+                include_vocabulary=True,
+                content_type="fact"
             )
-            enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
-                base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
-            )
-            fact_response = llm_provider.generate_response(enhanced_prompt, system_prompt=llm_provider.fun_facts_system_prompt)
+            
+            # Extract fact content and vocabulary
+            fact_response = consolidated_response.get("story_content", "")
+            vocab_words = consolidated_response.get("vocabulary_words", [])
+            vocab_question_data = consolidated_response.get("vocabulary_question", {})
+            
             session_data.currentFact = fact_response
             session_data.allFacts.append(fact_response)
             session_data.factsShown += 1
             
-            # Track vocabulary words that were intended to be used
-            if selected_vocab:
-                logger.info(f"Continuing fun fact included vocabulary: {selected_vocab}")
-                session_data.contentVocabulary.extend(selected_vocab)
-                logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+            # Track vocabulary words from consolidated response
+            if vocab_words:
+                logger.info(f"Consolidated continuing fact included vocabulary: {vocab_words}")
+                session_data.contentVocabulary.extend(vocab_words)
+                logger.info(f"📋 VOCABULARY TRACKING: Added {len(vocab_words)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
             
             # Log vocabulary debug info to server logs
             log_vocabulary_debug_info(
-                session_data.topic, session_data.askedVocabWords, fact_response, "Continuing Fun Fact", len(session_data.contentVocabulary)
+                session_data.topic, session_data.askedVocabWords, fact_response, "Consolidated Continuing Fact", len(session_data.contentVocabulary)
             )
             
-            # Generate vocabulary question using content-based extraction
-            fact_vocab_words = extract_vocabulary_from_content(fact_response, session_data.contentVocabulary)
+            # Use vocabulary question from consolidated response
             vocab_question = None
-            
-            # Find a vocabulary word that hasn't been asked yet from the fact content
-            available_fact_words = [word for word in fact_vocab_words if word not in session_data.askedVocabWords]
-            
-            if available_fact_words:
-                selected_word = select_best_vocabulary_word(available_fact_words)
-                session_data.askedVocabWords.append(selected_word)
-                
-                # Use the actual fact content as context for the vocabulary question
-                vocab_question = llm_provider.generate_vocabulary_question(selected_word, context=fact_response)
+            if vocab_question_data and vocab_question_data.get("question"):
+                # Track the vocabulary word
+                if vocab_words:
+                    session_data.askedVocabWords.append(vocab_words[0])
+                vocab_question = vocab_question_data
             else:
-                # Fallback to curated vocabulary if no words found in fact content
+                # Fallback to curated vocabulary if consolidated response didn't include a question
                 vocab_word_data = vocabulary_manager.select_vocabulary_word(
                     topic=session_data.topic,
                     used_words=session_data.askedVocabWords
@@ -2566,44 +2567,46 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 session_data.askedVocabWords = []  # Reset vocabulary words for fresh start
                 session_data.contentVocabulary = []  # Reset content vocabulary for fresh start
                 
-                # Generate first fact for continuing topic using external prompt system
-                base_prompt = prompt_manager.get_new_topic_fact_prompt(session_data.topic)
-                enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
-                    base_prompt, session_data.topic, session_data.askedVocabWords
+                # CONSOLIDATED: Generate first fact for same topic continuation
+                logger.info(f"Generating consolidated fact for same topic continuation: {session_data.topic}")
+                consolidated_response = llm_provider.generate_story_response(
+                    topic=session_data.topic,
+                    story_step="opening",  # New start for same topic
+                    include_feedback=False,  # No user input for facts mode
+                    include_vocabulary=True,
+                    content_type="fact"
                 )
-                logger.info(f"Continuing same topic '{session_data.topic}' - generated prompt: {enhanced_prompt[:200]}...")
-                fact_response = llm_provider.generate_response(enhanced_prompt, system_prompt=llm_provider.fun_facts_system_prompt)
-                logger.info(f"LLM response for same topic continuation: {fact_response[:100]}...")
+                
+                # Extract fact content and vocabulary
+                fact_response = consolidated_response.get("story_content", "")
+                vocab_words = consolidated_response.get("vocabulary_words", [])
+                vocab_question_data = consolidated_response.get("vocabulary_question", {})
+                
+                logger.info(f"Consolidated response for same topic continuation: {fact_response[:100]}...")
                 session_data.currentFact = fact_response
                 session_data.allFacts.append(fact_response)
                 session_data.factsShown += 1
                 
-                # Track vocabulary words that were intended to be used
-                if selected_vocab:
-                    logger.info(f"Same topic continuation included vocabulary: {selected_vocab}")
-                    session_data.contentVocabulary.extend(selected_vocab)
-                    logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+                # Track vocabulary words from consolidated response
+                if vocab_words:
+                    logger.info(f"Consolidated same topic continuation included vocabulary: {vocab_words}")
+                    session_data.contentVocabulary.extend(vocab_words)
+                    logger.info(f"📋 VOCABULARY TRACKING: Added {len(vocab_words)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
                 
                 # Log vocabulary debug info to server logs
                 log_vocabulary_debug_info(
-                    session_data.topic, session_data.askedVocabWords, fact_response, "Same Topic Continuation", len(session_data.contentVocabulary)
+                    session_data.topic, session_data.askedVocabWords, fact_response, "Consolidated Same Topic Continuation", len(session_data.contentVocabulary)
                 )
                 
-                # Generate vocabulary question using content-based extraction
-                fact_vocab_words = extract_vocabulary_from_content(fact_response, session_data.contentVocabulary)
+                # Use vocabulary question from consolidated response
                 vocab_question = None
-                
-                # Find a vocabulary word that hasn't been asked yet from the fact content
-                available_fact_words = [word for word in fact_vocab_words if word not in session_data.askedVocabWords]
-                
-                if available_fact_words:
-                    selected_word = select_best_vocabulary_word(available_fact_words)
-                    session_data.askedVocabWords.append(selected_word)
-                    
-                    # Use the actual fact content as context for the vocabulary question
-                    vocab_question = llm_provider.generate_vocabulary_question(selected_word, context=fact_response)
+                if vocab_question_data and vocab_question_data.get("question"):
+                    # Track the vocabulary word
+                    if vocab_words:
+                        session_data.askedVocabWords.append(vocab_words[0])
+                    vocab_question = vocab_question_data
                 else:
-                    # Fallback to curated vocabulary if no words found in fact content
+                    # Fallback to curated vocabulary if consolidated response didn't include a question
                     vocab_word_data = vocabulary_manager.select_vocabulary_word(
                         topic=session_data.topic,
                         used_words=session_data.askedVocabWords
@@ -2629,42 +2632,45 @@ async def handle_funfacts(user_message: str, session_data: SessionData) -> ChatR
                 session_data.askedVocabWords = []  # Reset vocabulary words for new topic
                 session_data.contentVocabulary = []  # Reset content vocabulary for new topic
                 
-                # Generate first fact for new topic with vocabulary integration using external prompt system
-                base_prompt = prompt_manager.get_new_topic_fact_prompt(new_topic)
-                enhanced_prompt, selected_vocab = prompt_manager.enhance_with_vocabulary(
-                    base_prompt, new_topic, session_data.askedVocabWords
+                # CONSOLIDATED: Generate first fact for new topic
+                logger.info(f"Generating consolidated fact for new topic: {new_topic}")
+                consolidated_response = llm_provider.generate_story_response(
+                    topic=new_topic,
+                    story_step="opening",
+                    include_feedback=False,  # No user input for facts mode
+                    include_vocabulary=True,
+                    content_type="fact"
                 )
-                fact_response = llm_provider.generate_response(enhanced_prompt, system_prompt=llm_provider.fun_facts_system_prompt)
+                
+                # Extract fact content and vocabulary
+                fact_response = consolidated_response.get("story_content", "")
+                vocab_words = consolidated_response.get("vocabulary_words", [])
+                vocab_question_data = consolidated_response.get("vocabulary_question", {})
+                
                 session_data.currentFact = fact_response
                 session_data.allFacts.append(fact_response)
                 session_data.factsShown += 1
                 
-                # Track vocabulary words that were intended to be used
-                if selected_vocab:
-                    logger.info(f"New topic fun fact included vocabulary: {selected_vocab}")
-                    session_data.contentVocabulary.extend(selected_vocab)
-                    logger.info(f"📋 VOCABULARY TRACKING: Added {len(selected_vocab)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
+                # Track vocabulary words from consolidated response
+                if vocab_words:
+                    logger.info(f"Consolidated new topic fact included vocabulary: {vocab_words}")
+                    session_data.contentVocabulary.extend(vocab_words)
+                    logger.info(f"📋 VOCABULARY TRACKING: Added {len(vocab_words)} words to session. Total tracked: {len(session_data.contentVocabulary)}")
                 
                 # Log vocabulary debug info to server logs
                 log_vocabulary_debug_info(
-                    new_topic, session_data.askedVocabWords, fact_response, "New Topic Fun Fact", len(session_data.contentVocabulary)
+                    new_topic, session_data.askedVocabWords, fact_response, "Consolidated New Topic Fact", len(session_data.contentVocabulary)
                 )
                 
-                # Generate vocabulary question using content-based extraction
-                fact_vocab_words = extract_vocabulary_from_content(fact_response, session_data.contentVocabulary)
+                # Use vocabulary question from consolidated response
                 vocab_question = None
-                
-                # Find a vocabulary word that hasn't been asked yet from the fact content
-                available_fact_words = [word for word in fact_vocab_words if word not in session_data.askedVocabWords]
-                
-                if available_fact_words:
-                    selected_word = select_best_vocabulary_word(available_fact_words)
-                    session_data.askedVocabWords.append(selected_word)
-                    
-                    # Use the actual fact content as context for the vocabulary question
-                    vocab_question = llm_provider.generate_vocabulary_question(selected_word, context=fact_response)
+                if vocab_question_data and vocab_question_data.get("question"):
+                    # Track the vocabulary word
+                    if vocab_words:
+                        session_data.askedVocabWords.append(vocab_words[0])
+                    vocab_question = vocab_question_data
                 else:
-                    # Fallback to curated vocabulary if no words found in fact content
+                    # Fallback to curated vocabulary if consolidated response didn't include a question
                     vocab_word_data = vocabulary_manager.select_vocabulary_word(
                         topic=new_topic,
                         used_words=session_data.askedVocabWords

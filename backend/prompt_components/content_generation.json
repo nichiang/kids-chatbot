@@ -13,6 +13,14 @@
       "template": "Help conclude the story based on: {user_input}\n\nREQUIREMENTS:\n- Provide a satisfying story ending\n- Summarize the adventure briefly\n- Congratulate the user on their creativity\n- Invite them to start a new story if they'd like",
       "variables": ["user_input"]
     },
+    "fact_opening": {
+      "template": "Create an interesting fact about {topic} for elementary students\n\nREQUIREMENTS:\n- Write 2-3 sentences suitable for strong 2nd graders or 3rd graders\n- Include fascinating, age-appropriate information\n- Bold 2-3 vocabulary words using **word** format\n- Make it engaging and educational\n- Use simple language that sparks curiosity\n\nExamples:\n- Space: 'Jupiter is so **enormous** that more than 1,300 Earths could fit inside it! Scientists **investigate** its powerful storms.'\n- Animals: 'Blue whales are **magnificent** creatures whose hearts alone weigh as much as a car!'\n- Ocean: 'The deepest part of the ocean is so **mysterious** that we know more about space than these depths!'",
+      "variables": ["topic"]
+    },
+    "fact_continuation": {
+      "template": "Create another interesting fact about {topic} for elementary students\n\nREQUIREMENTS:\n- Write 2-3 sentences with new information about the topic\n- Include different vocabulary words from previous facts\n- Bold 2-3 vocabulary words using **word** format\n- Keep it fresh and engaging\n- Build on curiosity about the topic",
+      "variables": ["topic"]
+    },
     "vocabulary_question_generation": {
       "template": "Create a vocabulary question about the word '{word}' from this context: {context}\n\nREQUIREMENTS:\n- Ask 'What does {word} mean?'\n- Provide 4 multiple choice options (a, b, c, d)\n- Make the correct answer clear but not too obvious\n- Use age-appropriate definitions and distractors\n- Include context clues in the question",
       "variables": ["word", "context"]

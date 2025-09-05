@@ -94,7 +94,8 @@ class ConsolidatedPromptBuilder:
                                       user_input: str = None,
                                       story_step: str = "opening",
                                       include_feedback: bool = True,
-                                      include_vocabulary: bool = True) -> str:
+                                      include_vocabulary: bool = True,
+                                      content_type: str = "story") -> str:
         """
         Build consolidated prompt for story generation with optional feedback and vocabulary
         
@@ -116,18 +117,29 @@ class ConsolidatedPromptBuilder:
             prompt_parts.append(f"""You are a {framework.get('role', 'friendly English tutor')} with a {framework.get('tone', 'encouraging and patient')} approach. You are working with {framework.get('age_target', '2nd-3rd grade students')} using {framework.get('communication_style', 'simple, clear language')}.
 """)
             
-            # 2. Story Generation Component
-            if story_step == "opening":
-                story_template = self._get_component("content_generation", "story_opening", "template")
-                story_content = story_template.format(topic=topic)
-            elif story_step == "continuation":
-                story_template = self._get_component("content_generation", "story_continuation", "template")
-                story_content = story_template.format(user_input=user_input or "")
-            else:  # conclusion
-                story_template = self._get_component("content_generation", "story_conclusion", "template")
-                story_content = story_template.format(user_input=user_input or "")
+            # 2. Content Generation Component (Story or Fact)
+            if content_type == "fact":
+                # Use fact templates
+                if story_step == "opening":
+                    content_template = self._get_component("content_generation", "fact_opening", "template")
+                    story_content = content_template.format(topic=topic)
+                else:  # continuation
+                    content_template = self._get_component("content_generation", "fact_continuation", "template") 
+                    story_content = content_template.format(topic=topic)
+            else:
+                # Use story templates
+                if story_step == "opening":
+                    story_template = self._get_component("content_generation", "story_opening", "template")
+                    story_content = story_template.format(topic=topic)
+                elif story_step == "continuation":
+                    story_template = self._get_component("content_generation", "story_continuation", "template")
+                    story_content = story_template.format(user_input=user_input or "")
+                else:  # conclusion
+                    story_template = self._get_component("content_generation", "story_conclusion", "template")
+                    story_content = story_template.format(user_input=user_input or "")
             
-            prompt_parts.append(f"STORY GENERATION:\n{story_content}\n")
+            content_label = "FACT GENERATION" if content_type == "fact" else "STORY GENERATION"
+            prompt_parts.append(f"{content_label}:\n{story_content}\n")
             
             # 3. Writing Feedback Component (if requested and user_input exists)
             if include_feedback and user_input:
