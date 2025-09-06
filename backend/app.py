@@ -838,36 +838,47 @@ def parse_enhanced_story_response(llm_response: str) -> EnhancedStoryResponse:
 
 def validate_entity_structure(entities: StoryEntities) -> bool:
     """
-    Validate that entity structure has at least one designable entity
+    Validate that entity structure has at least one designable CHARACTER entity
+    (Location design temporarily disabled per user request)
     
     Args:
         entities: StoryEntities to validate
         
     Returns:
-        True if there are entities that need design, False otherwise
+        True if there are CHARACTER entities that need design, False otherwise
     """
-    total_entities = (len(entities.characters.named) + len(entities.characters.unnamed) + 
-                     len(entities.locations.named) + len(entities.locations.unnamed))
+    # ONLY CHECK CHARACTERS - location design disabled per user request
+    total_character_entities = len(entities.characters.named) + len(entities.characters.unnamed)
     
-    if total_entities == 0:
-        logging.warning("⚠️ VALIDATION: No entities found for design phase")
+    # DISABLED: Location counting temporarily disabled per user request
+    # TODO: Uncomment when location design should be re-enabled
+    # total_location_entities = len(entities.locations.named) + len(entities.locations.unnamed)
+    # total_entities = total_character_entities + total_location_entities
+    
+    if total_character_entities == 0:
+        logging.warning("⚠️ VALIDATION: No CHARACTER entities found for design phase (location design disabled)")
         return False
         
-    # Check for designable entities (both named and unnamed entities can be designed)
-    named_entities = len(entities.characters.named) + len(entities.locations.named)
-    unnamed_entities = len(entities.characters.unnamed) + len(entities.locations.unnamed)
-    total_designable = named_entities + unnamed_entities
+    # Check for designable CHARACTER entities only
+    named_characters = len(entities.characters.named) 
+    unnamed_characters = len(entities.characters.unnamed)
+    # DISABLED: Location design temporarily disabled per user request
+    # TODO: Uncomment when location design should be re-enabled  
+    # named_locations = len(entities.locations.named)
+    # unnamed_locations = len(entities.locations.unnamed)
+    
+    total_designable = named_characters + unnamed_characters
     
     if total_designable == 0:
-        logging.info("ℹ️ VALIDATION: No entities found - no design phase needed")
+        logging.info("ℹ️ VALIDATION: No CHARACTER entities found - no design phase needed (location design disabled)")
         return False
         
-    if unnamed_entities > 0:
-        logging.info(f"✅ VALIDATION: Found {unnamed_entities} unnamed entities for full design phase (naming + aspects)")
-    if named_entities > 0:
-        logging.info(f"✅ VALIDATION: Found {named_entities} named entities for aspect design phase (skip naming)")
+    if unnamed_characters > 0:
+        logging.info(f"✅ VALIDATION: Found {unnamed_characters} unnamed CHARACTERS for full design phase (naming + aspects)")
+    if named_characters > 0:
+        logging.info(f"✅ VALIDATION: Found {named_characters} named CHARACTERS for aspect design phase (skip naming)")
         
-    logging.info(f"✅ VALIDATION: Total {total_designable} entities available for design phase")
+    logging.info(f"✅ VALIDATION: Total {total_designable} CHARACTER entities available for design phase (location design disabled)")
     return True
 
 def get_next_design_entity(entities: StoryEntities, designed_entities: List[str] = None) -> Optional[Tuple[str, str, bool]]:
@@ -892,11 +903,13 @@ def get_next_design_entity(entities: StoryEntities, designed_entities: List[str]
             logging.info(f"🎯 DESIGN: Next entity is unnamed character '{char}' (full design)")
             return ("character", char, False)  # is_named = False, so start with naming
             
-    # Check unnamed locations next
-    for loc in entities.locations.unnamed:
-        if loc not in designed_entities:
-            logging.info(f"🎯 DESIGN: Next entity is unnamed location '{loc}' (full design)")
-            return ("location", loc, False)  # is_named = False, so start with naming
+    # DISABLED: Location design temporarily disabled per user request
+    # TODO: Uncomment when location design should be re-enabled
+    # # Check unnamed locations next
+    # for loc in entities.locations.unnamed:
+    #     if loc not in designed_entities:
+    #         logging.info(f"🎯 DESIGN: Next entity is unnamed location '{loc}' (full design)")
+    #         return ("location", loc, False)  # is_named = False, so start with naming
     
     # Priority 2: Named entities (aspect design only, skip naming)
     # Check named characters
@@ -905,11 +918,13 @@ def get_next_design_entity(entities: StoryEntities, designed_entities: List[str]
             logging.info(f"🎯 DESIGN: Next entity is named character '{char}' (aspect design only)")
             return ("character", char, True)  # is_named = True, so skip naming
             
-    # Check named locations
-    for loc in entities.locations.named:
-        if loc not in designed_entities:
-            logging.info(f"🎯 DESIGN: Next entity is named location '{loc}' (aspect design only)")
-            return ("location", loc, True)  # is_named = True, so skip naming
+    # DISABLED: Location design temporarily disabled per user request
+    # TODO: Uncomment when location design should be re-enabled
+    # # Check named locations
+    # for loc in entities.locations.named:
+    #     if loc not in designed_entities:
+    #         logging.info(f"🎯 DESIGN: Next entity is named location '{loc}' (aspect design only)")
+    #         return ("location", loc, True)  # is_named = True, so skip naming
             
     logging.info("✅ DESIGN: All entities have been designed")
     return None
@@ -976,49 +991,54 @@ def determine_entity_type_from_descriptor(metadata: StoryMetadata) -> Optional[s
 
 def select_design_focus(character_name: Optional[str], location_name: Optional[str], design_options: List[str] = None, metadata: Optional[StoryMetadata] = None) -> Optional[str]:
     """
-    Select character or location design with intelligent entity type determination
+    Select character design only (location design temporarily disabled)
     For unnamed entities that need naming, determines type based on entity_descriptor match
     
     Args:
         character_name: Name of character if introduced
-        location_name: Name of location if introduced  
-        design_options: Available design options from metadata (fallback for unnamed entities)
+        location_name: Name of location if introduced (ignored - location design disabled)
+        design_options: Available design options from metadata (only character considered)
         metadata: Full story metadata for intelligent entity type determination
         
     Returns:
-        "character", "location", or None if neither available
+        "character" or None if no character available
     """
     import random
     
     available_options = []
     
+    # ONLY CHECK CHARACTERS - location design disabled per user request
     # Check named entities first
     if character_name:
         available_options.append("character")
-    if location_name:
-        available_options.append("location")
+    # DISABLED: Location design temporarily disabled per user request  
+    # TODO: Uncomment when location design should be re-enabled
+    # if location_name:
+    #     available_options.append("location")
     
     # If no named entities but design_options available, use those (for unnamed entities)
     if not available_options and design_options:
-        available_options = [option for option in design_options if option in ["character", "location"]]
-        logger.info(f"🔧 UNNAMED ENTITY: Using design_options {design_options} -> available: {available_options}")
+        # ONLY consider character options - filter out location
+        available_options = [option for option in design_options if option == "character"]
+        logger.info(f"🔧 UNNAMED ENTITY: Using design_options {design_options} -> available (character only): {available_options}")
         
         # BUG FIX: For unnamed entities that need naming, determine entity type intelligently
-        # Instead of random choice, match entity_descriptor with character/location descriptions
+        # But only return character since location is disabled
         if metadata and metadata.needs_naming and metadata.entity_descriptor:
             entity_type = determine_entity_type_from_descriptor(metadata)
-            if entity_type and entity_type in available_options:
+            if entity_type == "character" and entity_type in available_options:
                 logger.info(f"🎯 NAMING BUG FIX: entity_descriptor '{metadata.entity_descriptor}' -> entity_type '{entity_type}'")
                 return entity_type
+            elif entity_type == "location":
+                logger.info(f"🚫 LOCATION DESIGN DISABLED: Skipping location entity '{metadata.entity_descriptor}'")
+                return None  # Skip location design
     
     if not available_options:
         return None
-    elif len(available_options) == 1:
-        return available_options[0]
     else:
-        # 50/50 random choice when both are available and no specific naming requirement
-        choice = random.choice(available_options)
-        logger.info(f"🎲 RANDOM DESIGN CHOICE: Selected '{choice}' from {available_options}")
+        # Since we only consider characters now, just return the first (and only) option
+        choice = available_options[0]  # Will always be "character" 
+        logger.info(f"✅ CHARACTER DESIGN SELECTED: '{choice}' from {available_options}")
         return choice
 
 def get_next_design_aspect(design_type: str, used_aspects: List[str]) -> str:

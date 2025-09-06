@@ -1982,79 +1982,75 @@ body.theme-creative::before {
     font-size: 14px;
     font-weight: 500;
     cursor: default;
-    transition: all 0.2s ease;
     user-select: none;
     
-    /* Base styling - will be overridden by themes */
-    background: rgba(138, 43, 226, 0.3);
-    color: #ffffff;
-    border: 1px solid rgba(138, 43, 226, 0.6);
+    /* Removed button-like styling - these are word suggestions, not clickable buttons */
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.design-suggestion-pill:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
+/* Removed hover animation - these are not interactive buttons */
 
-/* Themed design suggestion pills */
+/* Themed design suggestion pills - all use transparent background for word suggestions */
 .theme-space .design-suggestion-pill {
-    background: rgba(138, 43, 226, 0.3);
-    color: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(138, 43, 226, 0.6);
+    
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .theme-fantasy .design-suggestion-pill {
-    background: rgba(255, 215, 0, 0.3);
-    color: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(255, 215, 0, 0.6);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .theme-sports .design-suggestion-pill {
-    background: rgba(255, 193, 7, 0.3);
-    color: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(255, 193, 7, 0.6);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .theme-ocean .design-suggestion-pill {
-    background: rgba(0, 188, 212, 0.3);
-    color: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(0, 188, 212, 0.6);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .theme-whimsical .design-suggestion-pill {
-    background: rgba(240, 98, 146, 0.3);
-    color: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(240, 98, 146, 0.6);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .theme-fun .design-suggestion-pill {
-    background: rgba(255, 217, 61, 0.3);
-    color: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(255, 217, 61, 0.6);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .theme-food .design-suggestion-pill {
-    background: rgba(255, 215, 0, 0.3);
-    color: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(255, 215, 0, 0.6);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .theme-animals .design-suggestion-pill {
-    background: rgba(139, 69, 19, 0.3);
-    color: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(139, 69, 19, 0.6);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .theme-elegant .design-suggestion-pill {
-    background: rgba(255, 215, 0, 0.2);
-    color: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(255, 215, 0, 0.4);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .theme-creative .design-suggestion-pill {
-    background: rgba(255, 193, 7, 0.3);
-    color: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(255, 193, 7, 0.6);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .kid-avatar {
