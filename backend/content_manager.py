@@ -96,25 +96,11 @@ class ContentManager:
         # Shared vocabulary prompts: used by both story and facts modes  
         self._load_json_file(prompts_dir / "shared-prompts.json", "shared_prompts")
         
-        # Legacy prompt loading (for backwards compatibility during transition)
-        # TODO: Remove after testing consolidation is complete
-        story_dir = prompts_dir / "story_mode"
-        if story_dir.exists():
-            self._load_text_file(story_dir / "system_context.txt", "story_system_prompt_legacy")
-            self._load_json_file(story_dir / "story_templates.json", "story_templates_legacy")
-            self._load_json_file(story_dir / "narrative_guidance.json", "narrative_guidance_legacy")
-        
         # Load facts mode prompts (not yet consolidated)
         facts_dir = prompts_dir / "facts_mode"
         if facts_dir.exists():
             self._load_text_file(facts_dir / "system_context.txt", "facts_system_prompt")
             self._load_json_file(facts_dir / "fact_templates.json", "fact_templates")
-        
-        # Load legacy shared prompts (for backwards compatibility)
-        shared_dir = prompts_dir / "shared"
-        if shared_dir.exists():
-            self._load_json_file(shared_dir / "vocabulary_templates.json", "vocabulary_templates_legacy")
-            self._load_json_file(shared_dir / "design_templates.json", "design_templates_legacy")
     
     def _load_config(self):
         """Load configuration from config directory"""
@@ -275,9 +261,14 @@ class ContentManager:
                 # Return the prompt template string, not the entire template object
                 return template_data.get("prompt_template", template_data)
             else:
-                # Fall back to legacy for backwards compatibility
-                templates = self.content.get("story_templates_legacy", {})
-                return templates.get(key, f"[Missing prompt template: {category}.{key}]")
+                return f"[Missing prompt template: {category}.{key}]"
+        
+        # Handle story generation templates from storywriting prompts
+        elif category == "story_generation":
+            storywriting_prompts = self.content.get("storywriting_prompts", {})
+            story_generation = storywriting_prompts.get("story_generation", {})
+            template_data = story_generation.get(key, {})
+            return template_data.get("prompt_template", f"[Missing story generation: {key}]")
         
         # Handle vocabulary templates from shared prompts
         elif category == "vocabulary_templates":
@@ -287,9 +278,7 @@ class ContentManager:
             if key == "question_generation":
                 return vocab_system.get("question_generation", {})
             else:
-                # Fall back to legacy for backwards compatibility
-                templates = self.content.get("vocabulary_templates_legacy", {})
-                return templates.get(key, f"[Missing prompt template: {category}.{key}]")
+                return f"[Missing prompt template: {category}.{key}]"
         
         # Handle design templates from character design prompts
         elif category == "design_templates":
@@ -298,9 +287,41 @@ class ContentManager:
             if key == "character":
                 return character_design.get("naming_prompts", {}).get("character", {})
             else:
-                # Fall back to legacy for backwards compatibility
-                templates = self.content.get("design_templates_legacy", {})
-                return templates.get(key, f"[Missing prompt template: {category}.{key}]")
+                return f"[Missing prompt template: {category}.{key}]"
+        
+        # Handle basic prompts from storywriting prompts
+        elif category == "basic_prompts":
+            storywriting_prompts = self.content.get("storywriting_prompts", {})
+            basic_prompts = storywriting_prompts.get("basic_prompts", {})
+            template_data = basic_prompts.get(key, {})
+            return template_data.get("prompt_template", f"[Missing basic prompt: {key}]")
+        
+        # Handle completion prompts from storywriting prompts
+        elif category == "completion_prompts":
+            storywriting_prompts = self.content.get("storywriting_prompts", {})
+            completion_prompts = storywriting_prompts.get("completion_prompts", {})
+            template_data = completion_prompts.get(key, {})
+            return template_data.get("prompt_template", f"[Missing completion prompt: {key}]")
+        
+        # Handle grammar feedback from storywriting prompts
+        elif category == "grammar_feedback":
+            storywriting_prompts = self.content.get("storywriting_prompts", {})
+            grammar_feedback = storywriting_prompts.get("grammar_feedback", {})
+            return grammar_feedback.get("prompt_template", f"[Missing grammar feedback template]")
+        
+        # Handle story assessment from storywriting prompts
+        elif category == "story_assessment":
+            storywriting_prompts = self.content.get("storywriting_prompts", {})
+            story_assessment = storywriting_prompts.get("story_assessment", {})
+            template_data = story_assessment.get(key, {})
+            return template_data.get("prompt_template", f"[Missing story assessment: {key}]")
+        
+        # Handle narrative enhancement from storywriting prompts
+        elif category == "narrative_enhancement":
+            storywriting_prompts = self.content.get("storywriting_prompts", {})
+            narrative_enhancement = storywriting_prompts.get("narrative_enhancement", {})
+            template_data = narrative_enhancement.get(key, {})
+            return template_data.get("prompt_template", f"[Missing narrative enhancement: {key}]")
         
         # Default legacy handling for other categories
         else:

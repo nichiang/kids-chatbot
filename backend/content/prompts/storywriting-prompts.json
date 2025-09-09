@@ -42,6 +42,12 @@
       "prompt_template": "Continue this story incorporating the child's input: {user_input}\n\nStory context: {story_context}\n\nREQUIREMENTS:\n- Write 1-3 sentences suitable for strong 2nd graders or 3rd graders\n- Build naturally on the child's contribution\n- Bold 2-3 vocabulary words using **word** format from this pool: {vocabulary_pool}\n- Maintain the {topic} theme\n- Keep the story engaging and age-appropriate\n- Move the narrative forward meaningfully",
       "variables": ["user_input", "story_context", "topic", "vocabulary_pool"],
       "source": "Currently hardcoded in app.py"
+    },
+    "story_ending": {
+      "description": "Generate final story conclusion with satisfying ending",
+      "prompt_template": "End the story about {topic}. Previous context: {context}.\n\nWrite a final paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. End the story with a satisfying conclusion and add 'The end!' at the very end.\n\nDO NOT ask the child to continue. DO NOT include vocabulary questions - those will be handled separately.",
+      "variables": ["topic", "context"],
+      "source": "Currently hardcoded in prompt_manager.py:get_story_ending_prompt()"
     }
   },
 
@@ -195,9 +201,39 @@
     }
   },
   
+  "basic_prompts": {
+    "story_continuation_simple": {
+      "description": "Simple invitation for child to continue the story",
+      "prompt_template": "Now continue the story! What happens next?",
+      "variables": [],
+      "usage": "Used for basic story continuation without complex context",
+      "source": "Currently hardcoded in prompt_manager.py:get_story_continuation_prompt()"
+    }
+  },
+  
+  "completion_prompts": {
+    "new_story_invitation": {
+      "description": "Invite child to write another story after vocabulary questions complete",
+      "prompt_template": "Wonderful job with the vocabulary! You've done great! Would you like to write another story? Here are some fun ideas:\n\n🚀 Space adventures\n🏰 Fantasy quests\n⚽ Sports excitement\n🦄 Magical creatures\n🕵️ Mystery solving\n🍕 Food adventures\n🐾 Animal stories\n🌊 Ocean explorations\n\nWhat sounds interesting to you?",
+      "variables": [],
+      "topic_suggestions": [
+        {"emoji": "🚀", "name": "Space adventures"},
+        {"emoji": "🏰", "name": "Fantasy quests"},
+        {"emoji": "⚽", "name": "Sports excitement"},
+        {"emoji": "🦄", "name": "Magical creatures"},
+        {"emoji": "🕵️", "name": "Mystery solving"},
+        {"emoji": "🍕", "name": "Food adventures"},
+        {"emoji": "🐾", "name": "Animal stories"},
+        {"emoji": "🌊", "name": "Ocean explorations"}
+      ],
+      "usage": "After vocabulary quiz completion to encourage new story writing",
+      "source": "Currently hardcoded in prompt_manager.py:get_story_completion_prompt()"
+    }
+  },
+  
   "grammar_feedback": {
     "description": "Provide encouraging grammar suggestions for student writing",
-    "prompt_template": "As a friendly English tutor for elementary students, analyze this text: \"{user_text}\"\n\nFollowing Step 5 of the story process, if there are any grammatical errors or if this is an incomplete sentence, explain what a better written sentence would be. If there is better vocabulary to use, suggest it.\n\nIMPORTANT: Always include a specific example of a better sentence, especially for incomplete sentences.\n\nIf the grammar is correct and complete, return \"CORRECT\".\nIf there's a suggestion, provide it in this format: \"You could make that sentence even better by saying '[improved version]'. [Brief explanation].\"\n\nExamples:\n- For \"practiced.\" → \"You could make that sentence even better by saying 'They practiced hard for the next game.' This gives us more detail about what happened!\"\n- For \"sara has curly hair\" → \"Great job, that's a nice start! You could add more details like 'Sara has curly hair and beautiful green eyes.' This makes the description more vivid!\"\n- For \"He go to the store.\" → \"You could make that sentence even better by saying 'He went to the store.' We use 'went' for past actions!\"\n\nAlways provide encouraging feedback and specific examples to help young learners improve their writing.",
+    "prompt_template": "As a friendly English tutor for elementary students, analyze this text: \"{user_text}\"\n\nIf there are any grammatical errors or if this is an incomplete sentence, explain what a better written sentence would be. If there is better vocabulary to use, suggest it.\n\nIMPORTANT: Always include a specific example of a better sentence, especially for incomplete sentences.\n\nIf the grammar is correct and complete, return \"CORRECT\".\nIf there's a suggestion, provide it in this format: \"You could make that sentence even better by saying '[improved version]'. [Brief explanation].\"\n\nExamples:\n- For \"practiced.\" → \"You could make that sentence even better by saying 'They practiced hard for the next game.' This gives us more detail about what happened!\"\n- For \"sara has curly hair\" → \"Great job, that's a nice start! You could add more details like 'Sara has curly hair and beautiful green eyes.' This makes the description more vivid!\"\n- For \"He go to the store.\" → \"You could make that sentence even better by saying 'He went to the store.' We use 'went' for past actions!\"\n\nAlways provide encouraging feedback and specific examples to help young learners improve their writing.",
     "variables": ["user_text"],
     "response_patterns": {
       "correct_grammar": "CORRECT",

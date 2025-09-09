@@ -62,10 +62,8 @@ def setup_latency_logging():
     handler.setFormatter(logging.Formatter('%(message)s'))
     latency_logger.addHandler(handler)
     
-    # Console handler for development
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(logging.Formatter('🕐 LATENCY: %(message)s'))
-    latency_logger.addHandler(console_handler)
+    # Console handler removed to prevent duplicate latency logs
+    # Latency data is still logged to latency.jsonl file
 
 def rotate_logs_if_needed():
     """Rotate logs when they exceed 5MB threshold"""
@@ -583,11 +581,18 @@ def select_best_vocabulary_word(available_words: List[str]) -> str:
     
     logger.info(f"select_best_vocabulary_word: Single word candidates: {single_word_candidates}")
     
-    # Use the first single word (don't overly prioritize case)
-    # This maintains original behavior for legitimate vocabulary words
+    # Prioritize lowercase words (more likely to be vocabulary) over proper nouns
     if single_word_candidates:
+        # First try to find lowercase words (common vocabulary)
+        lowercase_candidates = [word for word in single_word_candidates if word.islower()]
+        if lowercase_candidates:
+            selected = lowercase_candidates[0]
+            logger.info(f"select_best_vocabulary_word: Selected lowercase word: '{selected}'")
+            return selected
+        
+        # Fallback to any single word if no lowercase found
         selected = single_word_candidates[0]
-        logger.info(f"select_best_vocabulary_word: Selected: '{selected}'")
+        logger.info(f"select_best_vocabulary_word: Selected (fallback): '{selected}'")
         return selected
     else:
         # Last resort - return first available even if multi-word (shouldn't happen)

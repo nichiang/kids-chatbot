@@ -47,16 +47,8 @@ class PromptManager:
             self.story_templates = self.storywriting_prompts.get("story_generation", {}).get("story_opening", {})
             self.conflict_types = self.storywriting_prompts.get("narrative_enhancement", {}).get("conflict_scenarios", {})
             self.character_aspects = self.character_design_prompts.get("description_prompts", {})
-            
-            # Legacy loading for backwards compatibility during transition
-            # TODO: Remove these after updating all method implementations
-            self.story_templates_legacy = content_manager.content.get("story_templates_legacy", {})
-            self.conflict_types_legacy = content_manager.content.get("narrative_guidance_legacy", {})
-            design_templates_legacy = content_manager.content.get("design_templates_legacy", {})
-            self.character_aspects_legacy = design_templates_legacy.get("character", {})
-            self.location_aspects = design_templates_legacy.get("location", {})
                 
-            logger.info("✅ PromptManager templates loaded from ContentManager (consolidated + legacy)")
+            logger.info("✅ PromptManager templates loaded from ContentManager")
             
         except Exception as e:
             logger.error(f"❌ Failed to load PromptManager templates: {e}")
@@ -147,7 +139,14 @@ Use engaging, age-appropriate language that sparks imagination."""
         Returns:
             Simple continuation invitation prompt
         """
-        return "Now continue the story! What happens next?"
+        try:
+            # Import here to avoid circular imports
+            from content_manager import content_manager
+            template = content_manager.get_prompt_template("basic_prompts", "story_continuation_simple")
+            return template
+        except Exception as e:
+            logger.error(f"❌ Failed to load story continuation prompt: {e}")
+            return "Now continue the story! What happens next?"
     
     def get_story_ending_prompt(self, topic: str, context: str) -> str:
         """
@@ -160,7 +159,14 @@ Use engaging, age-appropriate language that sparks imagination."""
         Returns:
             Prompt to end story with satisfying conclusion
         """
-        return f"""End the story about {topic}. Previous context: {context}. 
+        try:
+            # Import here to avoid circular imports
+            from content_manager import content_manager
+            template = content_manager.get_prompt_template("story_generation", "story_ending")
+            return template.format(topic=topic, context=context)
+        except Exception as e:
+            logger.error(f"❌ Failed to load story ending prompt: {e}")
+            return f"""End the story about {topic}. Previous context: {context}. 
 
 Write a final paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. End the story with a satisfying conclusion and add 'The end!' at the very end. 
 
@@ -198,7 +204,14 @@ Write a paragraph that is 2-4 sentences long incorporating the child's creative 
         Returns:
             Prompt for constructive writing feedback
         """
-        return f"""As a friendly English tutor, provide very brief feedback on this child's descriptive writing about their {design_phase} {subject_name}:
+        try:
+            # Import here to avoid circular imports
+            from content_manager import content_manager
+            template = content_manager.get_prompt_template("grammar_feedback", "prompt_template")
+            return template.format(user_text=user_text)
+        except Exception as e:
+            logger.error(f"❌ Failed to load grammar feedback prompt: {e}")
+            return f"""As a friendly English tutor, provide very brief feedback on this child's descriptive writing about their {design_phase} {subject_name}:
 
 "{user_text}"
 
@@ -211,7 +224,14 @@ If the writing is already good, praise it. If it could be improved, give specifi
         Returns:
             Engaging new story invitation with topic suggestions
         """
-        return """Wonderful job with the vocabulary! You've done great! Would you like to write another story? Here are some fun ideas:
+        try:
+            # Import here to avoid circular imports
+            from content_manager import content_manager
+            template = content_manager.get_prompt_template("completion_prompts", "new_story_invitation")
+            return template
+        except Exception as e:
+            logger.error(f"❌ Failed to load story completion prompt: {e}")
+            return """Wonderful job with the vocabulary! You've done great! Would you like to write another story? Here are some fun ideas:
 
 🚀 Space adventures
 🏰 Fantasy quests
@@ -269,9 +289,16 @@ Write a paragraph that is 2-4 sentences long using vocabulary suitable for a str
         Returns:
             Assessment prompt for LLM to analyze narrative structure
         """
-        story_text = "\n".join(story_parts)
-        
-        return f"""Analyze this collaborative story for 2nd-3rd graders:
+        try:
+            # Import here to avoid circular imports
+            from content_manager import content_manager
+            story_text = "\n".join(story_parts)
+            template = content_manager.get_prompt_template("story_assessment", "arc_analysis")
+            return template.format(topic=topic, story_text=story_text)
+        except Exception as e:
+            logger.error(f"❌ Failed to load story arc assessment prompt: {e}")
+            story_text = "\n".join(story_parts)
+            return f"""Analyze this collaborative story for 2nd-3rd graders:
 
 STORY TOPIC: {topic}
 STORY SO FAR:
@@ -373,36 +400,44 @@ Bold 2-3 vocabulary words using **word** format."""
             Prompt for introducing appropriate conflict into story
         """
         try:
+            # Import here to avoid circular imports
+            from content_manager import content_manager
+            
+            # Get conflict scenarios from JSON
+            storywriting_prompts = content_manager.content.get("storywriting_prompts", {})
+            narrative_enhancement = storywriting_prompts.get("narrative_enhancement", {})
+            conflict_scenarios = narrative_enhancement.get("conflict_scenarios", {})
+            
             # Select conflict type and scale if not specified
             if conflict_type is None:
-                available_types = [k for k in self.conflict_types.keys() if k != 'educational_themes' and k != 'age_appropriate_guidelines' and k != 'narrative_patterns']
-                conflict_type = random.choice(available_types)
+                available_types = [k for k in conflict_scenarios.keys()]
+                if available_types:
+                    conflict_type = random.choice(available_types)
             
             if scale is None:
                 scale = random.choice(['epic_scale', 'daily_scale'])
             
             # Get scenarios for the selected type and scale
-            if conflict_type in self.conflict_types and scale in self.conflict_types[conflict_type]:
-                scenarios = self.conflict_types[conflict_type][scale].get('scenarios', [])
+            if conflict_type and conflict_type in conflict_scenarios and scale in conflict_scenarios[conflict_type]:
+                scenarios = conflict_scenarios[conflict_type][scale]
                 if scenarios:
                     selected_scenario = random.choice(scenarios)
                     
-                    return f"""Introduce this type of conflict into the {topic} story: {selected_scenario}
-
-Make the conflict age-appropriate for 2nd-3rd graders. The challenge should be:
-- Engaging but not frightening
-- Something the character can realistically overcome
-- Connected to the {topic} theme
-- An opportunity for character growth and learning
-
-Write 2-4 sentences that naturally introduce this challenge into the story.
-Bold 2-3 vocabulary words using **word** format."""
+                    # Get main template from JSON
+                    template = content_manager.get_prompt_template("narrative_enhancement", "conflict_integration")
+                    return template.format(topic=topic, selected_scenario=selected_scenario)
             
         except Exception as e:
             logger.error(f"❌ Failed to generate conflict integration prompt: {e}")
         
-        # Fallback prompt if conflict selection fails
-        return f"""Introduce an age-appropriate challenge or problem into the {topic} story.
+        # Fallback prompt using JSON template
+        try:
+            from content_manager import content_manager
+            template = content_manager.get_prompt_template("narrative_enhancement", "fallback_prompt")
+            return template.format(topic=topic)
+        except Exception as fallback_error:
+            logger.error(f"❌ Failed to load fallback conflict prompt: {fallback_error}")
+            return f"""Introduce an age-appropriate challenge or problem into the {topic} story.
 
 The challenge should be:
 - Suitable for 2nd-3rd graders (engaging but not scary)

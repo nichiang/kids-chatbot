@@ -97,6 +97,7 @@ class LLMProvider:
                 )
 
                 print(prompt)
+                print("---------END PROMPT----------")
                 
                 return response.choices[0].message.content.strip()
                 
@@ -167,7 +168,7 @@ What happens next in our story? Tell me how our hero begins their adventure!"""
                 shared_prompts = content_manager.content.get("shared_prompts", {})
                 vocab_system = shared_prompts.get("vocabulary_system", {})
                 question_generation = vocab_system.get("question_generation", {})
-                prompt_template = question_generation.get("template", "")
+                prompt_template = question_generation.get("prompt_template", "")
                 
                 if not prompt_template:
                     # Fallback to hardcoded prompt if consolidated version not found
@@ -205,6 +206,7 @@ Return ONLY valid JSON with: question, options (array of 4 strings), correctInde
                 )
 
                 print(prompt)
+                print("---------END PROMPT----------")
                 
                 result = json.loads(response.choices[0].message.content.strip())
                 return result
@@ -377,7 +379,7 @@ Return ONLY valid JSON with: question, options (array of 4 strings), correctInde
                 
                 storywriting_prompts = content_manager.content.get("storywriting_prompts", {})
                 grammar_feedback = storywriting_prompts.get("grammar_feedback", {})
-                prompt_template = grammar_feedback.get("template", "")
+                prompt_template = grammar_feedback.get("prompt_template", "")
                 
                 if not prompt_template:
                     # Fallback to hardcoded prompt if consolidated version not found
@@ -412,6 +414,7 @@ Always provide encouraging feedback and specific examples to help young learners
                 )
 
                 print(prompt)
+                print("---------END PROMPT----------")
                 
                 result = response.choices[0].message.content.strip()
                 return None if result == "CORRECT" else result
