@@ -1,0 +1,226 @@
+{
+  "metadata": {
+    "file_purpose": "All prompts for collaborative story writing experience",
+    "target_audience": "2nd-3rd grade elementary students",
+    "educational_goals": ["Creative writing", "Vocabulary expansion", "Character development", "Grammar improvement"],
+    "usage_notes": "Edit templates to change story generation behavior. Variables in {brackets} are automatically replaced.",
+    "last_updated": "2025-01-08",
+    "version": "1.0"
+  },
+  
+  "system_prompts": {
+    "tutor_persona": {
+      "description": "Defines the friendly English tutor character for story mode",
+      "prompt": "You are a friendly and playful English tutor for an elementary school student. You will co-write a story with the child. You will take turns writing a part of the story including designing characters and moving the narrative forward. You will also give the child feedback on their writing including grammatical errors, spelling mistakes, and how to improve the flow of the sentence.\n\nFavorite book series for children of this age include Hilo by Judd Winick, and Amulet by Kazu Kibuishi. The child enjoys topics like inventions, animals, soccer, cooking, superheroes, space, or sea creatures. The child likes mysteries, adventures, and comedies.\n\nHere are examples of challenging vocabulary: Investigate, Evidence, Mystery, Sleuth, Witness, Disguise, Unravel, Curious, adapt, analyze, predict, structure, unique, defend, benefit, examine\n\nWhen talking to the child, use short sentences. Avoid being too verbose. Use a curious tone throughout. Keep the interaction light and fun.",
+      "usage": "Set at the beginning of story mode conversations",
+      "source": "Currently in story_mode/system_context.txt"
+    }
+  },
+  
+  "story_generation": {
+    "story_opening": {
+      "named_entities": {
+        "description": "Stories that introduce pre-named characters or locations",
+        "probability_weight": 0.6,
+        "prompt_template": "Create a story opening for the topic: {topic}\n\nREQUIREMENTS:\n- Write 1-3 sentences suitable for strong 2nd graders or 3rd graders\n- Introduce a named character AND/OR a specific location with clear names\n- Bold 2-3 vocabulary words using **word** format\n- Use engaging, age-appropriate language that sparks imagination\n\nRETURN AS VALID JSON in this exact format:\n{{\n  \"story\": \"your story text here with **bolded** vocabulary words...\",\n  \"entities\": {{\n    \"characters\": {{\n      \"named\": [\"list character names here if any\"],\n      \"unnamed\": [\"list unnamed character descriptors if any\"]\n    }},\n    \"locations\": {{\n      \"named\": [\"list location names here if any\"],\n      \"unnamed\": [\"list unnamed location descriptors if any\"]\n    }}\n  }},\n  \"vocabulary_words\": [\"list the bolded vocabulary words here\"]\n}}\n\nExamples of good story openings with proper entity metadata:\n- Space: \"Captain Luna strapped herself into the **gleaming** spacecraft and checked all the controls.\"\n  Entities: {{\"characters\": {{\"named\": [\"Captain Luna\"], \"unnamed\": []}}, \"locations\": {{\"named\": [], \"unnamed\": [\"spacecraft\"]}}}}\n- Fantasy: \"Princess Maya ventured into the **enchanted** Whispering Woods, carrying her grandmother's ancient map.\"\n  Entities: {{\"characters\": {{\"named\": [\"Princess Maya\"], \"unnamed\": []}}, \"locations\": {{\"named\": [\"Whispering Woods\"], \"unnamed\": []}}}}\n- Animals: \"Dr. Sarah watched as the **magnificent** elephants gathered at the Crystal Watering Hole.\"\n  Entities: {{\"characters\": {{\"named\": [\"Dr. Sarah\"], \"unnamed\": []}}, \"locations\": {{\"named\": [\"Crystal Watering Hole\"], \"unnamed\": []}}}}",
+        "variables": ["topic"],
+        "response_format": "JSON with story, entities, and vocabulary_words",
+        "source": "Currently in story_mode/story_templates.json"
+      },
+      "unnamed_entities": {
+        "description": "Stories where child must name the characters or locations",
+        "probability_weight": 0.4,
+        "prompt_template": "Create a story opening for the topic: {topic}\n\nCRITICAL REQUIREMENTS:\n- Write 1-3 sentences suitable for strong 2nd graders or 3rd graders\n- Introduce an UNNAMED character or location using SHORT descriptors (2-3 words maximum)\n- DO NOT GIVE CHARACTERS NAMES - characters must remain unnamed\n- DO NOT USE NAMES like 'Mia', 'Luna', 'Alex' - use descriptors only\n- CORRECT: 'the little boy', 'the astronaut', 'the princess', 'a curious girl'\n- INCORRECT: 'a girl named Mia', 'Luna the astronaut', 'Princess Maya'\n- Keep descriptors simple and concise\n- Bold 2-3 vocabulary words using **word** format\n- Use engaging, age-appropriate language that sparks imagination\n\nRETURN AS VALID JSON in this exact format:\n{{\n  \"story\": \"your story text here with **bolded** vocabulary words...\",\n  \"entities\": {{\n    \"characters\": {{\n      \"named\": [],\n      \"unnamed\": [\"list unnamed character descriptors here\"]\n    }},\n    \"locations\": {{\n      \"named\": [],\n      \"unnamed\": [\"list unnamed location descriptors here if any\"]\n    }}\n  }},\n  \"vocabulary_words\": [\"list the bolded vocabulary words here\"]\n}}\n\nExamples of CORRECT unnamed story openings with proper entity metadata:\n- \"There was a little boy in a village who loved to **explore** the **mysterious** caves nearby.\"\n  Entities: {{\"characters\": {{\"named\": [], \"unnamed\": [\"the little boy\"]}}, \"locations\": {{\"named\": [], \"unnamed\": [\"the village\", \"the mysterious caves\"]}}}}\n- \"The princess was walking through her garden when she found a **magical** sword hidden behind the roses.\"\n  Entities: {{\"characters\": {{\"named\": [], \"unnamed\": [\"the princess\"]}}, \"locations\": {{\"named\": [], \"unnamed\": [\"her garden\"]}}}}\n- \"A curious girl found an **ancient** map hidden in her attic and felt a spark of **adventure**.\"\n  Entities: {{\"characters\": {{\"named\": [], \"unnamed\": [\"a curious girl\"]}}, \"locations\": {{\"named\": [], \"unnamed\": [\"her attic\"]}}}}\n- \"The young astronaut looked out at the **vast** space and felt both nervous and **excited** about the mission.\"\n  Entities: {{\"characters\": {{\"named\": [], \"unnamed\": [\"the young astronaut\"]}}, \"locations\": {{\"named\": [], \"unnamed\": [\"space\"]}}}}",
+        "variables": ["topic"],
+        "response_format": "JSON with story, entities, and vocabulary_words",
+        "naming_required": true,
+        "source": "Currently in story_mode/story_templates.json"
+      }
+    },
+    "story_continuation": {
+      "description": "Continue existing story based on child's contribution",
+      "prompt_template": "Continue this story incorporating the child's input: {user_input}\n\nStory context: {story_context}\n\nREQUIREMENTS:\n- Write 1-3 sentences suitable for strong 2nd graders or 3rd graders\n- Build naturally on the child's contribution\n- Bold 2-3 vocabulary words using **word** format from this pool: {vocabulary_pool}\n- Maintain the {topic} theme\n- Keep the story engaging and age-appropriate\n- Move the narrative forward meaningfully",
+      "variables": ["user_input", "story_context", "topic", "vocabulary_pool"],
+      "source": "Currently hardcoded in app.py"
+    }
+  },
+
+  "story_assessment": {
+    "arc_analysis": {
+      "description": "Analyze story structure and narrative development to guide story progression",
+      "prompt_template": "Analyze this collaborative story for 2nd-3rd graders:\n\nSTORY TOPIC: {topic}\nSTORY SO FAR:\n{story_text}\n\nAssess the narrative structure and return JSON in this exact format:\n{{\n    \"current_phase\": \"setup|development|climax|resolution\",\n    \"completeness_score\": 0-100,\n    \"character_growth\": 0-100,\n    \"has_clear_conflict\": true|false,\n    \"conflict_type\": \"emotional|social|problem_solving|environmental|adventure|none\",\n    \"lesson_learned\": true|false,\n    \"ready_to_resolve\": true|false,\n    \"next_guidance\": \"Brief guidance for what should happen next\"\n}}\n\nASSESSMENT CRITERIA:\n- Setup: Character and setting introduced, conflict hinted\n- Development: Character faces challenges, tries solutions\n- Climax: Most important moment, biggest challenge\n- Resolution: Problem solved, character growth shown\n\n- Character Growth: How much has the character learned/changed?\n- Completeness: Does story feel ready to end naturally?\n- Conflict: Is there a clear challenge being addressed?\n- Lesson: Has character learned something valuable?\n\nFocus on age-appropriate narrative elements for elementary students.",
+      "variables": ["topic", "story_text"],
+      "response_format": "JSON with narrative assessment metrics",
+      "usage": "Called independently on each story turn (when currentStep >= 2) before generating story continuation. Results stored in session and used to influence the subsequent narrative continuation prompt via get_narrative_continuation_prompt(). This is a separate LLM API call, not appended to other prompts.",
+      "trigger_condition": "Only when session_data.currentStep >= 2 (after some story development)",
+      "source": "Currently in prompt_manager.py:get_story_arc_assessment_prompt()"
+    },
+    "phase_guidance": {
+      "description": "Phase-specific story continuation guidance based on assessment results", 
+      "setup_prompt": "Continue setting up the {topic} story. Introduce the main character's problem or adventure. Make the character relatable to children and hint at the challenge ahead.",
+      "development_prompt": "Develop the {topic} story by having the character face challenges. Escalate the problem or adventure. Show the character trying different solutions and learning from attempts.",
+      "climax_prompt": "Bring the {topic} story to its most exciting or important moment. This is where the character faces their biggest challenge and must use what they've learned.",
+      "resolution_prompt": "Resolve the {topic} story in a satisfying way. Show how the character has grown and what they learned. End with 'The end!' Make it feel complete and rewarding.",
+      "variables": ["topic", "current_phase"],
+      "usage": "Selected based on current_phase from arc assessment results. Used to construct the base prompt for story continuation after assessment is complete. This replaces the standard continuation prompt when narrative assessment is available.",
+      "integration_pattern": "base_prompt = prompt_manager.get_narrative_continuation_prompt(session_data.narrativeAssessment, session_data.topic, story_context)",
+      "source": "Currently in prompt_manager.py:get_narrative_continuation_prompt()"
+    }
+  },
+  
+  "narrative_enhancement": {
+    "conflict_integration": {
+      "description": "Dynamically adds conflict when story lacks clear challenges",
+      "prompt_template": "Introduce this type of conflict into the {topic} story: {selected_scenario}\n\nMake the conflict age-appropriate for 2nd-3rd graders. The challenge should be:\n- Engaging but not frightening\n- Something the character can realistically overcome\n- Connected to the {topic} theme\n- An opportunity for character growth and learning\n\nWrite 1-3 sentences that naturally introduce this challenge into the story.\nBold 2-3 vocabulary words using **word** format.",
+      "variables": ["topic", "selected_scenario"],
+      "usage": "Appended to story continuation prompts when story lacks conflict",
+      "trigger_condition": "When narrative assessment shows no clear conflict and currentStep <= 3",
+      "prompt_integration": "base_prompt += '\\n\\nADDITIONAL GUIDANCE: {conflict_prompt}'",
+      "source": "Currently in prompt_manager.py:get_conflict_integration_prompt()"
+    },
+    "conflict_scenarios": {
+      "emotional_conflicts": {
+        "description": "Character faces internal struggles or emotional growth",
+        "daily_scale": [
+          "Child nervous about first day at new school where they know nobody",
+          "Feeling left out when best friends play games without including them",
+          "Scared to perform solo in school talent show with everyone watching",
+          "Worried about disappointing parents with bad report card grades",
+          "Anxious about trying out for sports team and possibly not making it",
+          "Embarrassed after making mistake in front of entire class"
+        ],
+        "epic_scale": [
+          "Character discovers they're the chosen one but feels inadequate",
+          "Hero must overcome fear of magic to save their homeland",
+          "Young person doubts their special abilities when kingdom depends on them",
+          "Character feels overwhelming burden of responsibility for protecting their world",
+          "Reluctant hero must find courage they never knew they had to face ancient evil",
+          "Character struggles with destiny vs personal desires when world needs saving"
+        ]
+      },
+      "social_conflicts": {
+        "description": "Character navigates relationships, friendships, teamwork",
+        "daily_scale": [
+          "Make friends with shy new classmate who sits alone at lunch",
+          "Resolve argument with best friend over borrowed toy that got broken",
+          "Include lonely student in group activity when others exclude them",
+          "Help two siblings stop fighting over sharing favorite video game",
+          "Convince team members to work together instead of arguing during game",
+          "Stand up for friend being teased by other kids on playground"
+        ],
+        "epic_scale": [
+          "Unite two warring kingdoms through friendship and understanding",
+          "Bring together different magical species who have been enemies",
+          "Help former enemy become trusted ally to face greater threat",
+          "Bridge the gap between humans and mythical creatures through diplomacy",
+          "Convince rival factions to work together to save their shared homeland",
+          "Transform bitter conflict into cooperation to overcome natural disaster"
+        ]
+      },
+      "problem_solving": {
+        "description": "Character faces puzzles, mysteries, or creative challenges",
+        "daily_scale": [
+          "Find beloved pet who escaped from backyard before dinnertime",
+          "Figure out how to fix favorite toy that broke during playtime",
+          "Help grandma locate missing recipe book for special dinner",
+          "Solve mystery of who keeps taking lunch money from school lockers",
+          "Discover why plants in garden keep dying despite careful watering",
+          "Find way to return lost wallet to rightful owner in busy city"
+        ],
+        "epic_scale": [
+          "Solve ancient magical puzzle to break curse threatening kingdom",
+          "Discover cure for mysterious plague affecting magical creatures",
+          "Find three missing artifacts before villain uses them for destruction",
+          "Decode cryptic prophecy to prevent foretold disaster from occurring",
+          "Uncover secret to defeating invincible monster terrorizing the land",
+          "Figure out how to restore magic to world where it's mysteriously vanishing"
+        ]
+      },
+      "environmental": {
+        "description": "Character faces challenges from nature or physical obstacles",
+        "daily_scale": [
+          "Get home safely during thunderstorm while walking from school",
+          "Help injured baby bird find its way back to nest in tall tree",
+          "Navigate through crowded amusement park to find parents after getting separated",
+          "Find shelter during camping trip when tent breaks in rainstorm",
+          "Safely cross busy street when traffic light isn't working properly",
+          "Get home from friend's house when bike tire goes flat far from home"
+        ],
+        "epic_scale": [
+          "Survive journey through dangerous enchanted forest full of creatures",
+          "Navigate through violent magical storm to deliver urgent message",
+          "Cross treacherous mountain range during winter to reach safe haven",
+          "Escape from ancient temple that's crumbling and filling with sand",
+          "Find way through maze-like underground caverns before torch burns out",
+          "Survive on mysterious island while searching for way back home"
+        ]
+      },
+      "adventure_conflicts": {
+        "description": "Character embarks on quests, expeditions, or journeys",
+        "daily_scale": [
+          "Explore mysterious old house that everyone thinks is haunted",
+          "Go on treasure hunt through local park using cryptic map found in attic",
+          "Journey to new part of city to find special ingredients for science project",
+          "Adventure through hiking trail to reach beautiful waterfall",
+          "Explore abandoned building safely to retrieve ball that went over fence",
+          "Go on camping adventure in backyard and survive entire night outdoors"
+        ],
+        "epic_scale": [
+          "Explore newly discovered magical realm to map its wonders",
+          "Journey to edge of known world to find legendary treasure",
+          "Venture into space to make first contact with alien civilization",
+          "Dive deep into ocean to discover underwater kingdom thought to be myth",
+          "Travel through time to prevent historical disaster from occurring",
+          "Quest through multiple dimensions to collect scattered magical crystals"
+        ]
+      }
+    },
+    "educational_themes": {
+      "cooperation": "Working together achieves more than working alone",
+      "perseverance": "Keep trying even when things get difficult", 
+      "kindness": "Small acts of kindness can make big differences",
+      "courage": "Being brave doesn't mean not being scared",
+      "creativity": "Thinking differently can solve impossible problems",
+      "friendship": "True friends support each other through challenges",
+      "responsibility": "Taking care of others makes you grow stronger",
+      "curiosity": "Asking questions leads to amazing discoveries",
+      "empathy": "Understanding others' feelings helps solve conflicts",
+      "self_confidence": "Believing in yourself helps you achieve goals"
+    },
+    "fallback_prompt": {
+      "prompt_template": "Introduce an age-appropriate challenge or problem into the {topic} story.\n\nThe challenge should be:\n- Suitable for 2nd-3rd graders (engaging but not scary)\n- Something the character can overcome through their own efforts\n- Related to the {topic} theme\n- A chance to learn an important lesson\n\nWrite 1-3 sentences that add this challenge to the story naturally.\nBold 2-3 vocabulary words using **word** format.",
+      "variables": ["topic"],
+      "usage": "Used when conflict scenario selection fails",
+      "source": "Currently in prompt_manager.py fallback logic"
+    }
+  },
+  
+  "grammar_feedback": {
+    "description": "Provide encouraging grammar suggestions for student writing",
+    "prompt_template": "As a friendly English tutor for elementary students, analyze this text: \"{user_text}\"\n\nFollowing Step 5 of the story process, if there are any grammatical errors or if this is an incomplete sentence, explain what a better written sentence would be. If there is better vocabulary to use, suggest it.\n\nIMPORTANT: Always include a specific example of a better sentence, especially for incomplete sentences.\n\nIf the grammar is correct and complete, return \"CORRECT\".\nIf there's a suggestion, provide it in this format: \"You could make that sentence even better by saying '[improved version]'. [Brief explanation].\"\n\nExamples:\n- For \"practiced.\" → \"You could make that sentence even better by saying 'They practiced hard for the next game.' This gives us more detail about what happened!\"\n- For \"sara has curly hair\" → \"Great job, that's a nice start! You could add more details like 'Sara has curly hair and beautiful green eyes.' This makes the description more vivid!\"\n- For \"He go to the store.\" → \"You could make that sentence even better by saying 'He went to the store.' We use 'went' for past actions!\"\n\nAlways provide encouraging feedback and specific examples to help young learners improve their writing.",
+    "variables": ["user_text"],
+    "response_patterns": {
+      "correct_grammar": "CORRECT",
+      "needs_improvement": "You could make that sentence even better by saying '{improved_version}'. {brief_explanation}"
+    },
+    "example_corrections": {
+      "incomplete_sentence": {
+        "input": "practiced.",
+        "correction": "They practiced hard for the next game.",
+        "explanation": "This gives us more detail about what happened!"
+      },
+      "grammar_error": {
+        "input": "He go to the store.",
+        "correction": "He went to the store.", 
+        "explanation": "We use 'went' for past actions!"
+      },
+      "descriptive_enhancement": {
+        "input": "sara has curly hair",
+        "correction": "Sara has curly hair and beautiful green eyes.",
+        "explanation": "This makes the description more vivid!"
+      }
+    },
+    "tone_requirements": ["Always encouraging", "Specific examples", "Age-appropriate explanations"],
+    "source": "Currently hardcoded in llm_provider.py:provide_grammar_feedback()"
+  }
+}

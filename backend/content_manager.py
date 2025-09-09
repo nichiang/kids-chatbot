@@ -48,6 +48,9 @@ class ContentManager:
             # Load configuration
             self._load_config()
             
+            # Create design templates mapping for app.py compatibility
+            self._create_design_templates_mapping()
+            
             logger.info("✅ ContentManager: All content loaded successfully")
             
         except Exception as e:
@@ -83,24 +86,35 @@ class ContentManager:
             logger.warning(f"Prompts directory not found: {prompts_dir}")
             return
         
-        # Load story mode prompts
+        # Load consolidated JSON files (Phase 1 of storywriting consolidation)
+        # Storywriting prompts: system, story generation, assessment, narrative enhancement, grammar
+        self._load_json_file(prompts_dir / "storywriting-prompts.json", "storywriting_prompts")
+        
+        # Character design prompts: naming, descriptions, flow patterns
+        self._load_json_file(prompts_dir / "character-design-prompts.json", "character_design_prompts")
+        
+        # Shared vocabulary prompts: used by both story and facts modes  
+        self._load_json_file(prompts_dir / "shared-prompts.json", "shared_prompts")
+        
+        # Legacy prompt loading (for backwards compatibility during transition)
+        # TODO: Remove after testing consolidation is complete
         story_dir = prompts_dir / "story_mode"
         if story_dir.exists():
-            self._load_text_file(story_dir / "system_context.txt", "story_system_prompt")
-            self._load_json_file(story_dir / "story_templates.json", "story_templates")
-            self._load_json_file(story_dir / "narrative_guidance.json", "narrative_guidance")
+            self._load_text_file(story_dir / "system_context.txt", "story_system_prompt_legacy")
+            self._load_json_file(story_dir / "story_templates.json", "story_templates_legacy")
+            self._load_json_file(story_dir / "narrative_guidance.json", "narrative_guidance_legacy")
         
-        # Load facts mode prompts
+        # Load facts mode prompts (not yet consolidated)
         facts_dir = prompts_dir / "facts_mode"
         if facts_dir.exists():
             self._load_text_file(facts_dir / "system_context.txt", "facts_system_prompt")
             self._load_json_file(facts_dir / "fact_templates.json", "fact_templates")
         
-        # Load shared prompts
+        # Load legacy shared prompts (for backwards compatibility)
         shared_dir = prompts_dir / "shared"
         if shared_dir.exists():
-            self._load_json_file(shared_dir / "vocabulary_templates.json", "vocabulary_templates")
-            self._load_json_file(shared_dir / "design_templates.json", "design_templates")
+            self._load_json_file(shared_dir / "vocabulary_templates.json", "vocabulary_templates_legacy")
+            self._load_json_file(shared_dir / "design_templates.json", "design_templates_legacy")
     
     def _load_config(self):
         """Load configuration from config directory"""
@@ -250,8 +264,48 @@ class ContentManager:
         Returns:
             Prompt template string
         """
-        templates = self.content.get(category, {})
-        return templates.get(key, f"[Missing prompt template: {category}.{key}]")
+        # Handle consolidated storywriting prompt templates
+        if category == "story_templates":
+            storywriting_prompts = self.content.get("storywriting_prompts", {})
+            story_generation = storywriting_prompts.get("story_generation", {})
+            story_opening = story_generation.get("story_opening", {})
+            
+            if key in story_opening:
+                template_data = story_opening.get(key, {})
+                # Return the prompt template string, not the entire template object
+                return template_data.get("prompt_template", template_data)
+            else:
+                # Fall back to legacy for backwards compatibility
+                templates = self.content.get("story_templates_legacy", {})
+                return templates.get(key, f"[Missing prompt template: {category}.{key}]")
+        
+        # Handle vocabulary templates from shared prompts
+        elif category == "vocabulary_templates":
+            shared_prompts = self.content.get("shared_prompts", {})
+            vocab_system = shared_prompts.get("vocabulary_system", {})
+            
+            if key == "question_generation":
+                return vocab_system.get("question_generation", {})
+            else:
+                # Fall back to legacy for backwards compatibility
+                templates = self.content.get("vocabulary_templates_legacy", {})
+                return templates.get(key, f"[Missing prompt template: {category}.{key}]")
+        
+        # Handle design templates from character design prompts
+        elif category == "design_templates":
+            character_design = self.content.get("character_design_prompts", {})
+            
+            if key == "character":
+                return character_design.get("naming_prompts", {}).get("character", {})
+            else:
+                # Fall back to legacy for backwards compatibility
+                templates = self.content.get("design_templates_legacy", {})
+                return templates.get(key, f"[Missing prompt template: {category}.{key}]")
+        
+        # Default legacy handling for other categories
+        else:
+            templates = self.content.get(category, {})
+            return templates.get(key, f"[Missing prompt template: {category}.{key}]")
     
     def get_design_template(self, template_path: str) -> str:
         """
@@ -299,8 +353,18 @@ class ContentManager:
         Returns:
             System prompt string
         """
-        prompt_key = f"{mode}_system_prompt"
-        return self.content.get(prompt_key, f"[Missing system prompt for mode: {mode}]")
+        if mode == "story":
+            # Use consolidated storywriting prompts
+            storywriting_prompts = self.content.get("storywriting_prompts", {})
+            system_prompts = storywriting_prompts.get("system_prompts", {})
+            tutor_persona = system_prompts.get("tutor_persona", {})
+            return tutor_persona.get("prompt", f"[Missing story system prompt in consolidated format]")
+        elif mode == "facts":
+            # Use legacy facts system prompt (not yet consolidated)
+            prompt_key = f"{mode}_system_prompt"
+            return self.content.get(prompt_key, f"[Missing system prompt for mode: {mode}]")
+        else:
+            return f"[Unknown mode: {mode}]"
     
     def reload_content(self):
         """Reload all content from files (useful for development)"""
@@ -323,6 +387,35 @@ class ContentManager:
             else:
                 summary[key] = str(type(value))
         return summary
+
+    def _create_design_templates_mapping(self):
+        """
+        Create design_templates mapping for app.py compatibility.
+        Maps character_design_prompts structure to expected design_templates structure.
+        """
+        try:
+            character_design = self.content.get("character_design_prompts", {})
+            description_prompts = character_design.get("description_prompts", {})
+            
+            # Create the mapping that app.py expects: design_templates.character
+            design_templates = {
+                "character": {}
+            }
+            
+            # Map each description prompt aspect to the expected structure
+            for aspect_name, aspect_data in description_prompts.items():
+                design_templates["character"][aspect_name] = aspect_data
+            
+            # Store the mapping in content so app.py can access it
+            self.content["design_templates"] = design_templates
+            
+            aspect_count = len(description_prompts)
+            logger.info(f"✅ Created design_templates mapping: character with {aspect_count} aspects")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to create design_templates mapping: {e}")
+            # Fallback: create empty structure
+            self.content["design_templates"] = {"character": {}}
 
 
 # Create singleton instance for app usage

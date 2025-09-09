@@ -15,9 +15,41 @@ app.get("/health", ...)
 app.mount("/", StaticFiles(directory="../frontend", html=True), name="static")
 ```
 
-### Enhanced Entity Design Phase Pattern (LATEST BREAKTHROUGH - Phase 17)
+### Consolidated Prompt Architecture Pattern (LATEST BREAKTHROUGH - Phase 7)
 
-**Pattern**: Unified Named/Unnamed Entity Design Flow with Smart Phase Selection
+**Pattern**: JSON-based prompt consolidation with backwards compatibility and consistent field naming
+- **Why**: Scattered prompts across 7+ files made maintenance difficult and caused production bugs
+- **Discovery**: Template loading required consistent field names and sentence count specifications
+- **Implementation**: 4-file JSON architecture with enhanced ContentManager access patterns
+
+**Consolidated Architecture**:
+```python
+# New consolidated structure
+content_manager.get_prompt_template("story_templates", "named_entities")
+# Returns prompt_template from storywriting-prompts.json
+
+# Enhanced access with backwards compatibility
+if category == "story_templates":
+    storywriting_prompts = self.content.get("storywriting_prompts", {})
+    story_generation = storywriting_prompts.get("story_generation", {})
+    return story_generation.get("story_opening", {}).get(key, {})
+```
+
+**File Organization Pattern**:
+- `storywriting-prompts.json` - System prompts, story generation, narrative enhancement, assessment
+- `character-design-prompts.json` - Character naming and description templates
+- `shared-prompts.json` - Cross-modal vocabulary prompts
+- Legacy files removed after successful consolidation
+
+**Critical Implementation Requirements**:
+1. **Consistent Field Names**: All prompts use `"prompt_template"` (not `"template"`)
+2. **Sentence Count Alignment**: All templates specify "1-3 sentences" consistently  
+3. **Backwards Compatibility**: Legacy fallbacks during transition period
+4. **Enhanced Access**: ContentManager handles both consolidated and legacy formats
+
+### Enhanced Entity Design Phase Pattern (Previous Breakthrough - Phase 17)
+
+**Pattern**: Unified Named/Unnamed Entity Design Flow with Smart Phase Selection  
 - **Why**: Eliminates dead-end stories and provides consistent educational engagement
 - **Discovery**: Named entities (like "Oliver") can provide equal educational value through aspect design
 - **Implementation**: Enhanced validation and entity selection with smart phase skipping

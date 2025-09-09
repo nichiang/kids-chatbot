@@ -1415,7 +1415,8 @@ def create_enhanced_design_prompt(session_data: SessionData) -> ChatResponse:
             # Extract template information
             prompt_template = aspect_template.get("prompt_template", f"Tell me about {entity_name}'s {current_aspect}")
             placeholder = aspect_template.get("placeholder", f"Describe the {current_aspect}")
-            suggestions = aspect_template.get("suggestions", [])
+            # Try both 'suggestion_words' (new format) and 'suggestions' (legacy format) 
+            suggestions = aspect_template.get("suggestion_words", aspect_template.get("suggestions", []))
             
             # Format the prompt with the entity name
             prompt_text = prompt_template.format(name=entity_name, descriptor=entity_descriptor)

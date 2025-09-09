@@ -161,12 +161,23 @@ What happens next in our story? Tell me how our hero begins their adventure!"""
                 if not sentence_with_word:
                     sentence_with_word = context  # Fallback to full context
                 
-                prompt = f"""Following Step 8 of the story process, create a vocabulary question for the word "{actual_word}" from this sentence: "{sentence_with_word}"
+                # Load vocabulary question template from consolidated shared prompts
+                from content_manager import content_manager
+                
+                shared_prompts = content_manager.content.get("shared_prompts", {})
+                vocab_system = shared_prompts.get("vocabulary_system", {})
+                question_generation = vocab_system.get("question_generation", {})
+                prompt_template = question_generation.get("template", "")
+                
+                if not prompt_template:
+                    # Fallback to hardcoded prompt if consolidated version not found
+                    logger.warning("⚠️ Vocabulary question template not found in consolidated JSON, using fallback")
+                    prompt_template = """Following Step 8 of the story process, create a vocabulary question for the word "{word}" from this sentence: "{sentence_context}"
 
 Create the question in this exact format:
-What does the word **{actual_word}** mean?
+What does the word **{word}** mean?
 
-Show the sentence where it was used: "{sentence_with_word}"
+Show the sentence where it was used: "{sentence_context}"
 
 Then provide 4 multiple choice answers (a, b, c, d) with one correct answer and three distractors.
 Make it appropriate for 2nd-3rd grade students.
@@ -179,6 +190,9 @@ Example format:
 }}
 
 Return ONLY valid JSON with: question, options (array of 4 strings), correctIndex (0-3)"""
+                
+                # Format the prompt with the word and sentence context
+                prompt = prompt_template.format(word=actual_word, sentence_context=sentence_with_word)
 
                 response = self.client.chat.completions.create(
                     model=self.model,
@@ -189,6 +203,8 @@ Return ONLY valid JSON with: question, options (array of 4 strings), correctInde
                     max_tokens=200,
                     temperature=0.3
                 )
+
+                print(prompt)
                 
                 result = json.loads(response.choices[0].message.content.strip())
                 return result
@@ -356,7 +372,17 @@ Return ONLY valid JSON with: question, options (array of 4 strings), correctInde
         """Provide grammar feedback following Step 5 of the story process"""
         if self.client and self.api_key:
             try:
-                prompt = f"""As a friendly English tutor for elementary students, analyze this text: "{user_text}"
+                # Load grammar feedback prompt from consolidated storywriting prompts
+                from content_manager import content_manager
+                
+                storywriting_prompts = content_manager.content.get("storywriting_prompts", {})
+                grammar_feedback = storywriting_prompts.get("grammar_feedback", {})
+                prompt_template = grammar_feedback.get("template", "")
+                
+                if not prompt_template:
+                    # Fallback to hardcoded prompt if consolidated version not found
+                    logger.warning("⚠️ Grammar feedback prompt not found in consolidated JSON, using fallback")
+                    prompt_template = """As a friendly English tutor for elementary students, analyze this text: "{user_text}"
 
 Following Step 5 of the story process, if there are any grammatical errors or if this is an incomplete sentence, explain what a better written sentence would be. If there is better vocabulary to use, suggest it. 
 
@@ -371,6 +397,9 @@ Examples:
 - For "He go to the store." → "You could make that sentence even better by saying 'He went to the store.' We use 'went' for past actions!"
 
 Always provide encouraging feedback and specific examples to help young learners improve their writing."""
+                
+                # Format the prompt with the user text
+                prompt = prompt_template.format(user_text=user_text)
 
                 response = self.client.chat.completions.create(
                     model=self.model,
@@ -381,6 +410,8 @@ Always provide encouraging feedback and specific examples to help young learners
                     max_tokens=100,
                     temperature=0.3
                 )
+
+                print(prompt)
                 
                 result = response.choices[0].message.content.strip()
                 return None if result == "CORRECT" else result

@@ -34,20 +34,36 @@ class PromptManager:
             # Import here to avoid circular imports
             from content_manager import content_manager
             
-            # Get templates from ContentManager
-            self.story_templates = content_manager.content.get("story_templates", {})
-            self.conflict_types = content_manager.content.get("narrative_guidance", {})
+            # Load consolidated storywriting prompts
+            self.storywriting_prompts = content_manager.content.get("storywriting_prompts", {})
             
-            # Get design aspects from ContentManager
-            design_templates = content_manager.content.get("design_templates", {})
-            self.character_aspects = design_templates.get("character", {})
-            self.location_aspects = design_templates.get("location", {})
+            # Load character design prompts  
+            self.character_design_prompts = content_manager.content.get("character_design_prompts", {})
+            
+            # Load shared vocabulary prompts
+            self.shared_prompts = content_manager.content.get("shared_prompts", {})
+            
+            # Extract commonly used sections for backwards compatibility
+            self.story_templates = self.storywriting_prompts.get("story_generation", {}).get("story_opening", {})
+            self.conflict_types = self.storywriting_prompts.get("narrative_enhancement", {}).get("conflict_scenarios", {})
+            self.character_aspects = self.character_design_prompts.get("description_prompts", {})
+            
+            # Legacy loading for backwards compatibility during transition
+            # TODO: Remove these after updating all method implementations
+            self.story_templates_legacy = content_manager.content.get("story_templates_legacy", {})
+            self.conflict_types_legacy = content_manager.content.get("narrative_guidance_legacy", {})
+            design_templates_legacy = content_manager.content.get("design_templates_legacy", {})
+            self.character_aspects_legacy = design_templates_legacy.get("character", {})
+            self.location_aspects = design_templates_legacy.get("location", {})
                 
-            logger.info("✅ PromptManager templates loaded from ContentManager")
+            logger.info("✅ PromptManager templates loaded from ContentManager (consolidated + legacy)")
             
         except Exception as e:
             logger.error(f"❌ Failed to load PromptManager templates: {e}")
             # Initialize with empty templates as fallback
+            self.storywriting_prompts = {}
+            self.character_design_prompts = {}
+            self.shared_prompts = {}
             self.story_templates = {}
             self.character_aspects = {}
             self.location_aspects = {}
@@ -104,13 +120,8 @@ class PromptManager:
                 template_key = "named_entities" if random.random() < 0.6 else "unnamed_entities"
                 logger.info(f"🎯 Story Opening: Random selection chose '{template_key}' template")
             
-            # Get template from ContentManager
-            story_templates = content_manager.get_prompt_template("story_templates", template_key)
-            if isinstance(story_templates, dict) and "prompt_template" in story_templates:
-                selected_template = story_templates["prompt_template"]
-            else:
-                # Fallback if template structure is different
-                selected_template = str(story_templates)
+            # Get template from ContentManager (now returns the prompt_template string directly)
+            selected_template = content_manager.get_prompt_template("story_templates", template_key)
             
             formatted_prompt = selected_template.format(topic=topic)
             

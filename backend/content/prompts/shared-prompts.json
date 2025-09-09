@@ -1,0 +1,105 @@
+{
+  "metadata": {
+    "file_purpose": "Vocabulary prompts shared across both story and facts modes",
+    "target_audience": "2nd-3rd grade elementary students", 
+    "usage_scope": "Cross-modal vocabulary learning and assessment",
+    "usage_notes": "These prompts affect vocabulary learning in both story writing and facts exploration. Test changes in both modes.",
+    "last_updated": "2025-01-08",
+    "version": "1.0"
+  },
+  
+  "vocabulary_system": {
+    "question_generation": {
+      "description": "Generate vocabulary comprehension questions from content",
+      "prompt_template": "Following Step 8 of the story process, create a vocabulary question for the word \"{word}\" from this sentence: \"{sentence_context}\"\n\nCreate the question in this exact format:\nWhat does the word **{word}** mean?\n\nShow the sentence where it was used: \"{sentence_context}\"\n\nThen provide 4 multiple choice answers (a, b, c, d) with one correct answer and three distractors.\nMake it appropriate for 2nd-3rd grade students.\n\nExample format:\n{{\n  \"question\": \"What does the word **courage** mean?\\n\\n\\\"As Leo went forward, he felt a sense of **courage**.\\\"\"\n  \"options\": [\"a) being scared\", \"b) being brave\", \"c) being tired\", \"d) being hungry\"],\n  \"correctIndex\": 1\n}}\n\nReturn ONLY valid JSON with: question, options (array of 4 strings), correctIndex (0-3)",
+      "variables": ["word", "sentence_context"],
+      "format_requirements": {
+        "question_format": "What does the word **{word}** mean?",
+        "context_display": "Show the sentence where it was used: \"{sentence}\"",
+        "answer_format": "4 multiple choice options (a, b, c, d)",
+        "response_format": "Valid JSON with question, options array, correctIndex"
+      },
+      "requirements": ["Age-appropriate for 2nd-3rd grade", "One correct answer", "Three plausible distractors", "Valid JSON output"],
+      "source": "Currently hardcoded in llm_provider.py:generate_vocabulary_question()"
+    },
+    "integration_guidelines": {
+      "selection_strategy": "Select ONLY 2-4 words total that fit most naturally in the content",
+      "bolding_format": "Bold selected words using **word** format for visual emphasis", 
+      "difficulty_target": "Focus on tier 2 (cross-curricular) and tier 3 (domain-specific) words",
+      "context_priority": "Choose words that enhance meaning rather than feel forced",
+      "anti_repetition": "Exclude previously used words from vocabulary pools to ensure variety",
+      "general_pool_guidance": "Select tier 2+3 general vocabulary words that challenge but don't overwhelm 2nd-3rd graders",
+      "topic_pool_guidance": "Choose topic-specific vocabulary that naturally fits the content context",
+      "source": "Currently in shared/vocabulary_templates.json"
+    },
+    "enhancement_templates": {
+      "full_instruction": "\\n\\nVOCABULARY INTEGRATION INSTRUCTIONS:\\nGENERAL WORDS (Tier 2+3): {general_pool}\\nTOPIC-SPECIFIC WORDS: {topic_pool}\\n\\nCRITICAL INSTRUCTIONS:\\n- Select ONLY 2-4 words total that fit most naturally in your content\\n- Choose words that enhance meaning rather than feel forced\\n- Bold selected words using **word** format\\n- DO NOT include vocabulary questions or definitions in the content\\n- Focus on creating compelling educational content\\n\\nTARGET USAGE: Select 2-4 most natural words only",
+      "fallback_instruction": " Bold 2-4 challenging or important words using **word** format. DO NOT include vocabulary questions or definitions in the content.",
+      "variables": ["general_pool", "topic_pool"],
+      "usage": "Appended to content generation prompts to guide vocabulary integration",
+      "source": "Currently in shared/vocabulary_templates.json"
+    },
+    "fallback_questions": {
+      "description": "Pre-defined questions when API fails or for common vocabulary words",
+      "examples": {
+        "enormous": {
+          "question": "What does the word **enormous** mean?",
+          "options": ["a) very small", "b) very big", "c) very old", "d) very cold"],
+          "correctIndex": 1
+        },
+        "investigate": {
+          "question": "What does the word **investigate** mean?",
+          "options": ["a) to ignore", "b) to find out about", "c) to run away", "d) to eat"],
+          "correctIndex": 1
+        },
+        "magnificent": {
+          "question": "What does the word **magnificent** mean?",
+          "options": ["a) very small", "b) very boring", "c) very beautiful", "d) very scary"],
+          "correctIndex": 2
+        },
+        "curious": {
+          "question": "What does the word **curious** mean?",
+          "options": ["a) wanting to learn", "b) feeling tired", "c) being angry", "d) staying quiet"],
+          "correctIndex": 0
+        },
+        "evidence": {
+          "question": "What does the word **evidence** mean?",
+          "options": ["a) hiding something", "b) proof or clues", "c) making noise", "d) being confused"],
+          "correctIndex": 1
+        },
+        "mystery": {
+          "question": "What does the word **mystery** mean?",
+          "options": ["a) something easy", "b) something puzzling", "c) something boring", "d) something loud"],
+          "correctIndex": 1
+        }
+      },
+      "usage": "Used when vocabulary question generation fails or for common words",
+      "source": "Extended from examples in vocabulary_templates.json and system context"
+    },
+    "assessment_feedback": {
+      "positive_response": "That's right! Great job!",
+      "negative_response": "Nice try — the right answer is {correct_answer}.",
+      "variables_negative": ["correct_answer"],
+      "source": "Currently in shared/vocabulary_templates.json"
+    }
+  },
+  
+  "educational_standards": {
+    "age_appropriateness": "Strong 2nd grader to 3rd grader vocabulary level",
+    "difficulty_tiers": "Focus on tier 2 (cross-curricular) and tier 3 (domain-specific) words",
+    "context_integration": "Words should appear naturally within educational content",
+    "assessment_approach": "Multiple choice questions with context-based examples",
+    "target_count": "Select ONLY 2-4 words total that fit most naturally in the content",
+    "variety_strategy": "Provides variety through rotation and anti-repetition tracking",
+    "source": "Currently in shared/vocabulary_templates.json"
+  },
+  
+  "anti_repetition_system": {
+    "tracking_method": "Exclude previously used words from vocabulary pools",
+    "rotation_strategy": "Prioritize fresh vocabulary over recently used words",
+    "pool_size_target": "40 total example words (20 general + 20 topic-specific)",
+    "variety_benefits": "Significantly more variety than previous limited approaches",
+    "implementation_notes": "System tracks used words per session to avoid repetition",
+    "source": "Currently in shared/vocabulary_templates.json"
+  }
+}

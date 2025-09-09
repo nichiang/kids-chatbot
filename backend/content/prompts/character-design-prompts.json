@@ -1,0 +1,88 @@
+{
+  "metadata": {
+    "file_purpose": "All prompts for character design interactions during story writing",
+    "target_audience": "2nd-3rd grade elementary students",
+    "educational_goals": ["Character development", "Creative description", "Vocabulary expansion"],
+    "usage_notes": "Used exclusively during story mode design phases. Modify templates to change character design prompts.",
+    "last_updated": "2025-01-08",
+    "version": "1.0"
+  },
+  
+  "naming_prompts": {
+    "character": {
+      "prompt_template": "Can you name the {descriptor}?",
+      "placeholder": "What would you like to name them?",
+      "variables": ["descriptor"],
+      "suggestions": ["Alex", "Maya", "Sam", "Riley", "Jordan", "Casey", "Taylor", "Morgan"],
+      "usage": "When story introduces unnamed character that needs naming",
+      "source": "Currently in shared/design_templates.json"
+    }
+  },
+  
+  "description_prompts": {
+    "appearance": {
+      "prompt_template": "Help us bring {name} to life! Describe how {name} looks like",
+      "placeholder": "Write 1-2 sentences about what they look like",
+      "variables": ["name"],
+      "suggestion_words": ["tall", "curly", "bright", "gentle", "strong", "tiny", "colorful", "shiny"],
+      "usage": "First aspect prompt after naming or for named characters",
+      "source": "Currently in shared/design_templates.json"
+    },
+    "personality": {
+      "prompt_template": "Let's describe {name}'s personality!",
+      "placeholder": "Write 1-2 sentences about their personality",
+      "variables": ["name"],
+      "suggestion_words": ["brave", "curious", "kind", "funny", "creative", "patient", "helpful", "clever"],
+      "usage": "Character personality development prompt",
+      "source": "Currently in shared/design_templates.json"
+    },
+    "dreams": {
+      "prompt_template": "Help give more details to {name}. What does {name} dream of becoming?",
+      "placeholder": "Write about their hopes and dreams. They are dreaming to become",
+      "variables": ["name"],
+      "suggestion_words": ["explorer", "inventor", "teacher", "artist", "scientist", "chef", "musician", "hero"],
+      "usage": "Character aspiration and goal development",
+      "source": "Currently in shared/design_templates.json"
+    },
+    "skills": {
+      "prompt_template": "Help give more details to {name}. What is {name} amazing at?",
+      "placeholder": "Describe their special talents",
+      "variables": ["name"],
+      "suggestion_words": ["climbing", "singing", "drawing", "cooking", "building", "dancing", "solving puzzles", "making friends"],
+      "usage": "Character ability and talent exploration",
+      "source": "Currently in shared/design_templates.json"
+    },
+    "flaws": {
+      "prompt_template": "Help us design {name}! Describe a small, relatable flaw",
+      "placeholder": "Describe a small, relatable flaw in 1-2 sentences", 
+      "variables": ["name"],
+      "suggestion_words": ["forgetful", "impatient", "too trusting", "afraid of heights", "talks too much", "loses things", "shy", "easily distracted"],
+      "usage": "Character depth through relatable imperfections",
+      "source": "Currently in shared/design_templates.json"
+    }
+  },
+  
+  "design_flow": {
+    "aspect_rotation": ["appearance", "personality", "dreams", "skills", "flaws"],
+    "max_aspects_per_character": 3,
+    "usage_notes": "System rotates through aspects to avoid repetition and maintain variety",
+    "selection_strategy": "Choose aspects that haven't been used recently for the current character"
+  },
+  
+  "integration_patterns": {
+    "story_flow_integration": {
+      "description": "How character design prompts integrate with story progression",
+      "trigger_conditions": [
+        "Story introduces unnamed character requiring naming",
+        "Named character needs additional development",
+        "Story requires character depth for narrative progression"
+      ],
+      "response_handling": "Character details get incorporated into subsequent story continuation prompts"
+    },
+    "educational_benefits": {
+      "vocabulary_expansion": "Suggestion words introduce descriptive vocabulary naturally",
+      "creative_thinking": "Open-ended prompts encourage imaginative character development", 
+      "writing_skills": "Practice describing characters builds descriptive writing abilities"
+    }
+  }
+}
