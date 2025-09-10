@@ -96,11 +96,8 @@ class ContentManager:
         # Shared vocabulary prompts: used by both story and facts modes  
         self._load_json_file(prompts_dir / "shared-prompts.json", "shared_prompts")
         
-        # Load facts mode prompts (not yet consolidated)
-        facts_dir = prompts_dir / "facts_mode"
-        if facts_dir.exists():
-            self._load_text_file(facts_dir / "system_context.txt", "facts_system_prompt")
-            self._load_json_file(facts_dir / "fact_templates.json", "fact_templates")
+        # Load consolidated fun facts prompts
+        self._load_json_file(prompts_dir / "funfacts-prompts.json", "funfacts_prompts")
     
     def _load_config(self):
         """Load configuration from config directory"""
@@ -323,6 +320,14 @@ class ContentManager:
             template_data = narrative_enhancement.get(key, {})
             return template_data.get("prompt_template", f"[Missing narrative enhancement: {key}]")
         
+        # Handle fact templates from funfacts prompts
+        elif category == "fact_templates":
+            funfacts_prompts = self.content.get("funfacts_prompts", {})
+            content_generation = funfacts_prompts.get("content_generation", {})
+            fact_templates = content_generation.get("fact_templates", {})
+            template_data = fact_templates.get(key, {})
+            return template_data.get("template", f"[Missing fact template: {key}]")
+        
         # Default legacy handling for other categories
         else:
             templates = self.content.get(category, {})
@@ -381,9 +386,11 @@ class ContentManager:
             tutor_persona = system_prompts.get("tutor_persona", {})
             return tutor_persona.get("prompt", f"[Missing story system prompt in consolidated format]")
         elif mode == "facts":
-            # Use legacy facts system prompt (not yet consolidated)
-            prompt_key = f"{mode}_system_prompt"
-            return self.content.get(prompt_key, f"[Missing system prompt for mode: {mode}]")
+            # Use consolidated funfacts prompts
+            funfacts_prompts = self.content.get("funfacts_prompts", {})
+            system_prompts = funfacts_prompts.get("system_prompts", {})
+            facts_persona = system_prompts.get("facts_persona", {})
+            return facts_persona.get("prompt", f"[Missing facts system prompt in consolidated format]")
         else:
             return f"[Unknown mode: {mode}]"
     
@@ -416,12 +423,17 @@ class ContentManager:
         """
         try:
             character_design = self.content.get("character_design_prompts", {})
+            naming_prompts = character_design.get("naming_prompts", {})
             description_prompts = character_design.get("description_prompts", {})
             
             # Create the mapping that app.py expects: design_templates.character
             design_templates = {
                 "character": {}
             }
+            
+            # Map naming prompts to the expected structure
+            for entity_type, naming_data in naming_prompts.items():
+                design_templates["character"]["naming"] = naming_data
             
             # Map each description prompt aspect to the expected structure
             for aspect_name, aspect_data in description_prompts.items():
@@ -430,8 +442,8 @@ class ContentManager:
             # Store the mapping in content so app.py can access it
             self.content["design_templates"] = design_templates
             
-            aspect_count = len(description_prompts)
-            logger.info(f"✅ Created design_templates mapping: character with {aspect_count} aspects")
+            total_aspects = len(description_prompts) + len(naming_prompts)
+            logger.info(f"✅ Created design_templates mapping: character with {total_aspects} aspects (including naming)")
             
         except Exception as e:
             logger.error(f"❌ Failed to create design_templates mapping: {e}")

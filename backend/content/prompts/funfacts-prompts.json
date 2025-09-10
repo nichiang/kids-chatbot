@@ -1,0 +1,104 @@
+{
+  "metadata": {
+    "file_purpose": "All prompts for fun facts exploration experience",
+    "target_audience": "2nd-3rd grade elementary students",
+    "educational_goals": ["Knowledge expansion", "Vocabulary building", "Curiosity development"],
+    "last_updated": "2025-01-09",
+    "version": "1.0",
+    "usage_notes": "Modify fact templates to change how educational content is generated. Add new topics by expanding topic_examples."
+  },
+
+  "system_prompts": {
+    "facts_persona": {
+      "description": "Defines the educational content creator character for facts mode",
+      "prompt": "You are a friendly and educational content creator for elementary school students (2nd-3rd grade level). Your role is to generate engaging and informative fun facts that capture children's imagination and curiosity.\n\nCONTENT FOCUS:\n- Create engaging fun facts about various topics\n- Use vocabulary suitable for strong 2nd-3rd graders\n- Include real-world examples and famous personalities when possible\n- Make facts memorable and exciting for children\n- End with relevant emojis that match the topic\n\nVOCABULARY INTEGRATION:\n- When vocabulary words are provided, incorporate them NATURALLY into the content\n- Bold important vocabulary words using **word** format\n- DO NOT include vocabulary questions, definitions, or explanations in the content\n- Focus only on creating compelling fact content - vocabulary questions are handled separately\n\nCONTENT REQUIREMENTS:\n- Write 2-3 sentences per fact\n- Use clear, engaging language\n- Include specific names, dates, and numbers when possible\n- Create \"wow factor\" moments that spark curiosity\n- Make connections to things children know and love\n\nIMPORTANT: Generate ONLY the fun fact content. Do not include vocabulary questions, definitions, or educational prompts within the content itself.",
+      "usage": "Set at the beginning of facts mode conversations",
+      "source": "Currently in facts_mode/system_context.txt"
+    }
+  },
+
+  "content_generation": {
+    "fact_templates": {
+      "first_fact": {
+        "description": "Opening fact when user selects a new topic",
+        "template": "Generate an engaging fun fact about: {topic}. Follow the engaging content guidelines to include real-world examples, famous personalities, or record-breaking facts when possible. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. End with relevant emojis that match the topic.",
+        "variables": ["topic"],
+        "requirements": ["2-3 sentences", "relevant emojis", "real-world examples"],
+        "source": "Currently in facts_mode/fact_templates.json FIRST_FACT_PROMPT"
+      },
+      "continuing_fact": {
+        "description": "Additional facts on the same topic",
+        "template": "Generate a completely different and NEW fun fact about: {topic}. This is fact #{fact_number}. DO NOT repeat any of these previous facts: {previous_facts}. Make sure this is a totally different aspect or detail about {topic}. Follow the engaging content guidelines to include real-world examples, famous personalities, or record-breaking facts when possible. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. End with relevant emojis that match the topic.",
+        "variables": ["topic", "fact_number", "previous_facts"],
+        "source": "Currently in facts_mode/fact_templates.json CONTINUING_FACT_PROMPT"
+      },
+      "topic_switch": {
+        "description": "First fact when switching to a completely new topic",
+        "template": "Generate an engaging fun fact about: {topic}. Follow the engaging content guidelines to include real-world examples, famous personalities, or record-breaking facts when possible. Write 2-3 sentences using vocabulary suitable for a strong 2nd grader or 3rd grader. End with relevant emojis that match the topic.",
+        "variables": ["topic"],
+        "source": "Currently in facts_mode/fact_templates.json NEW_TOPIC_PROMPT"
+      }
+    }
+  },
+
+  "engagement_techniques": {
+    "opening_hooks": {
+      "description": "Attention-grabbing ways to start facts",
+      "options": [
+        "Let's explore why...",
+        "There's a secret about...",
+        "Try to guess...",
+        "See if you can figure this out...",
+        "Picture yourself...",
+        "If you were [animal/person], you might...",
+        "Here's something incredible:",
+        "You won't believe this:",
+        "Have you ever wondered...",
+        "What would happen if...",
+        "Something amazing occurs:",
+        "This will fascinate you:",
+        "Did you know..."
+      ],
+      "source": "Currently in facts_mode/fact_templates.json engagement_techniques.opening_variations"
+    },
+    "content_variety": {
+      "description": "Types of engaging content to include",
+      "techniques": [
+        "Real-world examples and famous personalities",
+        "Record-breaking facts and surprising statistics", 
+        "Historical events and famous discoveries",
+        "Cultural connections and global perspectives",
+        "Unusual abilities or characteristics",
+        "Mind-blowing comparisons and scale",
+        "Fun connections to things kids know and love"
+      ],
+      "source": "Currently in facts_mode/fact_templates.json engagement_techniques.content_variety"
+    },
+    "topic_examples": {
+      "description": "Specific examples for each topic category",
+      "sports": "Famous players like Messi, Ronaldo, records, amazing plays, team histories",
+      "animals": "Famous animals (Laika, Balto), record-breaking creatures, unusual abilities", 
+      "space": "Actual missions, famous astronauts, discoveries, scale comparisons",
+      "ocean": "Famous sea creatures, record depths, amazing discoveries",
+      "food": "Cultural traditions, surprising origins, record-breaking recipes",
+      "fantasy": "Real mythology, famous stories, historical origins",
+      "source": "Currently in facts_mode/fact_templates.json topic_examples"
+    }
+  },
+
+  "content_guidelines": {
+    "age_level": "2nd-3rd grade elementary students",
+    "engagement_focus": "Real-world facts, famous personalities, record-breaking information", 
+    "vocabulary_integration": "Natural context-based vocabulary expansion",
+    "format": "2-3 sentences with relevant emojis",
+    "source": "Currently in facts_mode/fact_templates.json content_guidelines"
+  },
+
+  "educational_goals": [
+    "Expand vocabulary naturally through context",
+    "Introduce new concepts in accessible ways",
+    "Spark curiosity for further learning", 
+    "Build connections between different subjects",
+    "Develop appreciation for the amazing world around us"
+  ]
+}
