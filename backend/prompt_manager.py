@@ -37,6 +37,9 @@ class PromptManager:
             # Load consolidated storywriting prompts
             self.storywriting_prompts = content_manager.content.get("storywriting_prompts", {})
             
+            # Load consolidated funfacts prompts
+            self.funfacts_prompts = content_manager.content.get("funfacts_prompts", {})
+            
             # Load character design prompts  
             self.character_design_prompts = content_manager.content.get("character_design_prompts", {})
             
@@ -54,6 +57,7 @@ class PromptManager:
             logger.error(f"❌ Failed to load PromptManager templates: {e}")
             # Initialize with empty templates as fallback
             self.storywriting_prompts = {}
+            self.funfacts_prompts = {}
             self.character_design_prompts = {}
             self.shared_prompts = {}
             self.story_templates = {}
@@ -254,7 +258,9 @@ What sounds interesting to you?"""
         Returns:
             Prompt for story paragraph with vocabulary integration
         """
-        return f"""The child has chosen the topic: {topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately."""
+        from content_manager import content_manager
+        template = content_manager.get_prompt_template("basic_prompts", "topic_selection_story")
+        return template.format(topic=topic)
     
     def get_continue_story_prompt(self, topic: str, context: str) -> str:
         """
@@ -267,9 +273,9 @@ What sounds interesting to you?"""
         Returns:
             Prompt to continue story while managing length
         """
-        return f"""Continue the story about {topic}. Previous context: {context}. 
-
-Write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. Keep this a short story - try to end it before it goes over 300 words total. DO NOT include vocabulary questions - those will be handled separately."""
+        from content_manager import content_manager
+        template = content_manager.get_prompt_template("basic_prompts", "basic_story_continuation")
+        return template.format(topic=topic, context=context)
     
     # ================================
     # ENHANCED STORY STRUCTURE METHODS
@@ -585,29 +591,36 @@ Bold 2-3 vocabulary words using **word** format."""
     
     def _get_facts_prompt_template(self, template_key: str, **kwargs) -> str:
         """
-        Load and format fun facts prompt templates.
+        Load and format fun facts prompt templates from consolidated JSON structure.
         
         Args:
-            template_key: Template identifier
+            template_key: Template identifier (FIRST_FACT_PROMPT, CONTINUING_FACT_PROMPT, NEW_TOPIC_PROMPT)
             **kwargs: Template formatting variables
             
         Returns:
-            Formatted prompt combining instructions and template
+            Formatted prompt template
         """
         try:
-            # Load content instructions
-            instructions = self._load_file("prompts/fun_facts/02_content_instructions.txt")
+            # Import here to avoid circular imports
+            from content_manager import content_manager
             
-            # Load and parse scenario templates
-            templates_text = self._load_file("prompts/fun_facts/03_scenario_templates.txt")
-            templates = self._parse_template_file(templates_text)
+            # Map legacy template keys to consolidated structure
+            template_mapping = {
+                "FIRST_FACT_PROMPT": "first_fact",
+                "CONTINUING_FACT_PROMPT": "continuing_fact", 
+                "NEW_TOPIC_PROMPT": "topic_switch"
+            }
             
-            # Get base template and format
-            base_template = templates.get(template_key, '')
-            formatted_template = base_template.format(**kwargs)
+            # Get the mapped key
+            consolidated_key = template_mapping.get(template_key, template_key.lower())
             
-            # Combine instructions with template
-            return f"{instructions}\n\n{formatted_template}"
+            # Get template from consolidated structure
+            template = content_manager.get_prompt_template("fact_templates", consolidated_key)
+            
+            # Format with provided variables
+            formatted_template = template.format(**kwargs)
+            
+            return formatted_template
             
         except Exception as e:
             logger.error(f"❌ Failed to generate facts template {template_key}: {e}")

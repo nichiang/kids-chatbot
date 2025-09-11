@@ -208,6 +208,20 @@
       "variables": [],
       "usage": "Used for basic story continuation without complex context",
       "source": "Currently hardcoded in prompt_manager.py:get_story_continuation_prompt()"
+    },
+    "topic_selection_story": {
+      "description": "Generate story beginning when child selects new topic",
+      "prompt_template": "The child has chosen the topic: {topic}. Now write a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. DO NOT include vocabulary questions - those will be handled separately.",
+      "variables": ["topic"],
+      "usage": "Used when child selects a new topic to start fresh story",
+      "source": "Currently hardcoded in prompt_manager.py:get_topic_selection_story_prompt()"
+    },
+    "basic_story_continuation": {
+      "description": "Continue existing story with vocabulary integration",
+      "prompt_template": "Continue the story about {topic}. Previous context: {context}. \n\nWrite a paragraph that is 2-4 sentences long using vocabulary suitable for a strong 2nd grader or 3rd grader. Then invite the child to continue the story without giving them any options. Keep this a short story - try to end it before it goes over 300 words total. DO NOT include vocabulary questions - those will be handled separately.",
+      "variables": ["topic", "context"],
+      "usage": "Used for basic story continuation with topic and context",
+      "source": "Currently hardcoded in prompt_manager.py:get_continue_story_prompt()"
     }
   },
   

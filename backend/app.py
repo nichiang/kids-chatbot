@@ -2202,7 +2202,7 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
         # Replace rigid character count + step rules with narrative intelligence
         
         # Step 1: Assess current story narrative structure
-        if session_data.currentStep >= 2:  # Only assess after some story development
+        if session_data.currentStep >= 3:  # Only assess after some story development
             try:
                 # Get story arc assessment from LLM
                 assessment_prompt = prompt_manager.get_story_arc_assessment_prompt(
