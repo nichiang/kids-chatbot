@@ -8,14 +8,17 @@ import json
 import os
 import time
 import glob
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
+import uuid
 import statistics
 from llm_provider import llm_provider
 # REMOVED: generate_prompt import no longer needed (PromptManager handles all prompt logic)
 from vocabulary_manager import vocabulary_manager
 from prompt_manager import prompt_manager
 from content_manager import content_manager
+from latency_logger import LatencyLogger
+from story_tracker import StoryLatencyTracker
 
 # PROMPT MANAGER ARCHITECTURE:
 # Centralized prompt generation with self-documenting methods for maintainability:
@@ -97,156 +100,17 @@ def cleanup_old_archives(keep_count=5):
                 os.remove(old_file)
                 print(f"🗑️ Cleaned up old archive: {old_file}")
 
-class LatencyLogger:
-    """Comprehensive request and LLM call timing measurement"""
-    
-    def __init__(self):
-        self.logger = logging.getLogger('latency')
-        self.request_start = None
-        self.llm_calls = []
-        
-    def measure_request(self, func):
-        """Decorator to measure total request processing time"""
-        @wraps(func)
-        async def wrapper(*args, **kwargs):
-            self.request_start = time.perf_counter()
-            
-            try:
-                result = await func(*args, **kwargs)
-                
-                total_time = (time.perf_counter() - self.request_start) * 1000
-                
-                # Log comprehensive timing data
-                self.log_request_completion(
-                    total_time=total_time,
-                    llm_calls=self.llm_calls.copy(),
-                    result_type=getattr(result, 'response_type', 'unknown')
-                )
-                
-                return result
-            finally:
-                self.llm_calls.clear()
-                
-        return wrapper
-    
-    def measure_llm_call(self, call_type: str):
-        """Decorator to measure individual LLM API calls"""
-        def decorator(func):
-            @wraps(func)
-            async def wrapper(*args, **kwargs):
-                start_time = time.perf_counter()
-                
-                try:
-                    result = await func(*args, **kwargs)
-                    duration = (time.perf_counter() - start_time) * 1000
-                    
-                    self.llm_calls.append({
-                        'type': call_type,
-                        'duration': round(duration, 2),
-                        'timestamp': time.time()
-                    })
-                    
-                    return result
-                except Exception as e:
-                    duration = (time.perf_counter() - start_time) * 1000
-                    self.llm_calls.append({
-                        'type': call_type,
-                        'duration': round(duration, 2),
-                        'error': str(e),
-                        'timestamp': time.time()
-                    })
-                    raise
-                    
-            return wrapper
-        return decorator
-    
-    def log_request_completion(self, total_time: float, llm_calls: list, result_type: str):
-        """Log comprehensive request timing data"""
-        # Import here to avoid circular imports
-        from llm_provider import llm_call_timings
-        
-        # Get LLM call timings from llm_provider and clear the list
-        current_llm_calls = llm_call_timings.copy()
-        llm_call_timings.clear()
-        
-        llm_total = sum(call['duration'] for call in current_llm_calls)
-        processing_time = total_time - llm_total
-        
-        log_data = {
-            'timestamp': time.time(),
-            'total_request_time': round(total_time, 2),
-            'llm_total_time': round(llm_total, 2),
-            'processing_time': round(processing_time, 2),
-            'llm_calls': current_llm_calls,
-            'result_type': result_type,
-            'llm_call_count': len(current_llm_calls)
-        }
-        
-        self.logger.info(json.dumps(log_data))
-
-class StoryLatencyTracker:
-    """Track latency specifically for story exchanges and completion"""
-    
-    def __init__(self):
-        self.story_exchanges = []
-        self.story_start_time = None
-        
-    def start_story(self, topic: str, mode: str):
-        """Initialize story tracking"""
-        self.story_start_time = time.time()
-        self.story_exchanges = []
-        
-    def log_exchange(self, exchange_type: str, latency: float, user_input: str, response_type: str):
-        """Log individual story exchange timing"""
-        exchange_data = {
-            'exchange_number': len(self.story_exchanges) + 1,
-            'exchange_type': exchange_type,  # 'story_continuation', 'vocab_question', 'design_phase'
-            'latency': round(latency, 2),
-            'response_type': response_type,
-            'timestamp': time.time(),
-            'user_input_length': len(user_input) if user_input else 0
-        }
-        
-        self.story_exchanges.append(exchange_data)
-        
-    def complete_story(self, topic: str, mode: str):
-        """Log story completion summary with latency analysis"""
-        if not self.story_exchanges:
-            return None
-            
-        total_story_time = time.time() - self.story_start_time if self.story_start_time else 0
-        average_latency = sum(ex['latency'] for ex in self.story_exchanges) / len(self.story_exchanges)
-        latencies = [ex['latency'] for ex in self.story_exchanges]
-        
-        story_summary = {
-            'story_completion_time': time.time(),
-            'topic': topic,
-            'mode': mode,
-            'total_exchanges': len(self.story_exchanges),
-            'average_latency': round(average_latency, 2),
-            'total_story_duration': round(total_story_time, 2),
-            'exchanges': self.story_exchanges,
-            'latency_distribution': {
-                'min': min(latencies),
-                'max': max(latencies),
-                'median': round(statistics.median(latencies), 2)
-            }
-        }
-        
-        # Log to dedicated story latency file
-        os.makedirs('logs', exist_ok=True)
-        with open('logs/story_latency.jsonl', 'a') as f:
-            f.write(json.dumps(story_summary) + '\n')
-        
-        # Reset for next story
-        self.story_exchanges = []
-        self.story_start_time = None
-        
-        return story_summary
 
 # Initialize global instances
 latency_logger = LatencyLogger()
 story_tracker = StoryLatencyTracker()
+
+def get_latest_llm_timing() -> float:
+    """Get the duration of the most recent LLM call"""
+    from llm_provider import llm_call_timings
+    if llm_call_timings:
+        return llm_call_timings[-1].get('duration', 0.0)
+    return 0.0
 
 def determine_story_exchange_type(session_data: 'SessionData', result: 'ChatResponse') -> str:
     """Determine the type of story exchange for latency tracking"""
@@ -268,6 +132,481 @@ def determine_story_exchange_type(session_data: 'SessionData', result: 'ChatResp
     
     # Default to story continuation
     return 'story_continuation'
+
+# === SESSION LIFECYCLE MANAGEMENT ===
+
+def manage_session_lifecycle(session_data: 'SessionData', current_time: datetime) -> None:
+    """
+    Manage session lifecycle with 30-minute timeout
+    
+    Args:
+        session_data: Current session state
+        current_time: Current timestamp for timeout calculations
+    """
+    # Initialize new session
+    if not session_data.session_id:
+        session_data.session_id = str(uuid.uuid4())
+        session_data.session_start = current_time
+        session_data.turn_id = 1  # Start at 1, not 0
+        session_data.last_activity = current_time
+        logging.info(f"🆔 NEW SESSION: Created session {session_data.session_id[:8]}... at {current_time}")
+    else:
+        # Check for session timeout (30 minutes)
+        if session_data.last_activity:
+            inactive_duration = current_time - session_data.last_activity
+            if inactive_duration > timedelta(minutes=30):
+                # Start new session
+                old_session_id = session_data.session_id[:8] if session_data.session_id else "unknown"
+                session_data.session_id = str(uuid.uuid4())
+                session_data.session_start = current_time
+                session_data.turn_id = 1  # Reset to 1, not 0
+                # Reset story/funfact tracking
+                session_data.current_story_id = None
+                session_data.current_funfact_id = None
+                session_data.story_history = []
+                session_data.funfact_history = []
+                logging.info(f"⏰ SESSION TIMEOUT: Started new session {session_data.session_id[:8]}... (previous: {old_session_id}...)")
+            else:
+                # Increment turn for continuing session (no timeout)
+                session_data.turn_id += 1
+        else:
+            # First interaction with this session_id, set session_start
+            session_data.session_start = current_time
+            session_data.turn_id += 1
+    
+    # Update activity timestamp
+    session_data.last_activity = current_time
+
+def manage_content_ids(session_data: 'SessionData', mode: str) -> None:
+    """
+    Automatically manage story and funfact IDs based on interaction type
+    
+    Args:
+        session_data: Current session state
+        mode: "storywriting" or "funfacts"
+    """
+    if mode == "storywriting":
+        # Story-related interactions
+        if not session_data.current_story_id:
+            session_data.current_story_id = str(uuid.uuid4())
+            session_data.story_history.append(session_data.current_story_id)
+            logging.info(f"📖 NEW STORY: Created story ID {session_data.current_story_id[:8]}... in session {session_data.session_id[:8] if session_data.session_id else 'unknown'}...")
+        # Clear funfact_id if switching from facts to story
+        if session_data.current_funfact_id:
+            session_data.current_funfact_id = None
+            logging.info("🔄 MODE SWITCH: Cleared funfact ID (switched to story)")
+            
+    elif mode == "funfacts":
+        # Fun facts interactions
+        if not session_data.current_funfact_id:
+            session_data.current_funfact_id = str(uuid.uuid4())
+            session_data.funfact_history.append(session_data.current_funfact_id)
+            logging.info(f"🔍 NEW FUNFACTS: Created funfact ID {session_data.current_funfact_id[:8]}... in session {session_data.session_id[:8] if session_data.session_id else 'unknown'}...")
+        # Clear story_id if switching from story to facts
+        if session_data.current_story_id:
+            session_data.current_story_id = None
+            logging.info("🔄 MODE SWITCH: Cleared story ID (switched to funfacts)")
+
+def classify_interaction_module(session_data: 'SessionData', response: 'ChatResponse',
+                              mode: str, llm_call_types: List[str]) -> str:
+    """
+    Classify interaction by educational purpose using LLM call types and session state
+    
+    Args:
+        session_data: Current session state
+        response: Generated response
+        mode: "storywriting" or "funfacts"
+        llm_call_types: Types of LLM calls made (from latency logging)
+        
+    Returns:
+        Module classification string
+    """
+    
+    # 1. VOCABULARY - Check if response has vocab question
+    if hasattr(response, 'vocabQuestion') and response.vocabQuestion:
+        return 'vocabulary'
+    
+    # 2. LLM_FEEDBACK - Check if we made a grammar feedback LLM call
+    if 'grammar_feedback' in llm_call_types:
+        return 'llm_feedback'
+    
+    # 3. CHARACTER_DESIGN - Check design phase status  
+    if (hasattr(session_data, 'designPhase') and session_data.designPhase and
+        not getattr(session_data, 'designComplete', False)):
+        return 'character_design'
+    
+    # 4. FUN_FACT - Check mode
+    if mode == "funfacts":
+        return 'fun_fact'
+    
+    # 5. STORYWRITING_NARRATIVE - Default for story mode
+    return 'storywriting_narrative'
+
+def capture_story_assessment(assessment_response: str) -> dict:
+    """
+    Capture LLM story assessment with comprehensive error handling
+    
+    Args:
+        assessment_response: Raw LLM assessment response string
+        
+    Returns:
+        Structured assessment dict with status, data, and error fields
+    """
+    if not assessment_response or assessment_response.strip() == "":
+        return {
+            "assessment_status": "empty",
+            "assessment_data": None,
+            "assessment_error": None
+        }
+    
+    try:
+        assessment_json = json.loads(assessment_response)
+        return {
+            "assessment_status": "success",
+            "assessment_data": assessment_json,
+            "assessment_error": None
+        }
+    except json.JSONDecodeError as e:
+        return {
+            "assessment_status": "error", 
+            "assessment_data": None,
+            "assessment_error": str(e)
+        }
+
+def extract_prompt_template_previews(prompt_files: list, module: str) -> dict:
+    """
+    Extract actual prompt templates and their definitions based on module type
+    
+    Args:
+        prompt_files: List of prompt file keys (e.g., ['storywriting_prompts', 'shared_prompts'])
+        module: Interaction module to determine which templates to extract
+        
+    Returns:
+        Dict with prompt template previews and definitions
+    """
+    previews = {}
+    
+    try:
+        # Based on module type, extract the relevant prompt templates
+        if module == "vocabulary":
+            # For vocabulary: extract question_generation from shared_prompts
+            if "shared_prompts" in prompt_files:
+                shared_content = content_manager.content.get("shared_prompts", {})
+                vocab_system = shared_content.get("vocabulary_system", {})
+                question_gen = vocab_system.get("question_generation", {})
+                if "prompt_template" in question_gen:
+                    template = question_gen["prompt_template"][:250]
+                    previews["vocabulary_question_generation"] = {
+                        "definition": "question_generation",
+                        "file": "shared_prompts",
+                        "template_preview": template + "..." if len(question_gen["prompt_template"]) > 250 else template
+                    }
+        
+        elif module == "character_design":
+            # For character design: extract naming prompts from character_design_prompts
+            if "character_design_prompts" in prompt_files:
+                char_content = content_manager.content.get("character_design_prompts", {})
+                naming_prompts = char_content.get("naming_prompts", {})
+                character_naming = naming_prompts.get("character", {})
+                if "prompt_template" in character_naming:
+                    template = character_naming["prompt_template"][:250]
+                    previews["character_naming"] = {
+                        "definition": "naming_prompts.character",
+                        "file": "character_design_prompts", 
+                        "template_preview": template + "..." if len(character_naming["prompt_template"]) > 250 else template
+                    }
+        
+        elif module == "fun_fact":
+            # For fun facts: extract fact templates from funfacts_prompts
+            if "funfacts_prompts" in prompt_files:
+                facts_content = content_manager.content.get("funfacts_prompts", {})
+                content_gen = facts_content.get("content_generation", {})
+                fact_templates = content_gen.get("fact_templates", {})
+                # Try to get a commonly used template (e.g., space, general, etc.)
+                for template_key in ["space", "general", "animals"]:
+                    if template_key in fact_templates:
+                        template_data = fact_templates[template_key]
+                        if "template" in template_data:
+                            template = template_data["template"][:250]
+                            previews[f"fact_template_{template_key}"] = {
+                                "definition": f"fact_templates.{template_key}",
+                                "file": "funfacts_prompts",
+                                "template_preview": template + "..." if len(template_data["template"]) > 250 else template
+                            }
+                            break
+        
+        elif module in ["storywriting_narrative", "llm_feedback"]:
+            # For story writing: extract from storywriting_prompts based on recent usage patterns
+            if "storywriting_prompts" in prompt_files:
+                story_content = content_manager.content.get("storywriting_prompts", {})
+                
+                # Extract story generation templates
+                story_gen = story_content.get("story_generation", {})
+                story_opening = story_gen.get("story_opening", {})
+                
+                # Get the first available story opening template
+                for template_type in ["named_entities", "unnamed_entities"]:
+                    if template_type in story_opening:
+                        template_data = story_opening[template_type]
+                        if "prompt_template" in template_data:
+                            template = template_data["prompt_template"][:250]
+                            previews[f"story_opening_{template_type}"] = {
+                                "definition": f"story_generation.story_opening.{template_type}",
+                                "file": "storywriting_prompts",
+                                "template_preview": template + "..." if len(template_data["prompt_template"]) > 250 else template
+                            }
+                            break
+                
+                # Also extract story ending template as shown in user's example
+                story_ending = story_gen.get("story_ending", {})
+                if "prompt_template" in story_ending:
+                    template = story_ending["prompt_template"][:250]
+                    previews["story_ending"] = {
+                        "definition": "story_generation.story_ending",
+                        "file": "storywriting_prompts",
+                        "template_preview": template + "..." if len(story_ending["prompt_template"]) > 250 else template
+                    }
+        
+        # If no specific templates found, fall back to showing available template keys
+        if not previews:
+            for file_key in prompt_files:
+                if file_key in content_manager.content:
+                    content_data = content_manager.content[file_key]
+                    available_keys = list(content_data.keys()) if isinstance(content_data, dict) else []
+                    previews[f"{file_key}_available_sections"] = {
+                        "definition": f"Available sections in {file_key}",
+                        "file": file_key,
+                        "template_preview": f"Available sections: {', '.join(available_keys[:10])}"
+                    }
+        
+        return previews
+        
+    except Exception as e:
+        return {"error": f"Template extraction failed: {str(e)}"}
+
+def get_relevant_prompt_versions(module: str, mode: str) -> dict:
+    """
+    Get relevant prompt file versions based on interaction type
+    
+    Args:
+        module: Interaction module (vocabulary, character_design, fun_fact, etc.)
+        mode: Mode type ("storywriting" or "funfacts")
+        
+    Returns:
+        Dict with relevant prompt versions and previews
+    """
+    try:
+        all_versions = content_manager.get_prompt_versions()
+        relevant_versions = {}
+        
+        # Determine which prompt files are relevant
+        if module == "vocabulary":
+            # Vocabulary: shared_prompts only
+            if "shared_prompts" in all_versions:
+                relevant_versions["shared_prompts"] = all_versions["shared_prompts"]
+                
+        elif module == "character_design":
+            # Character design: character_design_prompts + shared_prompts
+            if "character_design_prompts" in all_versions:
+                relevant_versions["character_design_prompts"] = all_versions["character_design_prompts"]
+            if "shared_prompts" in all_versions:
+                relevant_versions["shared_prompts"] = all_versions["shared_prompts"]
+                
+        elif module == "fun_fact":
+            # Fun facts: funfacts_prompts + shared_prompts
+            if "funfacts_prompts" in all_versions:
+                relevant_versions["funfacts_prompts"] = all_versions["funfacts_prompts"]
+            if "shared_prompts" in all_versions:
+                relevant_versions["shared_prompts"] = all_versions["shared_prompts"]
+                
+        else:
+            # Story writing (storywriting_narrative, llm_feedback): storywriting_prompts + shared_prompts
+            if "storywriting_prompts" in all_versions:
+                relevant_versions["storywriting_prompts"] = all_versions["storywriting_prompts"]
+            if "shared_prompts" in all_versions:
+                relevant_versions["shared_prompts"] = all_versions["shared_prompts"]
+        
+        # Add prompt previews for debugging - extract actual prompt templates used
+        prompt_previews = {}
+        try:
+            prompt_previews = extract_prompt_template_previews(relevant_versions.keys(), module)
+        except Exception as preview_error:
+            # Handle preview extraction errors gracefully
+            prompt_previews = {"error": f"Preview extraction failed: {str(preview_error)}"}
+        
+        return {
+            "versions": relevant_versions,
+            "previews": prompt_previews
+        }
+        
+    except Exception as e:
+        # Handle version metadata missing or malformed gracefully
+        return {
+            "versions": {"error": f"Version tracking failed: {str(e)}"},
+            "previews": {}
+        }
+
+def extract_vocabulary_interaction_data(vocab_question: 'VocabQuestion', user_input: str) -> dict:
+    """
+    Extract complete vocabulary interaction data for educational logging
+    
+    Args:
+        vocab_question: VocabQuestion object from response
+        user_input: User's input (may contain selected answer)
+        
+    Returns:
+        Dict with complete vocabulary interaction data
+    """
+    try:
+        # Extract the target word from the question text
+        # Question format is typically: "What does the word **word** mean?"
+        import re
+        word_match = re.search(r'\*\*([^*]+)\*\*', vocab_question.question)
+        target_word = word_match.group(1) if word_match else "unknown"
+        
+        # Extract the reference sentence from the question
+        # The sentence is usually after the question, often in quotes
+        lines = vocab_question.question.split('\n')
+        reference_sentence = ""
+        for line in lines:
+            if line.strip().startswith('"') and line.strip().endswith('"'):
+                reference_sentence = line.strip().strip('"')
+                break
+        
+        # Determine user's selected answer (A, B, C, D) from user input
+        user_selected_answer = None
+        user_selected_index = None
+        if user_input:
+            # Look for patterns like "A", "a)", "A)", etc.
+            answer_match = re.search(r'[aAbBcCdD]', user_input.strip())
+            if answer_match:
+                user_selected_answer = answer_match.group(0).upper()
+                # Convert to index (A=0, B=1, C=2, D=3)
+                user_selected_index = ord(user_selected_answer) - ord('A')
+        
+        # Determine correctness
+        is_correct = None
+        if user_selected_index is not None:
+            is_correct = (user_selected_index == vocab_question.correctIndex)
+        
+        # Get correct answer text
+        correct_answer_text = None
+        if 0 <= vocab_question.correctIndex < len(vocab_question.options):
+            correct_answer_text = vocab_question.options[vocab_question.correctIndex]
+        
+        return {
+            "target_word": target_word,
+            "question_text": vocab_question.question,
+            "reference_sentence": reference_sentence,
+            "options": vocab_question.options,
+            "correct_answer_index": vocab_question.correctIndex,
+            "correct_answer_text": correct_answer_text,
+            "user_selected_answer": user_selected_answer,
+            "user_selected_index": user_selected_index,
+            "is_correct": is_correct,
+            "raw_user_input": user_input
+        }
+        
+    except Exception as e:
+        # Handle extraction errors gracefully
+        return {
+            "error": f"Vocabulary data extraction failed: {str(e)}",
+            "raw_vocab_question": vocab_question.dict() if hasattr(vocab_question, 'dict') else str(vocab_question),
+            "raw_user_input": user_input
+        }
+
+def extract_educational_context(session_data: 'SessionData', mode: str) -> dict:
+    """
+    Extract comprehensive educational context for logging
+    
+    Args:
+        session_data: Current session state
+        mode: Current interaction mode ("storywriting" or "funfacts")
+        
+    Returns:
+        Dict with educational context data
+    """
+    try:
+        # Story quality metrics
+        story_quality = {
+            "character_growth_score": session_data.characterGrowthScore,
+            "completeness_score": session_data.completenessScore,
+            "conflict_type": session_data.conflictType,
+            "conflict_scale": session_data.conflictScale,
+            "has_assessment": session_data.narrativeAssessment is not None
+        }
+        
+        return {
+            "current_topic": session_data.topic,
+            "interaction_mode": mode,
+            "story_quality": story_quality,
+            "age_band": "2nd-3rd_grade",  # Target age group constant
+            "facts_shown": session_data.factsShown if mode == "funfacts" else None
+        }
+        
+    except Exception as e:
+        # Handle educational context extraction errors gracefully
+        return {
+            "error": f"Educational context extraction failed: {str(e)}",
+            "current_topic": getattr(session_data, 'topic', None),
+            "interaction_mode": mode,
+            "age_band": "2nd-3rd_grade"
+        }
+
+def collect_educational_data(session_data: 'SessionData', response: 'ChatResponse', 
+                           mode: str, user_input: str, llm_call_types: List[str],
+                           assessment_result: dict = None, sub_interaction: int = 1) -> dict:
+    """
+    Collect all educational metadata for logging
+    
+    Args:
+        session_data: Current session state
+        response: Generated response
+        mode: "storywriting" or "funfacts"
+        user_input: User's input message
+        llm_call_types: Types of LLM calls made
+        assessment_result: Story assessment result if applicable
+        sub_interaction: Sub-interaction number within the same turn (for multi-interaction requests)
+        
+    Returns:
+        Dict with educational fields for logging
+    """
+    # Classify the interaction module
+    module = classify_interaction_module(session_data, response, mode, llm_call_types)
+    
+    # Get relevant prompt versions based on interaction type
+    prompt_versions = get_relevant_prompt_versions(module, mode)
+    
+    # Extract comprehensive educational context
+    educational_context = extract_educational_context(session_data, mode)
+    
+    # Build educational data structure
+    educational_data = {
+        # Session and content tracking
+        "session_id": session_data.session_id,
+        "turn_id": session_data.turn_id,
+        "sub_interaction": sub_interaction,
+        "story_id": session_data.current_story_id,
+        "funfact_id": session_data.current_funfact_id,
+        
+        # Interaction classification and content
+        "module": module,
+        "user_input": user_input,
+        "ai_output": response.response if hasattr(response, 'response') else "",
+        
+        # Story assessment (when applicable)
+        "story_assessment": assessment_result,
+        
+        # Educational context capture
+        "educational_context": educational_context
+    }
+    
+    # Add vocabulary-specific data when vocabulary interaction occurs
+    if module == "vocabulary" and hasattr(response, 'vocabQuestion') and response.vocabQuestion:
+        vocab_data = extract_vocabulary_interaction_data(response.vocabQuestion, user_input)
+        educational_data["vocabulary_interaction"] = vocab_data
+    
+    return educational_data
 
 # === END LATENCY MEASUREMENT SYSTEM ===
 
@@ -351,6 +690,16 @@ class SessionData(BaseModel):
     narrativeAssessment: Optional[dict] = None  # Last LLM assessment results
     characterGrowthScore: int = 0  # 0-100 scale tracking character development
     completenessScore: int = 0  # 0-100 scale tracking story completeness
+    
+    # Educational Logging Session Management Fields
+    session_id: Optional[str] = None  # UUID for session tracking
+    session_start: Optional[datetime] = None  # Session start timestamp
+    last_activity: Optional[datetime] = None  # Last interaction timestamp for timeout
+    turn_id: int = 0  # Sequential interaction counter within session
+    current_story_id: Optional[str] = None  # Current story UUID
+    current_funfact_id: Optional[str] = None  # Current fun fact UUID
+    story_history: List[str] = []  # All story IDs in this session
+    funfact_history: List[str] = []  # All fun fact IDs in this session
 
 class ChatRequest(BaseModel):
     message: str
@@ -369,6 +718,7 @@ class ChatResponse(BaseModel):
     sessionData: Optional[SessionData] = None
     suggestedTheme: Optional[str] = None
     designPrompt: Optional[DesignPrompt] = None  # New field for design phase prompts
+    educational_data: Optional[dict] = None  # Educational logging data (internal use)
 
 # Load centralized theme configuration
 def load_theme_config():
@@ -600,72 +950,6 @@ def select_best_vocabulary_word(available_words: List[str]) -> str:
         logger.warning(f"select_best_vocabulary_word: Using last resort word: '{selected}'")
         return selected
 
-# DEPRECATED: Use prompt_manager.get_story_opening_prompt() instead
-def generate_structured_story_prompt_DEPRECATED(topic: str, story_mode: str = "auto") -> str:
-    """
-    Generate a prompt that requests JSON format with story and metadata
-    Uses 40/60 probability split between unnamed/named entities, or forced mode for testing
-    
-    Args:
-        topic: The story topic chosen by the child
-        story_mode: "auto" (random), "named" (force named), or "unnamed" (force unnamed)
-        
-    Returns:
-        Structured prompt requesting JSON response with story and character/location metadata
-    """
-    import random
-    import json
-    from pathlib import Path
-    
-    try:
-        # Load story generation templates
-        story_templates_path = Path("prompts/story/04_story_generation.json")
-        with open(story_templates_path, 'r') as f:
-            templates = json.load(f)
-        
-        # Select template based on story mode
-        if story_mode == "named":
-            template_key = "named_entities"
-            logger.info("🎯 Story Generation: FORCED NAMED entity template (testing mode)")
-        elif story_mode == "unnamed":
-            template_key = "unnamed_entities"
-            logger.info("🎯 Story Generation: FORCED UNNAMED entity template (testing mode)")
-        else:  # auto mode - use random selection
-            if random.random() < 0.4:  # 40% probability for unnamed entities
-                template_key = "unnamed_entities"
-                logger.info("🎲 Story Generation: Selected UNNAMED entity template (40% probability)")
-            else:  # 60% probability for named entities  
-                template_key = "named_entities"
-                logger.info("🎲 Story Generation: Selected NAMED entity template (60% probability)")
-        
-        selected_template = templates[template_key]["prompt_template"]
-        logger.info(f"🎯 TEMPLATE DEBUG: Using template '{template_key}' for story_mode '{story_mode}'")
-        formatted_prompt = selected_template.format(topic=topic)
-        logger.info(f"🎯 PROMPT DEBUG: Formatted prompt length: {len(formatted_prompt)} characters")
-        return formatted_prompt
-        
-    except Exception as e:
-        logger.error(f"Error loading story generation templates: {e}")
-        # Fallback to named entity template (current behavior)
-        return f"""Create a story opening for the topic: {topic}
-
-REQUIREMENTS:
-- Write 2-4 sentences suitable for strong 2nd graders or 3rd graders
-- Introduce a named character AND/OR a specific location with clear names
-- Bold 2-3 vocabulary words using **word** format
-- Use engaging, age-appropriate language that sparks imagination
-
-RETURN AS VALID JSON in this exact format:
-{{
-  "story": "your story text here with **bolded** vocabulary words...",
-  "metadata": {{
-    "character_name": "character name if introduced, otherwise null",
-    "character_description": "brief description if character introduced, otherwise null",
-    "location_name": "location name if introduced, otherwise null", 
-    "location_description": "brief description if location introduced, otherwise null",
-    "design_options": ["character" and/or "location" based on what was introduced]
-  }}
-}}"""
 
 def parse_structured_story_response(llm_response: str) -> StructuredStoryResponse:
     """
@@ -901,8 +1185,15 @@ def get_next_design_entity(entities: StoryEntities, designed_entities: List[str]
     if designed_entities is None:
         designed_entities = []
         
-    # Priority 1: Unnamed entities (need full design: naming + aspects)
-    # Check unnamed characters first
+    # Priority 1: Named entities (aspect design only, skip naming)
+    # When we have named characters, prioritize them first to skip naming phase
+    for char in entities.characters.named:
+        if char not in designed_entities:
+            logging.info(f"🎯 DESIGN: Next entity is named character '{char}' (aspect design only)")
+            return ("character", char, True)  # is_named = True, so skip naming
+            
+    # Priority 2: Unnamed entities (need full design: naming + aspects)
+    # Only process unnamed entities if no named entities are available
     for char in entities.characters.unnamed:
         if char not in designed_entities:
             logging.info(f"🎯 DESIGN: Next entity is unnamed character '{char}' (full design)")
@@ -915,13 +1206,6 @@ def get_next_design_entity(entities: StoryEntities, designed_entities: List[str]
     #     if loc not in designed_entities:
     #         logging.info(f"🎯 DESIGN: Next entity is unnamed location '{loc}' (full design)")
     #         return ("location", loc, False)  # is_named = False, so start with naming
-    
-    # Priority 2: Named entities (aspect design only, skip naming)
-    # Check named characters
-    for char in entities.characters.named:
-        if char not in designed_entities:
-            logging.info(f"🎯 DESIGN: Next entity is named character '{char}' (aspect design only)")
-            return ("character", char, True)  # is_named = True, so skip naming
             
     # DISABLED: Location design temporarily disabled per user request
     # TODO: Uncomment when location design should be re-enabled
@@ -1613,6 +1897,7 @@ async def handle_design_phase_interaction(user_message: str, session_data: Sessi
         
         # Provide feedback on the description
         feedback_response = f"Wonderful description! I love how you described {entity_name}. That really brings them to life!"
+        feedback_duration = 0.0  # No LLM call for hardcoded feedback
         
         # Complete design phase after description
         session_data.designComplete = True
@@ -1636,6 +1921,7 @@ async def handle_design_phase_interaction(user_message: str, session_data: Sessi
         
         try:
             story_continuation = llm_provider.generate_response(enhanced_prompt)
+            story_duration = get_latest_llm_timing()
             session_data.storyParts.append(story_continuation)
             
             # Track vocabulary from continuation
@@ -1644,6 +1930,28 @@ async def handle_design_phase_interaction(user_message: str, session_data: Sessi
                 session_data.contentVocabulary.extend(story_vocab)
                 logging.info(f"📋 VOCABULARY TRACKING: Added {len(story_vocab)} words from enhanced design continuation. Total: {len(session_data.contentVocabulary)}")
             
+            # Log grammar feedback immediately (sub-interaction 1)
+            feedback_educational_data = collect_educational_data(
+                session_data, 
+                ChatResponse(response=feedback_response), 
+                "storywriting", 
+                provided_description, 
+                ["grammar_feedback"],
+                sub_interaction=1
+            )
+            latency_logger.log_educational_interaction("grammar_feedback", feedback_response, feedback_duration, feedback_educational_data)
+            
+            # Log story continuation immediately (sub-interaction 2)  
+            story_educational_data = collect_educational_data(
+                session_data,
+                ChatResponse(response=story_continuation),
+                "storywriting",
+                provided_description,
+                ["story_generation"], 
+                sub_interaction=2
+            )
+            latency_logger.log_educational_interaction("story_generation", story_continuation, story_duration, story_educational_data)
+            
             # Complete response with feedback + story continuation
             complete_response = f"{feedback_response}\n\nPerfect! You've helped bring {entity_name} to life! Here's how the story continues:\n\n{story_continuation}"
             
@@ -1651,7 +1959,8 @@ async def handle_design_phase_interaction(user_message: str, session_data: Sessi
             
             return ChatResponse(
                 response=complete_response,
-                sessionData=session_data
+                sessionData=session_data,
+                immediate_logging_performed=True
             )
             
         except Exception as e:
@@ -1678,9 +1987,11 @@ async def handle_design_phase_interaction(user_message: str, session_data: Sessi
     
     try:
         feedback_response = llm_provider.generate_response(feedback_prompt)
+        feedback_duration = get_latest_llm_timing()
     except Exception as e:
         logging.error(f"Error generating writing feedback: {e}")
         feedback_response = content_manager.get_bot_response("encouragement.creative_writing")
+        feedback_duration = 0.0
     
     # Add the current aspect to history
     session_data.designAspectHistory.append(session_data.currentDesignAspect)
@@ -1728,6 +2039,7 @@ async def handle_design_phase_interaction(user_message: str, session_data: Sessi
         
         try:
             story_continuation = llm_provider.generate_response(enhanced_prompt)
+            story_duration = get_latest_llm_timing()
             session_data.storyParts.append(story_continuation)
             
             # Track vocabulary from continuation
@@ -1736,12 +2048,41 @@ async def handle_design_phase_interaction(user_message: str, session_data: Sessi
                 session_data.contentVocabulary.extend(story_vocab)
                 logger.info(f"📋 VOCABULARY TRACKING: Added {len(story_vocab)} words from design continuation. Total: {len(session_data.contentVocabulary)}")
             
+            # Log grammar feedback immediately (sub-interaction 1)
+            print(f"🐛 DEBUG: About to log grammar feedback. Response length: {len(feedback_response)}")
+            feedback_educational_data = collect_educational_data(
+                session_data, 
+                ChatResponse(response=feedback_response), 
+                "storywriting", 
+                user_message, 
+                ["grammar_feedback"],
+                sub_interaction=1
+            )
+            print(f"🐛 DEBUG: Calling log_educational_interaction for grammar_feedback")
+            latency_logger.log_educational_interaction("grammar_feedback", feedback_response, feedback_duration, feedback_educational_data)
+            print(f"🐛 DEBUG: Grammar feedback logging completed")
+            
+            # Log story continuation immediately (sub-interaction 2)  
+            print(f"🐛 DEBUG: About to log story generation. Response length: {len(story_continuation)}")
+            story_educational_data = collect_educational_data(
+                session_data,
+                ChatResponse(response=story_continuation),
+                "storywriting",
+                user_message,
+                ["story_generation"], 
+                sub_interaction=2
+            )
+            print(f"🐛 DEBUG: Calling log_educational_interaction for story_generation")
+            latency_logger.log_educational_interaction("story_generation", story_continuation, story_duration, story_educational_data)
+            print(f"🐛 DEBUG: Story generation logging completed")
+            
             # Complete response with feedback + story continuation
             complete_response = f"{feedback_response}\n\nPerfect! You've helped bring {subject_name} to life! Here's how the story continues:\n\n{story_continuation}"
             
             return ChatResponse(
                 response=complete_response,
-                sessionData=session_data
+                sessionData=session_data,
+                immediate_logging_performed=True
             )
             
         except Exception as e:
@@ -1776,7 +2117,6 @@ app.add_middleware(
 # Request/Response models already defined at top of file
 
 @app.post("/chat", response_model=ChatResponse)
-@latency_logger.measure_request
 async def chat_endpoint(chat_request: ChatRequest):
     request_start = time.perf_counter()
     
@@ -1785,7 +2125,14 @@ async def chat_endpoint(chat_request: ChatRequest):
         mode = chat_request.mode
         session_data = chat_request.sessionData or SessionData()
         
-        logger.info(f"Processing {mode} message: {user_message}")
+        # Manage session lifecycle and track interactions
+        current_time = datetime.now()
+        manage_session_lifecycle(session_data, current_time)
+        
+        # Manage content IDs for story/funfact tracking
+        manage_content_ids(session_data, mode)
+        
+        logger.info(f"Processing {mode} message: {user_message} [Session: {session_data.session_id[:8] if session_data.session_id else 'none'}..., Turn: {session_data.turn_id}]")
         
         if mode == "storywriting":
             story_mode = chat_request.storyMode or "auto"
@@ -1817,10 +2164,40 @@ async def chat_endpoint(chat_request: ChatRequest):
                 if hasattr(result, 'latency_summary'):
                     result.latency_summary = story_summary
             
+            # Collect educational logging data (skip if immediate logging was already performed)
+            if not getattr(result, 'immediate_logging_performed', False):
+                llm_call_types = latency_logger.get_current_llm_call_types()
+                educational_data = collect_educational_data(
+                    session_data=session_data,
+                    response=result,
+                    mode=mode,
+                    user_input=user_message,
+                    llm_call_types=llm_call_types
+                )
+                
+                # Attach educational data to result for latency logger
+                result.educational_data = educational_data
+            
             return result
             
         elif mode == "funfacts":
-            return await handle_funfacts(user_message, session_data)
+            result = await handle_funfacts(user_message, session_data)
+            
+            # Collect educational logging data (skip if immediate logging was already performed)
+            if not getattr(result, 'immediate_logging_performed', False):
+                llm_call_types = latency_logger.get_current_llm_call_types()
+                educational_data = collect_educational_data(
+                    session_data=session_data,
+                    response=result,
+                    mode=mode,
+                    user_input=user_message,
+                    llm_call_types=llm_call_types
+                )
+                
+                # Attach educational data to result for latency logger
+                result.educational_data = educational_data
+            
+            return result
         else:
             return ChatResponse(response=content_manager.get_bot_response("errors.mode_error"))
             
@@ -2194,6 +2571,7 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
         
         # Provide grammar feedback if needed (Step 5)
         grammar_feedback = llm_provider.provide_grammar_feedback(user_message)
+        feedback_duration = get_latest_llm_timing()
         
         # Generate next part of story (Steps 2-4 repeated)
         story_context = "\n".join(session_data.storyParts[-3:])  # Last 3 parts for context
@@ -2209,6 +2587,18 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
                     session_data.storyParts, session_data.topic
                 )
                 assessment_response = llm_provider.generate_response(assessment_prompt)
+                assessment_duration = get_latest_llm_timing()
+                
+                # Log story assessment individually
+                assessment_educational_data = collect_educational_data(
+                    session_data,
+                    ChatResponse(response=assessment_response),
+                    "storywriting",
+                    user_message,
+                    ["story_assessment"],
+                    sub_interaction=1
+                )
+                latency_logger.log_educational_interaction("story_assessment", assessment_response, assessment_duration, assessment_educational_data)
                 
                 # Parse assessment JSON
                 import json
@@ -2238,6 +2628,18 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
                 base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
             )
             story_response = llm_provider.generate_response(enhanced_prompt)
+            story_duration = get_latest_llm_timing()
+            
+            # Log story ending generation individually
+            ending_educational_data = collect_educational_data(
+                session_data,
+                ChatResponse(response=story_response),
+                "storywriting",
+                user_message,
+                ["story_ending"],
+                sub_interaction=1
+            )
+            latency_logger.log_educational_interaction("story_ending", story_response, story_duration, ending_educational_data)
             
             # Track vocabulary words that were intended to be used
             if selected_vocab:
@@ -2294,6 +2696,7 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
                 base_prompt, session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary
             )
             story_response = llm_provider.generate_response(enhanced_prompt)
+            story_duration = get_latest_llm_timing()
             
             # Track vocabulary words that were intended to be used
             if selected_vocab:
@@ -2305,6 +2708,30 @@ async def handle_storywriting(user_message: str, session_data: SessionData, stor
             log_vocabulary_debug_info(
                 session_data.topic, session_data.askedVocabWords + session_data.contentVocabulary, story_response, "Story Continuation", len(session_data.contentVocabulary)
             )
+            
+            # Log individual educational interactions
+            if grammar_feedback:
+                # Log grammar feedback immediately
+                feedback_educational_data = collect_educational_data(
+                    session_data, 
+                    ChatResponse(response=grammar_feedback), 
+                    "storywriting", 
+                    user_message, 
+                    ["grammar_feedback"],
+                    sub_interaction=1
+                )
+                latency_logger.log_educational_interaction("grammar_feedback", grammar_feedback, feedback_duration, feedback_educational_data)
+            
+            # Log story continuation immediately  
+            story_educational_data = collect_educational_data(
+                session_data,
+                ChatResponse(response=story_response),
+                "storywriting",
+                user_message,
+                ["story_generation"], 
+                sub_interaction=2
+            )
+            latency_logger.log_educational_interaction("story_generation", story_response, story_duration, story_educational_data)
             
             # Add grammar feedback if available
             if grammar_feedback:
@@ -2352,7 +2779,19 @@ async def handle_start_vocabulary(session_data: SessionData) -> ChatResponse:
         
         # Use the actual story content as context for the vocabulary question
         vocab_question = llm_provider.generate_vocabulary_question(selected_word, context=all_story_text)
+        vocab_duration = get_latest_llm_timing()
         logger.info(f"  Generated question: '{vocab_question.get('question', 'N/A')}'")
+        
+        # Log vocabulary question generation individually
+        vocab_educational_data = collect_educational_data(
+            session_data,
+            ChatResponse(response=json.dumps(vocab_question)),
+            "storywriting",
+            "start_vocabulary",
+            ["vocabulary_question"],
+            sub_interaction=1
+        )
+        latency_logger.log_educational_interaction("vocabulary_question", json.dumps(vocab_question), vocab_duration, vocab_educational_data)
         
         return ChatResponse(
             response=content_manager.get_bot_response("vocabulary.intro_after_story"),
@@ -2373,6 +2812,18 @@ async def handle_start_vocabulary(session_data: SessionData) -> ChatResponse:
                 vocab_word_data['word'], 
                 context=vocab_word_data['definition']
             )
+            vocab_duration = get_latest_llm_timing()
+            
+            # Log fallback vocabulary question generation individually
+            vocab_educational_data = collect_educational_data(
+                session_data,
+                ChatResponse(response=json.dumps(vocab_question)),
+                "storywriting",
+                "start_vocabulary_fallback",
+                ["vocabulary_question"],
+                sub_interaction=1
+            )
+            latency_logger.log_educational_interaction("vocabulary_question", json.dumps(vocab_question), vocab_duration, vocab_educational_data)
             
             return ChatResponse(
                 response=content_manager.get_bot_response("vocabulary.intro_after_story"),
@@ -2418,7 +2869,19 @@ async def handle_next_vocabulary(session_data: SessionData) -> ChatResponse:
         
         # Use the actual story content as context for the vocabulary question
         vocab_question = llm_provider.generate_vocabulary_question(selected_word, context=all_story_text)
+        vocab_duration = get_latest_llm_timing()
         logger.info(f"  Generated question: '{vocab_question.get('question', 'N/A')}'")
+        
+        # Log vocabulary question generation individually
+        vocab_educational_data = collect_educational_data(
+            session_data,
+            ChatResponse(response=json.dumps(vocab_question)),
+            "storywriting",
+            "next_vocabulary",
+            ["vocabulary_question"],
+            sub_interaction=1
+        )
+        latency_logger.log_educational_interaction("vocabulary_question", json.dumps(vocab_question), vocab_duration, vocab_educational_data)
         
         return ChatResponse(
             response=content_manager.get_bot_response("vocabulary.next_question"),
@@ -2439,6 +2902,18 @@ async def handle_next_vocabulary(session_data: SessionData) -> ChatResponse:
                 vocab_word_data['word'], 
                 context=vocab_word_data['definition']
             )
+            vocab_duration = get_latest_llm_timing()
+            
+            # Log fallback vocabulary question generation individually
+            vocab_educational_data = collect_educational_data(
+                session_data,
+                ChatResponse(response=json.dumps(vocab_question)),
+                "storywriting",
+                "next_vocabulary_fallback",
+                ["vocabulary_question"],
+                sub_interaction=1
+            )
+            latency_logger.log_educational_interaction("vocabulary_question", json.dumps(vocab_question), vocab_duration, vocab_educational_data)
             
             return ChatResponse(
                 response=content_manager.get_bot_response("vocabulary.next_question"),
